@@ -4,6 +4,8 @@
 // runs at build time, so every meta tag is in the initial HTML response that
 // crawlers see.
 
+import "../styles/global.css";
+
 export interface Props {
   title: string;
   description: string;
@@ -127,7 +129,6 @@ const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     ))}
 
     <!-- Global styles -->
-    <link rel="stylesheet" href="/styles/global.css" />
   </head>
   <body class="bg-background text-foreground antialiased font-body">
     <slot />
