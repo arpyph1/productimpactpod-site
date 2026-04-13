@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Base styles
+ * The Lovable build had low-contrast gray-on-gray body text. Fix that here
+ * with explicit high-contrast tokens per the design brief's readability spec.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --bg-elevated: #141414;
+  --bg-card: #1a1a1a;
+  --bg-hover: #1f1f1f;
+  --fg: #f5f5f5;
+  --fg-muted: #d4d4d4;
+  --fg-subtle: #a0a0a0;
+  --fg-faint: #707070;
+  --accent: #ff6b4a;
+  --accent-hover: #ff8566;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+}
+
+html {
+  background-color: var(--bg);
+  color: var(--fg);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Article prose — the typography fix for the "wall of gray text" problem.
+ * Apply this class to the article body container.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.article-prose {
+  color: #e5e5e5;
+  font-size: 19px;
+  line-height: 1.75;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 767px) {
+  .article-prose {
+    font-size: 17px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+.article-prose p {
+  margin-top: 0;
+  margin-bottom: 1.5em;
+  color: #e5e5e5;
+}
+
+.article-prose strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.article-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 107, 74, 0.4);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.article-prose a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent-hover);
+}
+
+.article-prose h2 {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 64px;
+  margin-bottom: 20px;
+  color: #ffffff;
+  border-left: 4px solid var(--accent);
+  padding-left: 20px;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 767px) {
+  .article-prose h2 {
+    font-size: 28px;
+    margin-top: 48px;
+    padding-left: 16px;
+  }
+}
+
+.article-prose h3 {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 40px;
+  margin-bottom: 16px;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 767px) {
+  .article-prose h3 {
+    font-size: 22px;
+    margin-top: 32px;
+  }
+}
+
+.article-prose blockquote {
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.55;
+  color: #ffffff;
+  border-left: 4px solid var(--accent);
+  padding-left: 24px;
+  margin-top: 48px;
+  margin-bottom: 48px;
+  max-width: 720px;
+}
+
+@media (max-width: 767px) {
+  .article-prose blockquote {
+    font-size: 19px;
+    padding-left: 20px;
+    margin-top: 36px;
+    margin-bottom: 36px;
+  }
+}
+
+.article-prose blockquote p {
+  color: #ffffff;
+  font-size: inherit;
+  margin-bottom: 0.8em;
+}
+
+.article-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.article-prose ul,
+.article-prose ol {
+  margin-top: 1em;
+  margin-bottom: 1.5em;
+  padding-left: 1.5em;
+}
+
+.article-prose ul li,
+.article-prose ol li {
+  margin-bottom: 0.5em;
+  color: #e5e5e5;
+  line-height: 1.7;
+}
+
+.article-prose ul li::marker {
+  color: var(--accent);
+}
+
+.article-prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin-top: 48px;
+  margin-bottom: 48px;
+}
+
+.article-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.article-prose code {
+  background-color: var(--bg-card);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+}
+
+.article-prose pre {
+  background-color: var(--bg-card);
+  padding: 20px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.article-prose pre code {
+  background: none;
+  padding: 0;
+  color: #e5e5e5;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Accessibility helpers
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Utility classes used across components
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.container-prose {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.container-wide {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}

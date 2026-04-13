@@ -1,0 +1,66 @@
+---
+// Primary navigation — 6 items per PRD Section 2.
+// Logo in the center links to /. Hamburger on mobile.
+---
+
+<nav class="bg-background-elevated border-b border-[#2a2a2a] sticky top-0 z-40 backdrop-blur-sm bg-opacity-90">
+  <div class="container-wide flex items-center justify-between h-16">
+    <!-- Left nav -->
+    <ul class="hidden md:flex items-center gap-8 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
+      <li><a href="/news" class="hover:text-white transition-colors">News</a></li>
+      <li><a href="/themes" class="hover:text-white transition-colors">Themes</a></li>
+    </ul>
+
+    <!-- Logo (center) -->
+    <a href="/" class="flex items-center gap-2" aria-label="Product Impact home">
+      <img
+        src="/logo.png"
+        alt="Product Impact Podcast"
+        width="64"
+        height="64"
+        class="h-12 w-12 rounded-full"
+      />
+      <span class="sr-only">Product Impact</span>
+    </a>
+
+    <!-- Right nav -->
+    <ul class="hidden md:flex items-center gap-8 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
+      <li><a href="/podcast" class="hover:text-white transition-colors">Podcast</a></li>
+      <li><a href="/episodes" class="hover:text-white transition-colors">Episodes</a></li>
+      <li><a href="/partnerships" class="hover:text-white transition-colors">Partnerships</a></li>
+    </ul>
+
+    <!-- Mobile: hamburger -->
+    <button
+      type="button"
+      aria-label="Open menu"
+      class="md:hidden p-2 text-[#d4d4d4] hover:text-white"
+      id="mobile-menu-btn"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile menu (collapsible) -->
+  <div id="mobile-menu" class="md:hidden hidden border-t border-[#2a2a2a]">
+    <ul class="flex flex-col py-4 px-6 gap-4 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
+      <li><a href="/news" class="block py-2 hover:text-white">News</a></li>
+      <li><a href="/themes" class="block py-2 hover:text-white">Themes</a></li>
+      <li><a href="/podcast" class="block py-2 hover:text-white">Podcast</a></li>
+      <li><a href="/episodes" class="block py-2 hover:text-white">Episodes</a></li>
+      <li><a href="/partnerships" class="block py-2 hover:text-white">Partnerships</a></li>
+    </ul>
+  </div>
+</nav>
+
+<script>
+  const btn = document.getElementById("mobile-menu-btn");
+  const menu = document.getElementById("mobile-menu");
+  btn?.addEventListener("click", () => {
+    menu?.classList.toggle("hidden");
+  });
+</script>

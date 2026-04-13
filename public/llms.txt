@@ -1,0 +1,46 @@
+# Product Impact
+
+> AI product impact — news, releases, and case studies about the products transforming how we work and industries.
+
+## About
+
+Product Impact is a publication covering the AI products transforming how work happens across industries. We publish news, analysis, feature articles, case studies, and the Product Impact Podcast. Hosted by Arpy Dragffy (Founder, PH1 Research) and Brittany Hobbs.
+
+## Content surfaces
+
+- Homepage: https://productimpactpod.com/
+- News: https://productimpactpod.com/news/
+- Themes: https://productimpactpod.com/themes/
+- Podcast: https://productimpactpod.com/podcast/
+- Episodes: https://productimpactpod.com/episodes/
+- Concepts: https://productimpactpod.com/concepts/
+- People: https://productimpactpod.com/people/
+- Organizations: https://productimpactpod.com/organizations/
+- Products: https://productimpactpod.com/products/
+- Frameworks: https://productimpactpod.com/frameworks/
+- Sources: https://productimpactpod.com/sources/
+- Partnerships: https://productimpactpod.com/partnerships/
+
+## Canonical taxonomy — 8 themes
+
+- AI Product Strategy: https://productimpactpod.com/themes/ai-product-strategy
+- Agents & Agentic Systems: https://productimpactpod.com/themes/agents-agentic-systems
+- UX & Experience Design for AI: https://productimpactpod.com/themes/ux-experience-design-for-ai
+- Adoption & Organizational Change: https://productimpactpod.com/themes/adoption-organizational-change
+- Evaluation & Benchmarking: https://productimpactpod.com/themes/evaluation-benchmarking
+- Go-to-Market & Distribution: https://productimpactpod.com/themes/go-to-market-distribution
+- Data, Semantics & Knowledge Foundations: https://productimpactpod.com/themes/data-semantics-knowledge-foundations
+- Governance, Risk & Trust: https://productimpactpod.com/themes/governance-risk-trust
+
+## Feeds
+
+- Main RSS: https://productimpactpod.com/rss.xml
+- News RSS: https://productimpactpod.com/news/rss.xml
+- Podcast RSS: https://productimpactpod.com/podcast/rss.xml
+- Sitemap: https://productimpactpod.com/sitemap.xml
+- Google News sitemap: https://productimpactpod.com/news-sitemap.xml
+
+## Contact
+
+- Editorial: info@productimpactpod.com
+- Partnerships: partner@productimpactpod.com

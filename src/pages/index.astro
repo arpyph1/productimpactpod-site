@@ -1,0 +1,179 @@
+---
+// Homepage placeholder — Phase 1 focuses on article pages for SEO critical path.
+// Full homepage with hero + 2×2 grid + episode strip + themes + voices + partner
+// ribbon lands in Phase 2 per the design brief.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllArticles, formatLabel, themeLabel } from "@lib/supabase";
+
+const articles = await getAllArticles();
+const siteUrl = "https://productimpactpod.com";
+const leadStory = articles[0] ?? null;
+const secondaryArticles = articles.slice(1, 5);
+
+const themeGradients: Record<string, string> = {
+  "ai-product-strategy": "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems": "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai": "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change": "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking": "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution": "from-[#ff8566] to-[#8a3a28]",
+  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
+  "governance-risk-trust": "from-[#c96bff] to-[#5a2a80]",
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Product Impact",
+  url: siteUrl,
+  description:
+    "AI product impact — news, releases, and case studies about the products transforming how we work and industries.",
+  publisher: {
+    "@type": "Organization",
+    name: "Product Impact",
+    url: siteUrl,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/logo.png`,
+      width: 600,
+      height: 60,
+    },
+  },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${siteUrl}/news?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
+};
+---
+
+<BaseLayout
+  title="Product Impact — AI product news, releases, and case studies"
+  description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
+  canonicalUrl={`${siteUrl}/`}
+  jsonLd={websiteJsonLd}
+>
+  <Nav />
+
+  <main>
+    {/* Lead story hero */}
+    {leadStory && (
+      <section class="container-wide pt-12 pb-16">
+        <a
+          href={`/news/${leadStory.slug}`}
+          class="group block relative overflow-hidden rounded-2xl"
+        >
+          {leadStory.hero_image_url ? (
+            <img
+              src={leadStory.hero_image_url}
+              alt={leadStory.hero_image_alt ?? leadStory.title}
+              class="w-full aspect-video object-cover"
+            />
+          ) : (
+            <div
+              class={`w-full aspect-video bg-gradient-to-br ${
+                themeGradients[leadStory.themes?.[0] ?? "ai-product-strategy"]
+              }`}
+            ></div>
+          )}
+          <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent text-black">
+                {formatLabel(leadStory.format)}
+              </span>
+              {leadStory.themes?.slice(0, 2).map((t) => (
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border border-white/30 text-white">
+                  {themeLabel(t)}
+                </span>
+              ))}
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-[1.08] tracking-tight mb-4 max-w-4xl group-hover:text-accent transition-colors">
+              {leadStory.title}
+            </h1>
+            {leadStory.subtitle && (
+              <p class="text-lg md:text-xl text-white/85 max-w-3xl mb-6 line-clamp-2">
+                {leadStory.subtitle}
+              </p>
+            )}
+            <div class="flex items-center gap-2 text-sm text-white/70">
+              <span>
+                {leadStory.author_slugs
+                  .map((s) =>
+                    s
+                      .replace(/-/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase()),
+                  )
+                  .join(", ")}
+              </span>
+              {leadStory.read_time_minutes && (
+                <>
+                  <span>·</span>
+                  <span>{leadStory.read_time_minutes} min read</span>
+                </>
+              )}
+            </div>
+          </div>
+        </a>
+      </section>
+    )}
+
+    {/* Secondary 2×2 grid */}
+    {secondaryArticles.length > 0 && (
+      <section class="container-wide pb-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {secondaryArticles.map((article) => {
+            const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+            const gradient = themeGradients[firstTheme];
+            return (
+              <a
+                href={`/news/${article.slug}`}
+                class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+              >
+                {article.hero_image_url ? (
+                  <img
+                    src={article.hero_image_url}
+                    alt={article.hero_image_alt ?? article.title}
+                    loading="lazy"
+                    class="w-full aspect-video object-cover"
+                  />
+                ) : (
+                  <div
+                    class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center`}
+                  >
+                    <div class="text-xs uppercase tracking-widest text-white/80 font-semibold">
+                      Product Impact
+                    </div>
+                  </div>
+                )}
+                <div class="p-6">
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                      {formatLabel(article.format)}
+                    </span>
+                  </div>
+                  <h2 class="text-xl md:text-2xl font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
+                    {article.title}
+                  </h2>
+                  {article.subtitle && (
+                    <p class="text-sm text-[#d4d4d4] line-clamp-2 leading-relaxed">
+                      {article.subtitle}
+                    </p>
+                  )}
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

@@ -1,0 +1,294 @@
+// Supabase client for server-side queries at build time.
+// Uses the anon key (public) — all reads go through RLS-protected GET endpoints.
+// Writes are handled by the existing publish_articles.py pipeline, not the site.
+
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL =
+  import.meta.env.PUBLIC_SUPABASE_URL ??
+  "https://cyqkfkvsrdbbjuaqiglx.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY ??
+  // This is the public anon key — safe to commit. It's subject to RLS.
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWtma3ZzcmRiYmp1YXFpZ2x4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzAwNzksImV4cCI6MjA4NzEwNjA3OX0.n9oCsfYjFOePuOJb0OlMPC1kXpwIvVVweqdyHjXKVvs";
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+  },
+});
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export type ArticleFormat =
+  | "news-brief"
+  | "news-analysis"
+  | "release-note"
+  | "feature"
+  | "interview"
+  | "case-study"
+  | "opinion"
+  | "explainer"
+  | "product-review"
+  | "research-brief";
+
+export interface Article {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  format: ArticleFormat;
+  author_slugs: string[];
+  byline_role: string | null;
+  dateline: string | null;
+  publish_date: string;
+  last_updated: string | null;
+  read_time_minutes: number | null;
+  word_count: number | null;
+  meta_description: string;
+  hero_image_url: string | null;
+  hero_image_alt: string | null;
+  hero_image_credit: string | null;
+  content_markdown: string;
+  content_html: string;
+  themes: string[];
+  lenses: string[];
+  topics: string[];
+  primary_podcast_episode_guid: string | null;
+  schema_jsonld: Record<string, unknown> | null;
+  canonical_url: string;
+  published: boolean;
+  overview_bullets: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Entity {
+  id: string;
+  type: "concept" | "person" | "organization" | "framework" | "source" | "product";
+  slug: string;
+  name: string;
+  aliases: string[];
+  description: string | null;
+  long_form: string | null;
+  external_links: Array<{ label: string; url: string }>;
+  metadata: Record<string, unknown>;
+  themes: string[];
+  lenses: string[];
+  canonical_url: string;
+  schema_jsonld: Record<string, unknown> | null;
+}
+
+export interface Theme {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  long_form_intro: string | null;
+  meta_description: string | null;
+  target_search_queries: string[] | null;
+  schema_jsonld: Record<string, unknown> | null;
+  hero_image_url: string | null;
+  theme_color: string | null;
+  icon: string | null;
+  display_order: number;
+}
+
+export interface Episode {
+  episode_guid: string;
+  slug: string | null;
+  title: string;
+  content_html: string;
+  meta_description: string | null;
+  episode_number: number | null;
+  season_number: number | null;
+  duration: string | null;
+  themes: string[];
+  lenses: string[];
+  hosts: string[];
+  guests: Array<{ name: string; role?: string; linkedin?: string; website?: string }>;
+  transcript_markdown: string | null;
+  schema_jsonld: Record<string, unknown> | null;
+  published_at: string | null;
+  links: Array<{ label: string; url: string }> | null;
+  video_urls: string[] | null;
+  published: boolean;
+}
+
+// ── Query helpers ─────────────────────────────────────────────────────────────
+
+export async function getAllArticles(): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .order("publish_date", { ascending: false });
+  if (error) {
+    console.error("getAllArticles error:", error);
+    return [];
+  }
+  return (data ?? []) as Article[];
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("slug", slug)
+    .eq("published", true)
+    .single();
+  if (error) {
+    console.error("getArticleBySlug error:", error);
+    return null;
+  }
+  return data as Article;
+}
+
+export async function getRelatedArticles(
+  article: Article,
+  limit = 3,
+): Promise<Article[]> {
+  if (!article.themes || article.themes.length === 0) {
+    const { data } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("published", true)
+      .neq("slug", article.slug)
+      .order("publish_date", { ascending: false })
+      .limit(limit);
+    return (data ?? []) as Article[];
+  }
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .neq("slug", article.slug)
+    .overlaps("themes", article.themes)
+    .order("publish_date", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getRelatedArticles error:", error);
+    return [];
+  }
+  return (data ?? []) as Article[];
+}
+
+export async function getAllThemes(): Promise<Theme[]> {
+  const { data, error } = await supabase
+    .from("themes")
+    .select("*")
+    .order("display_order", { ascending: true });
+  if (error) {
+    console.error("getAllThemes error:", error);
+    return [];
+  }
+  return (data ?? []) as Theme[];
+}
+
+export async function getEntityBySlug(
+  type: Entity["type"],
+  slug: string,
+): Promise<Entity | null> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select("*")
+    .eq("type", type)
+    .eq("slug", slug)
+    .single();
+  if (error) {
+    console.error("getEntityBySlug error:", error);
+    return null;
+  }
+  return data as Entity;
+}
+
+export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
+  const { data, error } = await supabase
+    .from("shownotes")
+    .select("*")
+    .eq("published", true)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getLatestEpisodes error:", error);
+    return [];
+  }
+  return (data ?? []) as Episode[];
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+export function authorDisplayName(slug: string): string {
+  return slug
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function formatLabel(format: ArticleFormat): string {
+  const labels: Record<ArticleFormat, string> = {
+    "news-brief": "News Brief",
+    "news-analysis": "News Analysis",
+    "release-note": "Release",
+    feature: "Feature",
+    interview: "Interview",
+    "case-study": "Case Study",
+    opinion: "Opinion",
+    explainer: "Explainer",
+    "product-review": "Product Review",
+    "research-brief": "Research Brief",
+  };
+  return labels[format] ?? format;
+}
+
+export function themeLabel(slug: string): string {
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Strip the first <h1> from content_html to avoid duplicate title rendering.
+ * The article page template renders its own H1 from article.title, so we
+ * remove any leading H1 in the body to prevent the "title rendered twice" bug
+ * that showed up in Lovable's implementation.
+ */
+export function stripFirstH1(html: string): string {
+  return html.replace(/^\s*<h1[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+}
+
+/**
+ * Generate overview bullets from article body HTML if the stored bullets
+ * field is empty. Extracts the first sentence of each H2 section (or the
+ * first three sentences of the intro paragraph as a fallback).
+ */
+export function generateOverviewBullets(html: string, max = 5): string[] {
+  const stripped = stripFirstH1(html);
+  // Match H2 sections and grab the first paragraph after each one
+  const sections = [
+    ...stripped.matchAll(
+      /<h2[^>]*>[\s\S]*?<\/h2>\s*<p[^>]*>([\s\S]*?)<\/p>/gi,
+    ),
+  ];
+  if (sections.length > 0) {
+    return sections
+      .slice(0, max)
+      .map((m) => {
+        const firstSentence = m[1]
+          .replace(/<[^>]+>/g, "")
+          .split(/\.\s/)[0]
+          .trim();
+        return firstSentence.endsWith(".")
+          ? firstSentence
+          : firstSentence + ".";
+      })
+      .filter((s) => s.length > 20);
+  }
+  // Fallback: first paragraph split into sentences
+  const firstP = stripped.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+  if (!firstP) return [];
+  const text = firstP[1].replace(/<[^>]+>/g, "");
+  return text
+    .split(/\.\s/)
+    .slice(0, 3)
+    .map((s) => (s.endsWith(".") ? s.trim() : s.trim() + "."))
+    .filter((s) => s.length > 20);
+}

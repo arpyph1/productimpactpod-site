@@ -1,0 +1,457 @@
+---
+// /news/{slug} — the canonical article URL.
+// Static site generation: one HTML file per article, built at publish time.
+// This file is the fix for every SEO problem the Lovable build had:
+//   - Meta tags are in the initial HTML response (not set by useEffect)
+//   - Canonical URL points to productimpactpod.com (not lovable.app)
+//   - Article body is fully server-rendered (Googlebot sees it on first fetch)
+//   - JSON-LD NewsArticle schema is in <head>, crawler-visible
+//   - Open Graph article tags present
+//   - Twitter Card summary_large_image present
+//   - robots max-image-preview:large present
+//   - Per-article <title> and <meta description>
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import {
+  getAllArticles,
+  getArticleBySlug,
+  getRelatedArticles,
+  authorDisplayName,
+  formatLabel,
+  themeLabel,
+  stripFirstH1,
+  generateOverviewBullets,
+  type Article,
+} from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const articles = await getAllArticles();
+  return articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }));
+}
+
+interface Props {
+  article: Article;
+}
+
+const { article } = Astro.props;
+
+// Fetch related articles at build time (not runtime — this is static HTML)
+const related = await getRelatedArticles(article, 3);
+
+// Content processing
+const cleanedHtml = stripFirstH1(article.content_html);
+const overviewBullets =
+  article.overview_bullets && article.overview_bullets.length > 0
+    ? article.overview_bullets
+    : generateOverviewBullets(article.content_html);
+
+// Resolve the canonical URL — always productimpactpod.com, never lovable.app
+const siteUrl = "https://productimpactpod.com";
+const canonicalUrl =
+  article.canonical_url?.startsWith("https://productimpactpod.com")
+    ? article.canonical_url
+    : `${siteUrl}/news/${article.slug}`;
+
+// Hero image with theme fallback
+const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+const themeGradients: Record<string, string> = {
+  "ai-product-strategy": "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems": "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai": "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change": "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking": "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution": "from-[#ff8566] to-[#8a3a28]",
+  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
+  "governance-risk-trust": "from-[#c96bff] to-[#5a2a80]",
+};
+const heroGradient =
+  themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
+const hasHeroImage = !!article.hero_image_url;
+
+// Byline
+const authorNames = (article.author_slugs ?? []).map(authorDisplayName);
+const primaryAuthorSlug = article.author_slugs?.[0] ?? "arpy-dragffy";
+const publishDate = new Date(article.publish_date);
+const publishDateFormatted = publishDate.toLocaleDateString("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+const publishDateISO = publishDate.toISOString();
+
+// JSON-LD NewsArticle schema — the primary aggregator hook
+const newsArticleJsonLd = article.schema_jsonld ?? {
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  headline: article.title,
+  alternativeHeadline: article.subtitle ?? undefined,
+  description: article.meta_description,
+  datePublished: publishDateISO,
+  dateModified: article.last_updated
+    ? new Date(article.last_updated).toISOString()
+    : publishDateISO,
+  image: article.hero_image_url ? [article.hero_image_url] : undefined,
+  author: authorNames.map((name, i) => ({
+    "@type": "Person",
+    name,
+    url: `${siteUrl}/people/${article.author_slugs[i]}`,
+    jobTitle: article.byline_role ?? undefined,
+  })),
+  publisher: {
+    "@type": "Organization",
+    name: "Product Impact",
+    url: siteUrl,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/logo.png`,
+      width: 600,
+      height: 60,
+    },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": canonicalUrl,
+  },
+  articleSection: article.themes?.[0] ?? undefined,
+  keywords: [...(article.themes ?? []), ...(article.topics ?? [])].join(", "),
+  wordCount: article.word_count ?? undefined,
+  inLanguage: "en-US",
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: `${siteUrl}/`,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "News",
+      item: `${siteUrl}/news`,
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: article.title,
+      item: canonicalUrl,
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title={`${article.title} | Product Impact`}
+  description={article.meta_description}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+  ogImage={article.hero_image_url}
+  ogImageAlt={article.hero_image_alt}
+  publishedTime={publishDateISO}
+  modifiedTime={article.last_updated ?? publishDateISO}
+  articleSection={article.themes?.[0] ?? null}
+  articleTags={article.topics ?? []}
+  articleAuthor={`${siteUrl}/people/${primaryAuthorSlug}`}
+  jsonLd={[newsArticleJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-12">
+    <article>
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+        <ol class="flex flex-wrap items-center gap-2">
+          <li><a href="/" class="hover:text-white">Home</a></li>
+          <li class="text-[#707070]">/</li>
+          <li><a href="/news" class="hover:text-white">News</a></li>
+          <li class="text-[#707070]">/</li>
+          <li class="text-[#d4d4d4] truncate max-w-md">{article.title}</li>
+        </ol>
+      </nav>
+
+      {/* Format + theme badges */}
+      <div class="flex flex-wrap items-center gap-2 mb-5">
+        <span
+          class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent text-black"
+        >
+          {formatLabel(article.format)}
+        </span>
+        {article.themes?.map((t) => (
+          <a
+            href={`/themes/${t}`}
+            class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+          >
+            {themeLabel(t)}
+          </a>
+        ))}
+      </div>
+
+      {/* H1 — article headline, displayed exactly once */}
+      <h1
+        class="font-display font-extrabold text-[clamp(2.25rem,5vw,4rem)] leading-[1.08] tracking-tight text-white mb-6 max-w-4xl"
+      >
+        {article.title}
+      </h1>
+
+      {/* Deck / subtitle */}
+      {article.subtitle && (
+        <p class="text-[22px] md:text-[22px] leading-[1.5] text-[#d4d4d4] mb-8 max-w-[720px]">
+          {article.subtitle}
+        </p>
+      )}
+
+      {/* Byline */}
+      <div class="flex flex-wrap items-center gap-3 py-5 border-y border-[#2a2a2a] mb-10">
+        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center flex-shrink-0">
+          <span class="text-white font-bold text-sm">
+            {authorNames[0]?.charAt(0) ?? "A"}
+          </span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[16px] font-semibold text-white">
+            {authorNames.map((name, i) => (
+              <a
+                href={`/people/${article.author_slugs[i]}`}
+                class="text-accent hover:text-accent-hover"
+              >
+                {name}
+              </a>
+            ))}
+          </div>
+          {article.byline_role && (
+            <div class="text-[14px] text-[#a0a0a0]">{article.byline_role}</div>
+          )}
+        </div>
+        <div class="flex items-center gap-2 text-[14px] text-[#a0a0a0]">
+          <time datetime={publishDateISO}>{publishDateFormatted}</time>
+          {article.read_time_minutes && (
+            <>
+              <span class="text-[#707070]">·</span>
+              <span>{article.read_time_minutes} min read</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Hero image with theme fallback */}
+      <div class="mb-12 -mx-6 md:mx-0">
+        {hasHeroImage ? (
+          <figure>
+            <img
+              src={article.hero_image_url!}
+              alt={article.hero_image_alt ?? article.title}
+              width="1200"
+              height="628"
+              loading="eager"
+              class="w-full aspect-[1.91/1] object-cover rounded-none md:rounded-xl"
+            />
+            {article.hero_image_credit && (
+              <figcaption class="text-[13px] text-[#707070] italic mt-2 px-6 md:px-0">
+                Photo: {article.hero_image_credit}
+              </figcaption>
+            )}
+          </figure>
+        ) : (
+          <div
+            class={`w-full aspect-[1.91/1] rounded-none md:rounded-xl bg-gradient-to-br ${heroGradient} flex items-center justify-center`}
+          >
+            <div class="text-center p-8">
+              <div class="text-[11px] uppercase tracking-widest text-white/70 mb-2">
+                Product Impact
+              </div>
+              <div class="text-2xl md:text-3xl font-bold text-white max-w-2xl">
+                {themeLabel(firstTheme)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Two-column layout: article body (left) + entity sidebar (right, desktop) */}
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] lg:gap-16 justify-center">
+        <div>
+          {/* Overview bullets */}
+          {overviewBullets.length > 0 && (
+            <aside
+              class="mb-12 p-6 md:p-8 rounded-xl border-l-4 bg-background-card"
+              style={`border-left-color: var(--accent);`}
+            >
+              <div class="text-[11px] font-bold uppercase tracking-[0.08em] text-accent mb-4">
+                Overview
+              </div>
+              <ul class="space-y-4">
+                {overviewBullets.map((bullet) => (
+                  <li class="flex gap-3 text-[17px] leading-[1.6] text-[#e5e5e5]">
+                    <span class="text-accent mt-2 flex-shrink-0">•</span>
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
+
+          {/* Article body */}
+          <div class="article-prose" set:html={cleanedHtml}></div>
+
+          {/* Author bio card */}
+          <div class="mt-16 p-8 rounded-xl bg-background-card flex items-start gap-6">
+            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex-shrink-0 flex items-center justify-center">
+              <span class="text-white font-bold text-2xl">
+                {authorNames[0]?.charAt(0) ?? "A"}
+              </span>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white mb-1">
+                <a
+                  href={`/people/${primaryAuthorSlug}`}
+                  class="hover:text-accent"
+                >
+                  {authorNames[0]}
+                </a>
+              </h3>
+              {article.byline_role && (
+                <p class="text-[14px] text-[#a0a0a0] mb-3">
+                  {article.byline_role}
+                </p>
+              )}
+              <a
+                href={`/people/${primaryAuthorSlug}`}
+                class="text-accent hover:text-accent-hover text-sm font-semibold"
+              >
+                View all articles by {authorNames[0]} →
+              </a>
+            </div>
+          </div>
+
+          {/* Soft CTA */}
+          <p class="mt-12 text-sm text-[#a0a0a0] leading-relaxed max-w-[720px]">
+            Hosted by{" "}
+            <a
+              href="/people/arpy-dragffy"
+              class="text-accent hover:text-accent-hover"
+            >
+              Arpy Dragffy
+            </a>{" "}
+            and{" "}
+            <a
+              href="/people/brittany-hobbs"
+              class="text-accent hover:text-accent-hover"
+            >
+              Brittany Hobbs
+            </a>
+            . Arpy runs{" "}
+            <a
+              href="https://ph1.ca?utm_source=productimpactpod&utm_medium=article-footer&utm_campaign=soft-cta"
+              target="_blank"
+              rel="noopener"
+              class="text-accent hover:text-accent-hover"
+            >
+              PH1 Research
+            </a>
+            , a product adoption research firm, and leads{" "}
+            <a
+              href="https://aivalueacceleration.com?utm_source=productimpactpod&utm_medium=article-footer&utm_campaign=soft-cta"
+              target="_blank"
+              rel="noopener"
+              class="text-accent hover:text-accent-hover"
+            >
+              AI Value Acceleration
+            </a>
+            , enterprise AI adoption consulting.
+          </p>
+        </div>
+
+        {/* Entity sidebar — desktop only. Hidden until we wire up article_entities join. */}
+        <aside class="hidden lg:block">
+          <div class="sticky top-24 space-y-8">
+            <div class="text-xs font-bold uppercase tracking-wider text-[#707070]">
+              Related content
+            </div>
+            <a
+              href="/news"
+              class="block text-[15px] text-accent hover:text-accent-hover"
+            >
+              ← All news
+            </a>
+          </div>
+        </aside>
+      </div>
+
+      {/* Related articles */}
+      {related.length > 0 && (
+        <section class="mt-24 border-t border-[#2a2a2a] pt-16">
+          <div class="flex items-baseline gap-3 mb-8">
+            <h2 class="text-3xl font-bold text-white">Related articles</h2>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-black">
+              {related.length}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {related.map((r) => {
+              const relTheme = r.themes?.[0] ?? "ai-product-strategy";
+              const relGradient =
+                themeGradients[relTheme] ?? themeGradients["ai-product-strategy"];
+              return (
+                <a
+                  href={`/news/${r.slug}`}
+                  class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+                >
+                  {r.hero_image_url ? (
+                    <img
+                      src={r.hero_image_url}
+                      alt={r.hero_image_alt ?? r.title}
+                      class="w-full aspect-video object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div
+                      class={`w-full aspect-video bg-gradient-to-br ${relGradient} flex items-center justify-center p-6`}
+                    >
+                      <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
+                        Product Impact
+                      </div>
+                    </div>
+                  )}
+                  <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                        {formatLabel(r.format)}
+                      </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors">
+                      {r.title}
+                    </h3>
+                    {r.subtitle && (
+                      <p class="text-sm text-[#a0a0a0] line-clamp-2">
+                        {r.subtitle}
+                      </p>
+                    )}
+                    <div class="text-xs text-[#707070] mt-4">
+                      {new Date(r.publish_date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      {r.read_time_minutes && ` · ${r.read_time_minutes} min read`}
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </article>
+  </main>
+
+  <Footer />
+</BaseLayout>
