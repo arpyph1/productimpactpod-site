@@ -1,0 +1,270 @@
+---
+// /privacy — privacy policy.
+// Required for Google Publisher Center, Apple News, and CCPA/GDPR compliance.
+// Describes the actual data practices of the site as currently built.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+const lastUpdated = "2026-04-15";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Privacy Policy | Product Impact",
+  url: `${siteUrl}/privacy`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  dateModified: lastUpdated,
+};
+---
+
+<BaseLayout
+  title="Privacy Policy | Product Impact"
+  description="How Product Impact handles personal data, analytics, cookies, and third-party services."
+  canonicalUrl={`${siteUrl}/privacy`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16 max-w-4xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
+        Privacy Policy
+      </h1>
+      <p class="text-sm text-[#707070]">
+        Last updated: {new Date(lastUpdated).toLocaleDateString("en-US", {
+          year: "numeric", month: "long", day: "numeric",
+        })}
+      </p>
+    </header>
+
+    <div class="article-prose">
+      <section>
+        <h2>Summary</h2>
+        <p>
+          Product Impact is built to be low-tracking by default. The website is
+          a static site — we do not run advertising networks, we do not set
+          tracking cookies of our own, and we do not sell or share your
+          personal information. The sections below describe exactly what is
+          collected and by whom.
+        </p>
+      </section>
+
+      <section>
+        <h2>Who operates this site</h2>
+        <p>
+          Product Impact Podcast is operated by Arpy Dragffy. For privacy
+          inquiries, contact{" "}
+          <a href="mailto:privacy@productimpactpod.com">
+            privacy@productimpactpod.com
+          </a>
+          .
+        </p>
+      </section>
+
+      <section>
+        <h2>Data we collect</h2>
+        <h3>When you read the website</h3>
+        <p>
+          Our pages are served from Cloudflare Pages. Cloudflare automatically
+          logs standard request information — IP address, user agent, page
+          requested, timestamp, and referrer — for security, rate limiting,
+          and performance purposes. This data is retained by Cloudflare
+          according to their{" "}
+          <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">
+            privacy policy
+          </a>
+          . We do not receive individual-level analytics from Cloudflare for
+          website reads.
+        </p>
+
+        <h3>When you subscribe to our newsletter</h3>
+        <p>
+          Our newsletter is hosted on Substack. If you subscribe, Substack
+          collects your email address and any optional profile information you
+          provide. We can see aggregate subscriber counts and individual email
+          open/click rates. Substack's data practices are described in the{" "}
+          <a href="https://substack.com/privacy" target="_blank" rel="noopener">
+            Substack privacy policy
+          </a>
+          . You can unsubscribe at any time via the link in every email.
+        </p>
+
+        <h3>When you listen to the podcast</h3>
+        <p>
+          Our podcast is distributed via a third-party hosting provider (e.g.
+          Spotify for Podcasters, Libsyn, or similar) and listened to through
+          platforms like Spotify, Apple Podcasts, and YouTube. Each platform
+          has its own privacy and listening-analytics practices. We receive
+          aggregate listening statistics from our hosting provider — we do not
+          identify individual listeners.
+        </p>
+
+        <h3>When you email us</h3>
+        <p>
+          If you email an address at productimpactpod.com, we retain the
+          correspondence for as long as reasonably needed to respond and to
+          maintain records of editorial tips, corrections, or partnership
+          inquiries. We do not add your email address to a marketing list
+          unless you explicitly subscribe.
+        </p>
+      </section>
+
+      <section>
+        <h2>Cookies and local storage</h2>
+        <p>
+          The Product Impact website does not set any first-party analytics or
+          advertising cookies. A minimal set of technical cookies may be set
+          by Cloudflare for security and bot detection purposes — these are
+          not used for advertising or cross-site tracking.
+        </p>
+        <p>
+          If you click a link that takes you to a third-party site (Substack,
+          Spotify, LinkedIn, YouTube, etc.), that site's own cookie and
+          tracking practices apply.
+        </p>
+      </section>
+
+      <section>
+        <h2>Third-party services</h2>
+        <p>
+          We rely on the following third-party services to operate:
+        </p>
+        <ul>
+          <li>
+            <strong>Cloudflare</strong> — hosting, DNS, CDN, and bot protection.
+          </li>
+          <li>
+            <strong>Supabase</strong> — database that stores published article
+            content. Article data served to readers is public. Supabase does
+            not receive your personal data from ordinary site visits.
+          </li>
+          <li>
+            <strong>Substack</strong> — newsletter delivery and hosting.
+            Substack receives your data only if you subscribe.
+          </li>
+          <li>
+            <strong>Podcast platforms</strong> — Spotify, Apple Podcasts,
+            YouTube, and our podcast host. These platforms receive data from
+            you only when you actively listen on them.
+          </li>
+          <li>
+            <strong>Email providers</strong> — if you email us, our email
+            provider processes the message.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>What we do <em>not</em> do</h2>
+        <ul>
+          <li>We do not run display advertising or ad networks.</li>
+          <li>
+            We do not sell, rent, or share your personal information with
+            data brokers.
+          </li>
+          <li>
+            We do not set first-party analytics trackers (no Google Analytics,
+            Plausible, Fathom, or similar cookie-based trackers on the site
+            itself).
+          </li>
+          <li>
+            We do not use cross-site tracking pixels on our pages.
+          </li>
+          <li>
+            We do not fingerprint visitors or build behavioural profiles.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Your rights</h2>
+        <p>
+          Depending on where you live, you may have rights under privacy laws
+          such as the EU General Data Protection Regulation (GDPR), the UK
+          GDPR, the California Consumer Privacy Act (CCPA), or similar
+          jurisdictions. These may include the right to:
+        </p>
+        <ul>
+          <li>Access the personal data we hold about you;</li>
+          <li>Correct inaccurate personal data;</li>
+          <li>Delete personal data (subject to lawful retention needs);</li>
+          <li>Object to or restrict certain processing;</li>
+          <li>Withdraw consent for optional processing (e.g. newsletter);</li>
+          <li>Lodge a complaint with your local data protection authority.</li>
+        </ul>
+        <p>
+          To exercise any of these rights, email{" "}
+          <a href="mailto:privacy@productimpactpod.com">
+            privacy@productimpactpod.com
+          </a>
+          . For rights that apply to data held by third-party services
+          (Substack, podcast platforms), those services have their own process
+          — we can point you in the right direction.
+        </p>
+        <p>
+          <strong>Do Not Sell or Share (CCPA):</strong> we do not sell or
+          share personal information as those terms are defined under the
+          CCPA.
+        </p>
+      </section>
+
+      <section>
+        <h2>Retention</h2>
+        <p>
+          We retain data only as long as needed for the purpose it was
+          collected. Email correspondence is retained for editorial records
+          and business operations. Aggregate analytics and server logs are
+          retained per our providers' default retention windows.
+        </p>
+      </section>
+
+      <section>
+        <h2>Children</h2>
+        <p>
+          Product Impact is not directed at children under 16. We do not
+          knowingly collect personal data from children. If you believe a
+          child has provided us with personal data, contact{" "}
+          <a href="mailto:privacy@productimpactpod.com">
+            privacy@productimpactpod.com
+          </a>{" "}
+          and we will delete it.
+        </p>
+      </section>
+
+      <section>
+        <h2>International transfers</h2>
+        <p>
+          Our infrastructure providers (Cloudflare, Supabase, Substack) operate
+          globally. Your data may be processed in countries other than your
+          own, including the United States. These providers use standard
+          contractual clauses and other lawful transfer mechanisms.
+        </p>
+      </section>
+
+      <section>
+        <h2>Changes to this policy</h2>
+        <p>
+          We may update this policy as the site evolves. Material changes will
+          be noted at the top of this page with a revised "Last updated" date.
+          Continued use of the site after changes take effect means you accept
+          the updated policy.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Questions about this policy or our data practices:{" "}
+          <a href="mailto:privacy@productimpactpod.com">
+            privacy@productimpactpod.com
+          </a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

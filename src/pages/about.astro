@@ -1,0 +1,307 @@
+---
+// /about — publisher identity, editorial standards, ownership disclosure.
+// This page exists to satisfy Google Publisher Center and Apple News Publisher
+// trust-page requirements. Aggregators reject submissions missing this.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+
+// Site-wide publisher schema — Google News weights this heavily
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "NewsMediaOrganization",
+  name: "Product Impact",
+  alternateName: "Product Impact Podcast",
+  url: siteUrl,
+  logo: {
+    "@type": "ImageObject",
+    url: `${siteUrl}/logo.png`,
+    width: 600,
+    height: 60,
+  },
+  description:
+    "AI product impact — independent news, analysis, and case studies covering the AI products reshaping industries.",
+  email: "info@productimpactpod.com",
+  foundingDate: "2024",
+  founder: [
+    {
+      "@type": "Person",
+      name: "Arpy Dragffy",
+      url: `${siteUrl}/people/arpy-dragffy`,
+    },
+  ],
+  publishingPrinciples: `${siteUrl}/about#editorial-standards`,
+  actionableFeedbackPolicy: `${siteUrl}/about#corrections`,
+  ethicsPolicy: `${siteUrl}/about#ethics`,
+  ownershipFundingInfo: `${siteUrl}/about#ownership`,
+  diversityPolicy: `${siteUrl}/about#diversity`,
+  masthead: `${siteUrl}/about#masthead`,
+  missionCoveragePrioritiesPolicy: `${siteUrl}/about#mission`,
+  correctionsPolicy: `${siteUrl}/about#corrections`,
+  verificationFactCheckingPolicy: `${siteUrl}/about#fact-checking`,
+  unnamedSourcesPolicy: `${siteUrl}/about#sources`,
+  sameAs: [
+    "https://productimpactpod.substack.com",
+    "https://linkedin.com/company/product-impact-podcast",
+    "https://youtube.com/@productimpactpod",
+  ],
+};
+
+const aboutPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  name: "About Product Impact",
+  url: `${siteUrl}/about`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  mainEntity: organizationJsonLd,
+};
+---
+
+<BaseLayout
+  title="About | Product Impact"
+  description="Product Impact is independent coverage of the AI products reshaping industries. Editorial standards, ownership, and how we work."
+  canonicalUrl={`${siteUrl}/about`}
+  jsonLd={[organizationJsonLd, aboutPageJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-16 max-w-4xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
+        About Product Impact
+      </h1>
+      <p class="text-xl text-[#d4d4d4] leading-relaxed max-w-3xl">
+        Independent news, analysis, and case studies covering the AI products
+        reshaping how work happens across industries.
+      </p>
+    </header>
+
+    <div class="article-prose">
+      <section id="mission">
+        <h2>Mission</h2>
+        <p>
+          Product Impact covers the AI products that are actually changing how
+          industries work. We focus on the craft of building and shipping AI
+          products — the research, design, deployment, and adoption decisions that
+          separate products that create lasting value from those that don't.
+        </p>
+        <p>
+          Our audience is product leaders, researchers, designers, and
+          practitioners building AI products inside companies ranging from early
+          startups to the enterprise. Our coverage is practitioner-first: what
+          decisions are working, what's not, and why.
+        </p>
+      </section>
+
+      <section id="editorial-standards">
+        <h2>Editorial Standards</h2>
+        <p>
+          Every article published on Product Impact follows a consistent set of
+          standards:
+        </p>
+        <ul>
+          <li>
+            <strong>Primary sources first.</strong> We link to original
+            documentation, research papers, company announcements, and speakers
+            wherever possible. If we cite a claim, you can follow it to its
+            origin.
+          </li>
+          <li>
+            <strong>Named expertise.</strong> Every article carries a visible
+            byline. Contributors are product practitioners, researchers, and
+            founders with direct experience in the domains they cover.
+          </li>
+          <li>
+            <strong>Disclosure of interests.</strong> When an article touches a
+            company, product, or person where the author, host, or publication
+            has a commercial relationship, we disclose it in the article.
+          </li>
+          <li>
+            <strong>No paid placement in editorial.</strong> Sponsorships are
+            clearly labelled and separate from editorial coverage. Sponsors do
+            not review or influence editorial content.
+          </li>
+          <li>
+            <strong>Opinion labelled as opinion.</strong> Analysis and opinion
+            articles are flagged with the "Opinion" or "News Analysis" format
+            badge. News briefs and release notes are reported, not opinionated.
+          </li>
+        </ul>
+      </section>
+
+      <section id="fact-checking">
+        <h2>Verification &amp; Fact-Checking</h2>
+        <p>
+          Before publication, every article is checked for:
+        </p>
+        <ul>
+          <li>
+            Accurate attribution of quotes, statistics, and technical claims
+            to a named, verifiable source.
+          </li>
+          <li>
+            Correct representation of third-party products, research, and
+            companies — with links to the primary source for every claim.
+          </li>
+          <li>
+            Technical accuracy of descriptions of AI systems, architectures,
+            and capabilities. When reporting on emerging technology, we
+            distinguish between demonstrated behaviour, claimed behaviour, and
+            speculative projection.
+          </li>
+        </ul>
+        <p>
+          Interview transcripts are reviewed by the interviewee for accuracy
+          before publication. Quotes may be lightly edited for clarity but never
+          for substance.
+        </p>
+      </section>
+
+      <section id="corrections">
+        <h2>Corrections</h2>
+        <p>
+          If you spot an error — factual, technical, or a misattribution — email
+          us at{" "}
+          <a href="mailto:corrections@productimpactpod.com">
+            corrections@productimpactpod.com
+          </a>
+          . We aim to acknowledge within one business day and correct confirmed
+          errors promptly.
+        </p>
+        <p>
+          Corrections are made in-place with a dated <em>Correction:</em>{" "}
+          appendix at the bottom of the article. Substantial corrections
+          (factual errors that change the article's conclusions) are noted in
+          the article's metadata and announced on our social channels.
+        </p>
+      </section>
+
+      <section id="sources">
+        <h2>Unnamed Sources</h2>
+        <p>
+          We prefer named, on-the-record sources. When we use unnamed sources,
+          we do so only when:
+        </p>
+        <ul>
+          <li>The information is material to the public interest;</li>
+          <li>
+            The source has direct, verifiable knowledge (not second-hand
+            speculation);
+          </li>
+          <li>
+            The source would face professional or personal risk from being
+            named;
+          </li>
+          <li>
+            At least one additional source has independently corroborated the
+            information.
+          </li>
+        </ul>
+        <p>
+          We describe unnamed sources by their relationship to the story (e.g.
+          "an engineer at the company") with enough context that readers can
+          assess credibility.
+        </p>
+      </section>
+
+      <section id="ethics">
+        <h2>Ethics Policy</h2>
+        <p>
+          Product Impact does not accept payment or other consideration in
+          exchange for editorial coverage. Contributors disclose any commercial
+          relationship with companies, products, or people they cover — and we
+          publish those disclosures visibly in the article.
+        </p>
+        <p>
+          Our hosts and regular contributors have their own businesses and
+          consulting practices. See <a href="#ownership">Ownership &amp; Funding</a>{" "}
+          for the relationships that matter to disclosure.
+        </p>
+      </section>
+
+      <section id="ownership">
+        <h2>Ownership &amp; Funding</h2>
+        <p>
+          Product Impact Podcast is independently owned and operated. It is not
+          a division of, or funded by, any AI company or investor group.
+        </p>
+        <p>
+          <strong>Publisher:</strong> Arpy Dragffy, founder of{" "}
+          <a href="https://ph1.ca" target="_blank" rel="noopener">PH1 Research</a>{" "}
+          and{" "}
+          <a href="https://aivalueacceleration.com" target="_blank" rel="noopener">
+            AI Value Acceleration
+          </a>
+          . PH1 Research is a product adoption research firm; AI Value
+          Acceleration is an enterprise AI adoption consultancy. Both are
+          independent of Product Impact and do not influence editorial.
+        </p>
+        <p>
+          <strong>Revenue sources:</strong> Sponsorships and the{" "}
+          <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener">
+            Substack newsletter
+          </a>
+          . Sponsorships are labelled clearly and separated from editorial.
+          Sponsors have no approval rights over coverage.
+        </p>
+        <p>
+          If coverage involves a company, product, or person where a commercial
+          relationship exists (consulting client of PH1 or AIVA, podcast
+          sponsor, investor in a portfolio company), we disclose it in the
+          article.
+        </p>
+      </section>
+
+      <section id="masthead">
+        <h2>Masthead</h2>
+        <p>
+          <strong><a href="/people/arpy-dragffy">Arpy Dragffy</a></strong> —
+          Co-host, Producer, Publisher. Founder of PH1 Research and AI Value
+          Acceleration. Focused on enterprise AI adoption and product impact
+          research.
+        </p>
+        <p>
+          <strong><a href="/people/brittany-hobbs">Brittany Hobbs</a></strong> —
+          Co-host. Product leader working at the intersection of AI
+          capabilities, product strategy, and go-to-market.
+        </p>
+      </section>
+
+      <section id="diversity">
+        <h2>Diversity &amp; Coverage Policy</h2>
+        <p>
+          We actively seek out perspectives beyond the dominant narratives of
+          Silicon Valley AI. This means covering AI product work happening
+          outside the Bay Area, in non-English markets, inside regulated
+          industries, and at companies beyond the largest AI labs. Our guest
+          selection, contributor network, and sourcing aims to reflect the
+          breadth of practitioners actually shipping AI products today.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Editorial: <a href="mailto:info@productimpactpod.com">info@productimpactpod.com</a>
+          <br />
+          Corrections: <a href="mailto:corrections@productimpactpod.com">corrections@productimpactpod.com</a>
+          <br />
+          Partnerships: <a href="mailto:partner@productimpactpod.com">partner@productimpactpod.com</a>
+          <br />
+          Tips &amp; story pitches: <a href="mailto:tips@productimpactpod.com">tips@productimpactpod.com</a>
+        </p>
+        <p>
+          See also: <a href="/contact">Full contact page</a> ·{" "}
+          <a href="/partnerships">Partnerships</a> ·{" "}
+          <a href="/privacy">Privacy</a> ·{" "}
+          <a href="/terms">Terms</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

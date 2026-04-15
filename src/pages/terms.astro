@@ -1,0 +1,278 @@
+---
+// /terms — terms of service.
+// Covers content licensing, user conduct, disclaimers, limitations of liability.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+const lastUpdated = "2026-04-15";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Terms of Service | Product Impact",
+  url: `${siteUrl}/terms`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  dateModified: lastUpdated,
+};
+---
+
+<BaseLayout
+  title="Terms of Service | Product Impact"
+  description="Terms governing use of the Product Impact website, newsletter, and podcast."
+  canonicalUrl={`${siteUrl}/terms`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16 max-w-4xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
+        Terms of Service
+      </h1>
+      <p class="text-sm text-[#707070]">
+        Last updated: {new Date(lastUpdated).toLocaleDateString("en-US", {
+          year: "numeric", month: "long", day: "numeric",
+        })}
+      </p>
+    </header>
+
+    <div class="article-prose">
+      <section>
+        <h2>Agreement</h2>
+        <p>
+          By accessing or using productimpactpod.com, subscribing to the
+          newsletter, or listening to the podcast, you agree to these Terms of
+          Service and our <a href="/privacy">Privacy Policy</a>. If you don't
+          agree, please don't use the site or services.
+        </p>
+      </section>
+
+      <section>
+        <h2>Who we are</h2>
+        <p>
+          "Product Impact," "we," "us," and "our" refer to Product Impact
+          Podcast, operated by Arpy Dragffy. Contact:{" "}
+          <a href="mailto:info@productimpactpod.com">info@productimpactpod.com</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Editorial content</h2>
+        <p>
+          All editorial content — articles, analysis, interviews, podcast
+          episodes, and newsletter content — is produced by Product Impact and
+          its contributors. Content is provided for informational and
+          educational purposes only. It does not constitute professional,
+          legal, financial, medical, or investment advice.
+        </p>
+        <p>
+          Opinions expressed by hosts, contributors, guests, or interviewees
+          are their own and do not necessarily reflect the views of Product
+          Impact, our sponsors, or any other contributor's employer.
+        </p>
+      </section>
+
+      <section>
+        <h2>Copyright and licensing</h2>
+        <h3>Our content</h3>
+        <p>
+          Unless otherwise noted, all content published on productimpactpod.com
+          is copyright © Product Impact Podcast. All rights reserved.
+        </p>
+        <p>
+          You may:
+        </p>
+        <ul>
+          <li>
+            Read, listen, and share links to our content for personal,
+            non-commercial use;
+          </li>
+          <li>
+            Quote short excerpts (up to approximately 100 words) for
+            journalistic, educational, or commentary purposes, with a visible
+            attribution and link back to the original article;
+          </li>
+          <li>
+            Cite and reference articles in academic, research, or journalistic
+            work with standard attribution.
+          </li>
+        </ul>
+        <p>
+          You may not:
+        </p>
+        <ul>
+          <li>
+            Republish full articles, audio episodes, or substantial portions
+            of our content without written permission;
+          </li>
+          <li>
+            Use our content to train machine learning models except where we
+            explicitly permit it via robots.txt allow rules for specific
+            crawlers;
+          </li>
+          <li>
+            Frame, mirror, or re-host our content on other domains;
+          </li>
+          <li>
+            Remove attribution, copyright notices, or links from any excerpt
+            you quote.
+          </li>
+        </ul>
+        <p>
+          For syndication, translation, or republication requests, contact{" "}
+          <a href="mailto:info@productimpactpod.com">info@productimpactpod.com</a>.
+        </p>
+
+        <h3>Third-party content</h3>
+        <p>
+          Articles may quote, embed, or reference third-party content (company
+          blog posts, research papers, product demos, etc.). Such content
+          remains the property of its original owner and is used under fair
+          use / fair dealing principles with attribution.
+        </p>
+
+        <h3>Guest and interviewee content</h3>
+        <p>
+          Interview subjects retain copyright in their own statements.
+          Publication on Product Impact implies consent for distribution via
+          our website, podcast feeds, newsletter, and syndication partners.
+          Guests may request a transcript for review before publication.
+        </p>
+      </section>
+
+      <section>
+        <h2>Trademarks</h2>
+        <p>
+          "Product Impact," "Product Impact Podcast," and the Product Impact
+          logo are marks of Product Impact Podcast. All other trademarks
+          referenced on the site are the property of their respective owners
+          and are used for identification and commentary only.
+        </p>
+      </section>
+
+      <section>
+        <h2>Accuracy and disclaimers</h2>
+        <p>
+          We work to ensure factual accuracy (see our{" "}
+          <a href="/about#fact-checking">fact-checking policy</a> and{" "}
+          <a href="/about#corrections">corrections policy</a>). However, the
+          site and its content are provided "as is" without warranties of any
+          kind — express, implied, or statutory.
+        </p>
+        <p>
+          AI is a fast-moving field. Information that is accurate on the date
+          of publication may be superseded by new product releases, research,
+          or corrections. We do our best to note material updates, but we do
+          not guarantee that archival content remains current.
+        </p>
+        <p>
+          Links to third-party sites are provided for convenience. We do not
+          endorse and are not responsible for the content, accuracy, or
+          practices of external sites.
+        </p>
+      </section>
+
+      <section>
+        <h2>User conduct</h2>
+        <p>
+          When you interact with us — by email, social media, submitting tips,
+          or any other channel — you agree not to:
+        </p>
+        <ul>
+          <li>Provide false or misleading information;</li>
+          <li>
+            Send content that infringes third-party intellectual property,
+            privacy, or publicity rights;
+          </li>
+          <li>
+            Send unlawful, defamatory, threatening, or harassing material;
+          </li>
+          <li>
+            Attempt to compromise the security or integrity of our systems;
+          </li>
+          <li>
+            Use automated tools to scrape, mirror, or harvest content beyond
+            what our robots.txt and public feeds permit.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Sponsorships and advertising</h2>
+        <p>
+          Sponsored content is clearly labelled. Sponsorships do not
+          influence editorial coverage. See the{" "}
+          <a href="/about#editorial-standards">editorial standards</a> and{" "}
+          <a href="/partnerships">partnerships page</a> for details.
+        </p>
+      </section>
+
+      <section>
+        <h2>Limitation of liability</h2>
+        <p>
+          To the maximum extent permitted by law, Product Impact, its owners,
+          contributors, and service providers shall not be liable for any
+          indirect, incidental, special, consequential, or punitive damages
+          arising from your use of the site, newsletter, or podcast — or for
+          decisions you make based on our content.
+        </p>
+        <p>
+          Our total liability for any direct damages is limited to the amount
+          you paid us in the 12 months preceding the event giving rise to the
+          claim, which for most readers is zero.
+        </p>
+      </section>
+
+      <section>
+        <h2>Indemnification</h2>
+        <p>
+          You agree to indemnify and hold Product Impact harmless from claims
+          arising out of your violation of these Terms or your misuse of the
+          content or services.
+        </p>
+      </section>
+
+      <section>
+        <h2>Termination</h2>
+        <p>
+          We may restrict or terminate access to the site or services for
+          anyone who violates these Terms. You may stop using our services
+          at any time by unsubscribing from newsletters, unfollowing the
+          podcast, or simply not visiting the site.
+        </p>
+      </section>
+
+      <section>
+        <h2>Governing law</h2>
+        <p>
+          These Terms are governed by the laws of Canada and the Province of
+          British Columbia, without regard to conflict-of-laws principles.
+          Disputes will be resolved in the courts located in Vancouver, British
+          Columbia, to the extent permitted by applicable law.
+        </p>
+      </section>
+
+      <section>
+        <h2>Changes to these Terms</h2>
+        <p>
+          We may update these Terms. Material changes will be noted at the
+          top of this page with a revised "Last updated" date. Continued use
+          of the services after changes means you accept the updated Terms.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Questions about these Terms:{" "}
+          <a href="mailto:info@productimpactpod.com">info@productimpactpod.com</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>
