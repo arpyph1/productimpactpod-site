@@ -5,82 +5,11 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import {
-  getAllThemes,
-  getArticlesByTheme,
-  formatLabel,
-  themeLabel,
-  type Theme,
-} from "@lib/supabase";
-
-const canonicalThemes = [
-  {
-    slug: "ai-product-strategy",
-    name: "AI Product Strategy",
-    description: "How to define, build, and position AI products in competitive markets.",
-    intro: "AI product strategy is the practice of deciding what to build, for whom, and why — in an era when the capabilities themselves are evolving faster than most product frameworks. This theme covers product vision, positioning, competitive differentiation, and the strategic decisions that separate AI products that create lasting value from those that don't.",
-    gradient: "from-[#ff6b4a] to-[#8a3a28]",
-    color: "#ff6b4a",
-  },
-  {
-    slug: "agents-agentic-systems",
-    name: "Agents & Agentic Systems",
-    description: "The architecture, design, and deployment of autonomous AI agents.",
-    intro: "Agentic systems are AI products that can plan, reason, use tools, and take actions on behalf of users — autonomously, over extended time horizons. This theme covers multi-agent architectures, tool use, memory, orchestration, safety constraints, and the UX challenges of building products that users trust to act.",
-    gradient: "from-[#9b7bff] to-[#4a3a80]",
-    color: "#9b7bff",
-  },
-  {
-    slug: "ux-experience-design-for-ai",
-    name: "UX & Experience Design for AI",
-    description: "Designing AI-powered interfaces that earn trust and drive adoption.",
-    intro: "AI changes the fundamental contract between software and users. When outputs are probabilistic and capabilities shift with each model update, traditional UX heuristics need rethinking. This theme covers interaction design for AI, trust-building UI patterns, error recovery, progressive disclosure of AI capabilities, and what good AI product design looks like in practice.",
-    gradient: "from-[#4ab8c9] to-[#1f5a66]",
-    color: "#4ab8c9",
-  },
-  {
-    slug: "adoption-organizational-change",
-    name: "Adoption & Organizational Change",
-    description: "Getting teams to use AI products — and building orgs that sustain it.",
-    intro: "The hardest part of AI products is rarely the model — it's getting people to use them, and building the organizational structures that sustain adoption over time. This theme covers change management, workflow integration, training, resistance patterns, and the organizational design decisions that separate AI deployments that stick from those that don't.",
-    gradient: "from-[#f5a623] to-[#7a5310]",
-    color: "#f5a623",
-  },
-  {
-    slug: "evaluation-benchmarking",
-    name: "Evaluation & Benchmarking",
-    description: "Measuring AI product quality, reliability, and business impact.",
-    intro: "How do you know if your AI product is working? Evaluation is one of the hardest open problems in AI product development. This theme covers evals design, human evaluation, automated metrics, A/B testing for AI, quality regression detection, and how to connect model performance to business outcomes that actually matter.",
-    gradient: "from-[#6bbf71] to-[#2d5a30]",
-    color: "#6bbf71",
-  },
-  {
-    slug: "go-to-market-distribution",
-    name: "Go-to-Market & Distribution",
-    description: "Bringing AI products to market — channels, pricing, and growth.",
-    intro: "AI products create new GTM challenges: usage-based pricing, trust hurdles, enterprise procurement complexity, and the challenge of demonstrating ROI on probabilistic outputs. This theme covers positioning, channel strategy, pricing models, sales motion, and the growth tactics that are working for AI-native companies.",
-    gradient: "from-[#ff8566] to-[#8a3a28]",
-    color: "#ff8566",
-  },
-  {
-    slug: "data-semantics-knowledge-foundations",
-    name: "Data, Semantics & Knowledge Foundations",
-    description: "The data infrastructure, ontologies, and knowledge graphs that power AI products.",
-    intro: "AI products are only as good as the data and knowledge representations underlying them. This theme covers data pipelines, knowledge graphs, ontologies, RAG architectures, semantic search, embeddings, and the data engineering decisions that determine whether AI products deliver accurate, grounded, and trustworthy outputs.",
-    gradient: "from-[#5ba3cc] to-[#1f4a66]",
-    color: "#5ba3cc",
-  },
-  {
-    slug: "governance-risk-trust",
-    name: "Governance, Risk & Trust",
-    description: "Safety, compliance, and building AI products that organisations can trust.",
-    intro: "As AI products move from experimental to mission-critical, governance becomes a product requirement rather than a checkbox. This theme covers AI safety, bias and fairness, regulatory compliance (EU AI Act, NIST AI RMF), responsible AI frameworks, red-teaming, and the policies and processes that help organizations deploy AI responsibly.",
-    gradient: "from-[#c96bff] to-[#5a2a80]",
-    color: "#c96bff",
-  },
-];
+import { getAllThemes, getArticlesByTheme, formatLabel } from "@lib/supabase";
+import { canonicalThemes, themeGradients } from "@lib/themes";
 
 export async function getStaticPaths() {
+  const { canonicalThemes } = await import("@lib/themes");
   return canonicalThemes.map((t) => ({
     params: { slug: t.slug },
     props: { themeConfig: t },
@@ -104,24 +33,13 @@ const dbTheme = dbThemes.find((t) => t.slug === themeConfig.slug);
 const longForm = dbTheme?.long_form_intro ?? themeConfig.intro;
 const metaDescription = dbTheme?.meta_description ?? themeConfig.description;
 
-const themeGradients: Record<string, string> = {
-  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
-  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
-  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
-  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
-  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
-  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
-  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
-  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
-};
-
 const hubJsonLd = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   name: `${themeConfig.name} | Product Impact`,
   description: metaDescription,
   url: `${siteUrl}/themes/${themeConfig.slug}`,
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  isPartOf: { "@id": `${siteUrl}/#website` },
   mainEntity: {
     "@type": "ItemList",
     itemListElement: articles.map((a, i) => ({

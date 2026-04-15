@@ -51,32 +51,18 @@ const displayThemes =
     ? themes.map((t) => ({ slug: t.slug, name: t.name, description: t.description }))
     : canonicalThemes.map((t) => ({ ...t, description: null }));
 
-const websiteJsonLd = {
+// Homepage declares itself as WebPage referencing the site-wide WebSite/Organization
+const homepageJsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Product Impact",
-  url: siteUrl,
+  "@type": "WebPage",
+  "@id": `${siteUrl}/#webpage`,
+  url: `${siteUrl}/`,
+  name: "Product Impact — AI product news, releases, and case studies",
   description:
     "AI product impact — news, releases, and case studies about the products transforming how we work and industries.",
-  publisher: {
-    "@type": "Organization",
-    name: "Product Impact",
-    url: siteUrl,
-    logo: {
-      "@type": "ImageObject",
-      url: `${siteUrl}/logo.png`,
-      width: 600,
-      height: 60,
-    },
-  },
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${siteUrl}/news?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  about: { "@id": `${siteUrl}/#organization` },
+  inLanguage: "en-US",
 };
 ---
 
@@ -84,7 +70,7 @@ const websiteJsonLd = {
   title="Product Impact — AI product news, releases, and case studies"
   description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
   canonicalUrl={`${siteUrl}/`}
-  jsonLd={websiteJsonLd}
+  jsonLd={homepageJsonLd}
 >
   <Nav />
 

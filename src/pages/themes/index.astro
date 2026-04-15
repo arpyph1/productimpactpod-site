@@ -5,60 +5,9 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { getAllThemes } from "@lib/supabase";
+import { canonicalThemes } from "@lib/themes";
 
 const siteUrl = "https://productimpactpod.com";
-
-// Canonical theme list — Supabase themes table overrides if populated
-const canonicalThemes = [
-  {
-    slug: "ai-product-strategy",
-    name: "AI Product Strategy",
-    description: "How to define, build, and position AI products in competitive markets.",
-    gradient: "from-[#ff6b4a] to-[#8a3a28]",
-  },
-  {
-    slug: "agents-agentic-systems",
-    name: "Agents & Agentic Systems",
-    description: "The architecture, design, and deployment of autonomous AI agents.",
-    gradient: "from-[#9b7bff] to-[#4a3a80]",
-  },
-  {
-    slug: "ux-experience-design-for-ai",
-    name: "UX & Experience Design for AI",
-    description: "Designing AI-powered interfaces that earn trust and drive adoption.",
-    gradient: "from-[#4ab8c9] to-[#1f5a66]",
-  },
-  {
-    slug: "adoption-organizational-change",
-    name: "Adoption & Organizational Change",
-    description: "Getting teams to use AI products — and building orgs that sustain it.",
-    gradient: "from-[#f5a623] to-[#7a5310]",
-  },
-  {
-    slug: "evaluation-benchmarking",
-    name: "Evaluation & Benchmarking",
-    description: "Measuring AI product quality, reliability, and business impact.",
-    gradient: "from-[#6bbf71] to-[#2d5a30]",
-  },
-  {
-    slug: "go-to-market-distribution",
-    name: "Go-to-Market & Distribution",
-    description: "Bringing AI products to market — channels, pricing, and growth.",
-    gradient: "from-[#ff8566] to-[#8a3a28]",
-  },
-  {
-    slug: "data-semantics-knowledge-foundations",
-    name: "Data, Semantics & Knowledge Foundations",
-    description: "The data infrastructure, ontologies, and knowledge graphs that power AI products.",
-    gradient: "from-[#5ba3cc] to-[#1f4a66]",
-  },
-  {
-    slug: "governance-risk-trust",
-    name: "Governance, Risk & Trust",
-    description: "Safety, compliance, and building AI products that organisations can trust.",
-    gradient: "from-[#c96bff] to-[#5a2a80]",
-  },
-];
 
 // Merge with Supabase data if available
 const dbThemes = await getAllThemes();

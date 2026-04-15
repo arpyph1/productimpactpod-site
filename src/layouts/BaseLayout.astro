@@ -5,6 +5,7 @@
 // crawlers see.
 
 import "../styles/global.css";
+import { publisherSchema, websiteSchema } from "@lib/publisher";
 
 export interface Props {
   title: string;
@@ -44,7 +45,12 @@ const siteUrl = "https://productimpactpod.com";
 // PNG generated from src/brand/og-default.svg via scripts/build-brand-assets.mjs
 const fullOgImage = ogImage ?? `${siteUrl}/og-default.png`;
 
-const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+// Always include publisher + website schemas on every page.
+// Page-specific jsonLd (NewsArticle, PodcastEpisode, CollectionPage, etc.)
+// stacks on top. Linking via @id avoids duplication when /about renders its
+// own NewsMediaOrganization — Google canonicalises to the same @id.
+const pageJsonLd = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
 ---
 
 <!doctype html>

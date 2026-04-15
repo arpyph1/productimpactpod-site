@@ -9,54 +9,16 @@ import Footer from "@components/Footer.astro";
 
 const siteUrl = "https://productimpactpod.com";
 
-// Site-wide publisher schema — Google News weights this heavily
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "NewsMediaOrganization",
-  name: "Product Impact",
-  alternateName: "Product Impact Podcast",
-  url: siteUrl,
-  logo: {
-    "@type": "ImageObject",
-    url: `${siteUrl}/logo.png`,
-    width: 600,
-    height: 60,
-  },
-  description:
-    "AI product impact — independent news, analysis, and case studies covering the AI products reshaping industries.",
-  email: "info@productimpactpod.com",
-  foundingDate: "2024",
-  founder: [
-    {
-      "@type": "Person",
-      name: "Arpy Dragffy",
-      url: `${siteUrl}/people/arpy-dragffy`,
-    },
-  ],
-  publishingPrinciples: `${siteUrl}/about#editorial-standards`,
-  actionableFeedbackPolicy: `${siteUrl}/about#corrections`,
-  ethicsPolicy: `${siteUrl}/about#ethics`,
-  ownershipFundingInfo: `${siteUrl}/about#ownership`,
-  diversityPolicy: `${siteUrl}/about#diversity`,
-  masthead: `${siteUrl}/about#masthead`,
-  missionCoveragePrioritiesPolicy: `${siteUrl}/about#mission`,
-  correctionsPolicy: `${siteUrl}/about#corrections`,
-  verificationFactCheckingPolicy: `${siteUrl}/about#fact-checking`,
-  unnamedSourcesPolicy: `${siteUrl}/about#sources`,
-  sameAs: [
-    "https://productimpactpod.substack.com",
-    "https://linkedin.com/company/product-impact-podcast",
-    "https://youtube.com/@productimpactpod",
-  ],
-};
-
+// AboutPage references the site-wide publisher via @id; the full
+// NewsMediaOrganization definition lives in @lib/publisher and is
+// rendered by BaseLayout on every page.
 const aboutPageJsonLd = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
   name: "About Product Impact",
   url: `${siteUrl}/about`,
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
-  mainEntity: organizationJsonLd,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: { "@id": `${siteUrl}/#organization` },
 };
 ---
 
@@ -64,7 +26,7 @@ const aboutPageJsonLd = {
   title="About | Product Impact"
   description="Product Impact is independent coverage of the AI products reshaping industries. Editorial standards, ownership, and how we work."
   canonicalUrl={`${siteUrl}/about`}
-  jsonLd={[organizationJsonLd, aboutPageJsonLd]}
+  jsonLd={aboutPageJsonLd}
 >
   <Nav />
 

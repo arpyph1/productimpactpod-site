@@ -105,21 +105,12 @@ const newsArticleJsonLd = article.schema_jsonld ?? {
     url: `${siteUrl}/people/${article.author_slugs[i]}`,
     jobTitle: article.byline_role ?? undefined,
   })),
-  publisher: {
-    "@type": "Organization",
-    name: "Product Impact",
-    url: siteUrl,
-    logo: {
-      "@type": "ImageObject",
-      url: `${siteUrl}/logo.png`,
-      width: 600,
-      height: 60,
-    },
-  },
+  publisher: { "@id": `${siteUrl}/#organization` },
   mainEntityOfPage: {
     "@type": "WebPage",
     "@id": canonicalUrl,
   },
+  isPartOf: { "@id": `${siteUrl}/#website` },
   articleSection: article.themes?.[0] ?? undefined,
   keywords: [...(article.themes ?? []), ...(article.topics ?? [])].join(", "),
   wordCount: article.word_count ?? undefined,

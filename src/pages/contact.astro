@@ -9,49 +9,15 @@ import Footer from "@components/Footer.astro";
 
 const siteUrl = "https://productimpactpod.com";
 
+// ContactPoint array is already carried by the site-wide publisher schema
+// (@lib/publisher); this page just points at it by @id reference.
 const contactPageJsonLd = {
   "@context": "https://schema.org",
   "@type": "ContactPage",
   name: "Contact | Product Impact",
   url: `${siteUrl}/contact`,
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
-  mainEntity: {
-    "@type": "NewsMediaOrganization",
-    name: "Product Impact",
-    url: siteUrl,
-    contactPoint: [
-      {
-        "@type": "ContactPoint",
-        contactType: "editorial",
-        email: "info@productimpactpod.com",
-        availableLanguage: "en",
-      },
-      {
-        "@type": "ContactPoint",
-        contactType: "corrections",
-        email: "corrections@productimpactpod.com",
-        availableLanguage: "en",
-      },
-      {
-        "@type": "ContactPoint",
-        contactType: "tips",
-        email: "tips@productimpactpod.com",
-        availableLanguage: "en",
-      },
-      {
-        "@type": "ContactPoint",
-        contactType: "partnerships",
-        email: "partner@productimpactpod.com",
-        availableLanguage: "en",
-      },
-      {
-        "@type": "ContactPoint",
-        contactType: "privacy",
-        email: "privacy@productimpactpod.com",
-        availableLanguage: "en",
-      },
-    ],
-  },
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: { "@id": `${siteUrl}/#organization` },
 };
 
 const channels = [
