@@ -174,6 +174,50 @@ export async function getRelatedArticles(
   return (data ?? []) as Article[];
 }
 
+/**
+ * Aggregate the unique set of topic slugs used across all published articles.
+ * Topics are per-article free-form tags; this is the index used to enumerate
+ * static paths for /topics/[slug].
+ */
+export async function getAllTopics(): Promise<
+  Array<{ slug: string; count: number; firstSeen: string }>
+> {
+  const articles = await getAllArticles();
+  const counter = new Map<string, { count: number; firstSeen: string }>();
+  for (const a of articles) {
+    for (const topic of a.topics ?? []) {
+      const prev = counter.get(topic);
+      if (prev) {
+        prev.count++;
+        if (a.publish_date < prev.firstSeen) prev.firstSeen = a.publish_date;
+      } else {
+        counter.set(topic, { count: 1, firstSeen: a.publish_date });
+      }
+    }
+  }
+  return [...counter.entries()]
+    .map(([slug, v]) => ({ slug, ...v }))
+    .sort((a, b) => b.count - a.count); // most-covered first
+}
+
+export async function getArticlesByTopic(
+  topicSlug: string,
+  limit = 50,
+): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .contains("topics", [topicSlug])
+    .order("publish_date", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getArticlesByTopic error:", error);
+    return [];
+  }
+  return (data ?? []) as Article[];
+}
+
 export async function getArticlesByTheme(
   themeSlug: string,
   limit = 50,

@@ -1,0 +1,125 @@
+---
+// /news/page/[page] — pages 2+ of the news index.
+// Static paths generated for every page except page 1 (that's /news/index.astro).
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import ArticleCard from "@components/ArticleCard.astro";
+import Pagination from "@components/Pagination.astro";
+import { formatLabel, type Article } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const { getAllArticles } = await import("@lib/supabase");
+  const PAGE_SIZE = 24;
+  const articles = await getAllArticles();
+  const lastPage = Math.max(1, Math.ceil(articles.length / PAGE_SIZE));
+
+  // Generate only pages 2+
+  const paths = [];
+  for (let p = 2; p <= lastPage; p++) {
+    const start = (p - 1) * PAGE_SIZE;
+    paths.push({
+      params: { page: String(p) },
+      props: {
+        articles: articles.slice(start, start + PAGE_SIZE),
+        currentPage: p,
+        lastPage,
+      },
+    });
+  }
+  return paths;
+}
+
+const PAGE_SIZE = 24;
+
+interface Props {
+  articles: Article[];
+  currentPage: number;
+  lastPage: number;
+}
+
+const { articles, currentPage, lastPage } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/news/page/${currentPage}`;
+
+const prevUrl =
+  currentPage === 2 ? "/news" : `/news/page/${currentPage - 1}`;
+const nextUrl =
+  currentPage < lastPage ? `/news/page/${currentPage + 1}` : null;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `News — Page ${currentPage} | Product Impact`,
+  url: canonicalUrl,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: (currentPage - 1) * PAGE_SIZE + i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+---
+
+<BaseLayout
+  title={`News — Page ${currentPage} | Product Impact`}
+  description="AI product impact — news, releases, and case studies."
+  canonicalUrl={canonicalUrl}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <div class="mb-3">
+        <a href="/news" class="text-sm text-[#a0a0a0] hover:text-white">← Back to News</a>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        News
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        Page {currentPage} of {lastPage}.
+      </p>
+    </header>
+
+    {/* Format filter tabs */}
+    <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
+      <a
+        href="/news"
+        class="px-4 py-2 rounded-full text-sm font-semibold bg-background-card text-white border border-accent"
+      >
+        All
+      </a>
+      {([
+        "news-brief", "news-analysis", "release-note", "feature",
+        "interview", "case-study", "opinion", "explainer",
+        "product-review", "research-brief",
+      ] as const).map((fmt) => (
+        <a
+          href={`/news/format/${fmt}`}
+          class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
+        >
+          {formatLabel(fmt)}
+        </a>
+      ))}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {articles.map((article) => <ArticleCard article={article} />)}
+    </div>
+
+    <Pagination
+      currentPage={currentPage}
+      lastPage={lastPage}
+      prevUrl={prevUrl}
+      nextUrl={nextUrl}
+    />
+  </main>
+
+  <Footer />
+</BaseLayout>

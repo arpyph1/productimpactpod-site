@@ -1,0 +1,142 @@
+---
+// Shared index layout for /people, /concepts, /organizations, /products,
+// /frameworks, /sources. Lists every entity of the given type.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import type { Entity } from "@lib/supabase";
+
+interface Props {
+  entities: Entity[];
+  type: Entity["type"];
+  title: string;
+  description: string;
+  lead: string;
+  siteUrl?: string;
+}
+
+const {
+  entities,
+  type,
+  title,
+  description,
+  lead,
+  siteUrl = "https://productimpactpod.com",
+} = Astro.props;
+
+const typePlural: Record<Entity["type"], string> = {
+  concept:      "concepts",
+  person:       "people",
+  organization: "organizations",
+  product:      "products",
+  framework:    "frameworks",
+  source:       "sources",
+};
+
+const path = `/${typePlural[type]}`;
+
+const collectionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: title,
+  url: `${siteUrl}${path}`,
+  description,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: entities.length,
+    itemListElement: entities.map((e, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}${path}/${e.slug}`,
+      name: e.name,
+    })),
+  },
+};
+
+// Group alphabetically
+const grouped = new Map<string, Entity[]>();
+for (const e of entities) {
+  const letter = (e.name[0] ?? "#").toUpperCase();
+  const key = /[A-Z]/.test(letter) ? letter : "#";
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(e);
+}
+for (const list of grouped.values()) {
+  list.sort((a, b) => a.name.localeCompare(b.name));
+}
+const sortedGroups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+---
+
+<BaseLayout title={title} description={description} canonicalUrl={`${siteUrl}${path}`} jsonLd={collectionJsonLd}>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        <slot name="heading">{title.split(" | ")[0]}</slot>
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">{lead}</p>
+    </header>
+
+    {entities.length === 0 ? (
+      <div class="text-center py-24">
+        <p class="text-xl text-[#a0a0a0]">No {typePlural[type]} indexed yet.</p>
+      </div>
+    ) : (
+      <>
+        <nav aria-label="Jump to letter" class="flex flex-wrap gap-1.5 mb-10 pb-6 border-b border-[#2a2a2a]">
+          {sortedGroups.map(([letter]) => (
+            <a
+              href={`#letter-${letter}`}
+              class="w-8 h-8 flex items-center justify-center rounded-md text-sm font-bold text-[#d4d4d4] bg-background-card hover:bg-background-hover hover:text-accent transition-colors"
+            >
+              {letter}
+            </a>
+          ))}
+        </nav>
+
+        <div class="space-y-10">
+          {sortedGroups.map(([letter, list]) => (
+            <section id={`letter-${letter}`}>
+              <h2 class="text-3xl font-extrabold text-accent mb-5 border-b border-[#2a2a2a] pb-2">
+                {letter}
+              </h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {list.map((e) => (
+                  <a
+                    href={`${path}/${e.slug}`}
+                    class="group flex items-start gap-3 p-3 rounded-lg bg-background-card hover:bg-background-hover transition-colors"
+                  >
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center flex-shrink-0">
+                      <span class="text-white font-bold text-sm">
+                        {e.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-semibold text-white group-hover:text-accent transition-colors truncate">
+                        {e.name}
+                      </div>
+                      {e.description && (
+                        <div class="text-xs text-[#a0a0a0] line-clamp-2 mt-0.5 leading-snug">
+                          {e.description}
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <p class="text-sm text-[#707070] italic mt-12 pt-6 border-t border-[#2a2a2a]">
+          {entities.length} {typePlural[type]} indexed.
+        </p>
+      </>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

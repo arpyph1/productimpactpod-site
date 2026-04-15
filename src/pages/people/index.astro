@@ -1,0 +1,14 @@
+---
+import EntityIndex from "@components/EntityIndex.astro";
+import { getAllEntitiesByType } from "@lib/supabase";
+
+const entities = await getAllEntitiesByType("person");
+---
+
+<EntityIndex
+  entities={entities}
+  type="person"
+  title="People | Product Impact"
+  description="Every person — host, contributor, interview subject, founder, researcher — covered on Product Impact."
+  lead="Hosts, contributors, interview subjects, founders, and researchers who've appeared on Product Impact."
+/>

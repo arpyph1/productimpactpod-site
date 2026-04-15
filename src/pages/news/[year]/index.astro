@@ -1,0 +1,131 @@
+---
+// /news/[year] — year archive.
+// Lists every article published in the given year, newest first.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import ArticleCard from "@components/ArticleCard.astro";
+import { type Article } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const { getAllArticles } = await import("@lib/supabase");
+  const articles = await getAllArticles();
+  const byYear = new Map<string, Article[]>();
+  for (const a of articles) {
+    const d = new Date(a.publish_date);
+    if (isNaN(d.getTime())) continue;
+    const year = String(d.getUTCFullYear());
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year)!.push(a);
+  }
+  return [...byYear.entries()].map(([year, list]) => ({
+    params: { year },
+    props: { year, articles: list },
+  }));
+}
+
+interface Props {
+  year: string;
+  articles: Article[];
+}
+
+const { year, articles } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/news/${year}`;
+
+// Month buckets for in-page navigation
+const byMonth = new Map<string, Article[]>();
+for (const a of articles) {
+  const d = new Date(a.publish_date);
+  const key = `${year}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  if (!byMonth.has(key)) byMonth.set(key, []);
+  byMonth.get(key)!.push(a);
+}
+const sortedMonths = [...byMonth.entries()].sort(([a], [b]) => b.localeCompare(a));
+const monthName = (iso: string) => {
+  const [y, m] = iso.split("-");
+  const d = new Date(Date.UTC(+y, +m - 1, 1));
+  return d.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `News — ${year} | Product Impact`,
+  url: canonicalUrl,
+  description: `Every Product Impact article published in ${year}.`,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news` },
+    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive` },
+    { "@type": "ListItem", position: 4, name: year, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={`News — ${year} | Product Impact`}
+  description={`Every Product Impact article published in ${year} — AI product news, releases, and analysis.`}
+  canonicalUrl={canonicalUrl}
+  jsonLd={[jsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/news" class="hover:text-white">News</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/news/archive" class="hover:text-white">Archive</a></li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4]">{year}</li>
+      </ol>
+    </nav>
+
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        {year}
+      </h1>
+      <p class="text-lg text-[#d4d4d4]">
+        {articles.length} article{articles.length !== 1 ? "s" : ""} published.
+      </p>
+    </header>
+
+    {/* Month jump nav */}
+    {sortedMonths.length > 1 && (
+      <div class="flex flex-wrap gap-2 mb-12 pb-6 border-b border-[#2a2a2a]">
+        {sortedMonths.map(([iso, list]) => (
+          <a
+            href={`/news/${iso.replace("-", "/")}`}
+            class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] bg-background-card hover:text-white hover:bg-background-hover transition-colors"
+          >
+            {monthName(iso)} <span class="text-[#707070]">· {list.length}</span>
+          </a>
+        ))}
+      </div>
+    )}
+
+    {/* Articles grid */}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {articles.map((article) => <ArticleCard article={article} />)}
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

@@ -1,0 +1,14 @@
+---
+import EntityIndex from "@components/EntityIndex.astro";
+import { getAllEntitiesByType } from "@lib/supabase";
+
+const entities = await getAllEntitiesByType("framework");
+---
+
+<EntityIndex
+  entities={entities}
+  type="framework"
+  title="Frameworks | Product Impact"
+  description="Product, engineering, and evaluation frameworks referenced across our AI product coverage."
+  lead="Product, engineering, and evaluation frameworks referenced across our coverage."
+/>
