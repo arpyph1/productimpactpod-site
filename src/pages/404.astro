@@ -1,0 +1,145 @@
+---
+// /404 — not-found page.
+// Astro renders this for routes that don't match during static generation;
+// Cloudflare Pages serves it for any unmatched URL.
+// Includes recent articles and themes so a visitor who hit a dead link can
+// still find something useful — and crawlers still see fresh internal links.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllArticles, formatLabel } from "@lib/supabase";
+
+const siteUrl = "https://productimpactpod.com";
+const recentArticles = (await getAllArticles()).slice(0, 4);
+
+// Minimal JSON-LD — just enough to identify this as a valid page
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Page not found | Product Impact",
+  url: `${siteUrl}/404`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+};
+
+const themes = [
+  { slug: "ai-product-strategy",                  name: "AI Product Strategy" },
+  { slug: "agents-agentic-systems",               name: "Agents & Agentic Systems" },
+  { slug: "ux-experience-design-for-ai",          name: "UX & Experience Design for AI" },
+  { slug: "adoption-organizational-change",       name: "Adoption & Change" },
+  { slug: "evaluation-benchmarking",              name: "Evaluation & Benchmarking" },
+  { slug: "go-to-market-distribution",            name: "Go-to-Market" },
+  { slug: "data-semantics-knowledge-foundations", name: "Data & Knowledge" },
+  { slug: "governance-risk-trust",                name: "Governance & Trust" },
+];
+---
+
+<BaseLayout
+  title="Page not found | Product Impact"
+  description="The page you're looking for doesn't exist. Try the news index, themes, or episodes."
+  canonicalUrl={`${siteUrl}/404`}
+  noindex={true}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-24 max-w-4xl mx-auto text-center">
+    <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-6">
+      404
+    </div>
+    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6">
+      Page not found
+    </h1>
+    <p class="text-xl text-[#d4d4d4] leading-relaxed max-w-2xl mx-auto mb-10">
+      The URL you followed doesn't match anything we publish. It may have
+      moved, been renamed, or never existed. Here are some good places to
+      continue.
+    </p>
+
+    {/* Primary actions */}
+    <div class="flex flex-wrap items-center justify-center gap-3 mb-16">
+      <a
+        href="/"
+        class="px-6 py-3 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover transition-colors"
+      >
+        Home
+      </a>
+      <a
+        href="/news"
+        class="px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+      >
+        Latest news →
+      </a>
+      <a
+        href="/episodes"
+        class="px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+      >
+        Episodes →
+      </a>
+    </div>
+
+    {/* Themes */}
+    <section class="mb-16 text-left">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-4 text-center">
+        Browse by theme
+      </h2>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        {themes.map((t) => (
+          <a
+            href={`/themes/${t.slug}`}
+            class="px-4 py-2 rounded-full border border-[#3a3a3a] text-sm text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+          >
+            {t.name}
+          </a>
+        ))}
+      </div>
+    </section>
+
+    {/* Recent articles */}
+    {recentArticles.length > 0 && (
+      <section class="text-left">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-4 text-center">
+          Recent articles
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recentArticles.map((article) => (
+            <a
+              href={`/news/${article.slug}`}
+              class="group block bg-background-card hover:bg-background-hover rounded-xl p-5 transition-colors text-left"
+            >
+              <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                  {formatLabel(article.format)}
+                </span>
+              </div>
+              <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2">
+                {article.title}
+              </h3>
+              {article.subtitle && (
+                <p class="text-sm text-[#a0a0a0] mt-1 line-clamp-2">
+                  {article.subtitle}
+                </p>
+              )}
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {/* Help */}
+    <section class="mt-16 pt-10 border-t border-[#2a2a2a] text-left max-w-2xl mx-auto">
+      <h2 class="text-sm font-bold text-white mb-3">Still stuck?</h2>
+      <p class="text-sm text-[#a0a0a0] leading-relaxed">
+        If you followed a link that should work, please email{" "}
+        <a href="mailto:info@productimpactpod.com" class="text-accent hover:text-accent-hover">
+          info@productimpactpod.com
+        </a>{" "}
+        with the URL and we'll fix it. You can also search our{" "}
+        <a href="/sitemap.xml" class="text-accent hover:text-accent-hover">sitemap</a>{" "}
+        for what you were looking for.
+      </p>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>
