@@ -4,14 +4,20 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL =
-  import.meta.env.PUBLIC_SUPABASE_URL ??
-  "https://cyqkfkvsrdbbjuaqiglx.supabase.co";
+// Both values come from the Cloudflare Pages build environment (set in
+// Pages → Settings → Environment variables). No hardcoded fallback — we
+// want a loud build failure if the env is misconfigured rather than the
+// site silently pointing at the wrong project.
+const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-const SUPABASE_ANON_KEY =
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY ??
-  // This is the public anon key — safe to commit. It's subject to RLS.
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5cWtma3ZzcmRiYmp1YXFpZ2x4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzAwNzksImV4cCI6MjA4NzEwNjA3OX0.n9oCsfYjFOePuOJb0OlMPC1kXpwIvVVweqdyHjXKVvs";
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY must be set. " +
+    "Copy .env.example to .env for local dev, or configure in the " +
+    "Cloudflare Pages dashboard for production.",
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -408,7 +414,7 @@ export async function getLatestShorts(
 
 export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
   const { data, error } = await supabase
-    .from("shownotes")
+    .from("episode_shownotes")
     .select("*")
     .eq("published", true)
     .order("published_at", { ascending: false })
@@ -422,7 +428,7 @@ export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
 
 export async function getAllEpisodes(): Promise<Episode[]> {
   const { data, error } = await supabase
-    .from("shownotes")
+    .from("episode_shownotes")
     .select("*")
     .eq("published", true)
     .order("published_at", { ascending: false });
@@ -435,7 +441,7 @@ export async function getAllEpisodes(): Promise<Episode[]> {
 
 export async function getEpisodeBySlug(slug: string): Promise<Episode | null> {
   const { data, error } = await supabase
-    .from("shownotes")
+    .from("episode_shownotes")
     .select("*")
     .eq("slug", slug)
     .eq("published", true)
