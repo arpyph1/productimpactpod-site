@@ -1,0 +1,267 @@
+---
+// /episodes/[slug] — individual episode page.
+// Static generation: one HTML file per episode at build time.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllEpisodes, getRelatedArticles, type Episode } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const episodes = await getAllEpisodes();
+  // Only generate pages for episodes that have a slug
+  return episodes
+    .filter((ep) => ep.slug)
+    .map((ep) => ({
+      params: { slug: ep.slug! },
+      props: { episode: ep },
+    }));
+}
+
+interface Props {
+  episode: Episode;
+}
+
+const { episode } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/episodes/${episode.slug}`;
+
+const publishDate = episode.published_at ? new Date(episode.published_at) : null;
+const publishDateFormatted = publishDate?.toLocaleDateString("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+const publishDateISO = publishDate?.toISOString() ?? null;
+
+// JSON-LD PodcastEpisode
+const episodeJsonLd = episode.schema_jsonld ?? {
+  "@context": "https://schema.org",
+  "@type": "PodcastEpisode",
+  name: episode.title,
+  description: episode.meta_description ?? undefined,
+  url: canonicalUrl,
+  datePublished: publishDateISO ?? undefined,
+  duration: episode.duration ?? undefined,
+  episodeNumber: episode.episode_number ?? undefined,
+  partOfSeries: {
+    "@type": "PodcastSeries",
+    name: "Product Impact Podcast",
+    url: `${siteUrl}/podcast`,
+  },
+  author: [
+    { "@type": "Person", name: "Arpy Dragffy", url: `${siteUrl}/people/arpy-dragffy` },
+    { "@type": "Person", name: "Brittany Hobbs", url: `${siteUrl}/people/brittany-hobbs` },
+  ],
+  ...(episode.guests?.length > 0
+    ? {
+        actor: episode.guests.map((g) => ({
+          "@type": "Person",
+          name: g.name,
+          ...(g.website ? { url: g.website } : {}),
+        })),
+      }
+    : {}),
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "Podcast", item: `${siteUrl}/podcast` },
+    { "@type": "ListItem", position: 3, name: "Episodes", item: `${siteUrl}/episodes` },
+    { "@type": "ListItem", position: 4, name: episode.title, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={`${episode.title} | Product Impact Podcast`}
+  description={episode.meta_description ?? episode.title}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+  publishedTime={publishDateISO}
+  jsonLd={[episodeJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-12">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/" class="hover:text-white">Home</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/podcast" class="hover:text-white">Podcast</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/episodes" class="hover:text-white">Episodes</a></li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4] truncate max-w-xs">{episode.title}</li>
+      </ol>
+    </nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] gap-16 justify-center">
+      <div>
+        {/* Episode badge */}
+        <div class="flex flex-wrap items-center gap-2 mb-5">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent text-black">
+            Episode {episode.episode_number ?? ""}
+          </span>
+          {episode.themes?.slice(0, 2).map((t) => (
+            <a
+              href={`/themes/${t}`}
+              class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+            >
+              {t.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            </a>
+          ))}
+        </div>
+
+        {/* Title */}
+        <h1 class="font-display font-extrabold text-[clamp(2rem,5vw,3.5rem)] leading-[1.1] tracking-tight text-white mb-6 max-w-4xl">
+          {episode.title}
+        </h1>
+
+        {/* Meta */}
+        <div class="flex flex-wrap items-center gap-3 py-5 border-y border-[#2a2a2a] mb-10">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm text-[#a0a0a0]">
+              Hosted by{" "}
+              <a href="/people/arpy-dragffy" class="text-white hover:text-accent">Arpy Dragffy</a>
+              {" "}and{" "}
+              <a href="/people/brittany-hobbs" class="text-white hover:text-accent">Brittany Hobbs</a>
+            </div>
+            {episode.guests && episode.guests.length > 0 && (
+              <div class="text-sm text-[#d4d4d4] mt-1">
+                With{" "}
+                {episode.guests.map((g, i) => (
+                  <>
+                    {g.website ? (
+                      <a href={g.website} target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">
+                        {g.name}
+                      </a>
+                    ) : (
+                      <span class="text-white">{g.name}</span>
+                    )}
+                    {g.role && <span class="text-[#707070]"> ({g.role})</span>}
+                    {i < episode.guests.length - 1 && <span>, </span>}
+                  </>
+                ))}
+              </div>
+            )}
+          </div>
+          <div class="flex items-center gap-2 text-[14px] text-[#a0a0a0]">
+            {publishDateFormatted && (
+              <time datetime={publishDateISO ?? ""}>{publishDateFormatted}</time>
+            )}
+            {episode.duration && (
+              <>
+                <span class="text-[#707070]">·</span>
+                <span>{episode.duration}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Listen links */}
+        {episode.links && episode.links.length > 0 && (
+          <div class="mb-10 flex flex-wrap gap-3">
+            {episode.links.map((link) => (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener"
+                class="flex items-center gap-2 px-4 py-2 bg-background-card rounded-full text-sm font-semibold text-white hover:bg-background-hover transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Show notes / content */}
+        {episode.content_html && (
+          <div class="article-prose" set:html={episode.content_html}></div>
+        )}
+
+        {/* Transcript (collapsible) */}
+        {episode.transcript_markdown && (
+          <details class="mt-16 group">
+            <summary class="flex items-center gap-3 cursor-pointer list-none py-4 border-y border-[#2a2a2a]">
+              <span class="text-sm font-bold uppercase tracking-wider text-[#707070] group-open:text-white transition-colors">
+                Full Transcript
+              </span>
+              <span class="text-accent text-xs group-open:rotate-180 transition-transform inline-block">▼</span>
+            </summary>
+            <div class="mt-6 p-6 bg-background-card rounded-xl">
+              <pre class="text-sm text-[#d4d4d4] leading-relaxed whitespace-pre-wrap font-body">
+                {episode.transcript_markdown}
+              </pre>
+            </div>
+          </details>
+        )}
+      </div>
+
+      {/* Sidebar */}
+      <aside class="hidden lg:block">
+        <div class="sticky top-24 space-y-8">
+          {episode.themes && episode.themes.length > 0 && (
+            <div>
+              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                Themes
+              </div>
+              <div class="flex flex-col gap-2">
+                {episode.themes.map((t) => (
+                  <a
+                    href={`/themes/${t}`}
+                    class="text-sm text-[#d4d4d4] hover:text-accent transition-colors"
+                  >
+                    {t.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {episode.guests && episode.guests.length > 0 && (
+            <div>
+              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                Guests
+              </div>
+              <div class="flex flex-col gap-3">
+                {episode.guests.map((g) => (
+                  <div>
+                    <div class="text-sm font-semibold text-white">
+                      {g.website ? (
+                        <a href={g.website} target="_blank" rel="noopener" class="hover:text-accent transition-colors">
+                          {g.name}
+                        </a>
+                      ) : g.name}
+                    </div>
+                    {g.role && (
+                      <div class="text-xs text-[#707070]">{g.role}</div>
+                    )}
+                    {g.linkedin && (
+                      <a href={g.linkedin} target="_blank" rel="noopener" class="text-xs text-accent hover:text-accent-hover">
+                        LinkedIn →
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <a
+            href="/episodes"
+            class="block text-[14px] text-accent hover:text-accent-hover pt-2 border-t border-[#2a2a2a]"
+          >
+            ← All episodes
+          </a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

@@ -1,0 +1,46 @@
+---
+import EntityPage from "@components/EntityPage.astro";
+import {
+  getAllEntitiesByType,
+  getEntityBySlug,
+  getArticlesByEntity,
+  getAllArticles,
+} from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const [entities, articles] = await Promise.all([
+    getAllEntitiesByType("person"),
+    getAllArticles(),
+  ]);
+
+  // Include slugs from author_slugs that may not yet have an entity row
+  const authorSlugs = new Set([
+    ...entities.map((e) => e.slug),
+    ...articles.flatMap((a) => a.author_slugs ?? []),
+    // Hosts always get a page even with no articles yet
+    "arpy-dragffy",
+    "brittany-hobbs",
+  ]);
+
+  return [...authorSlugs].map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const [entity, entityArticles, allArticles] = await Promise.all([
+  getEntityBySlug("person", slug),
+  getArticlesByEntity(slug),
+  getAllArticles(),
+]);
+
+if (!entity) return Astro.redirect("/404", 302);
+
+const authoredArticles = allArticles.filter((a) =>
+  (a.author_slugs ?? []).includes(slug),
+);
+---
+
+<EntityPage
+  entity={entity}
+  articles={entityArticles}
+  authoredArticles={authoredArticles}
+/>

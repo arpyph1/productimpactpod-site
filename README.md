@@ -33,7 +33,7 @@ Site runs at `http://localhost:4321`.
 npm run build
 ```
 
-Output lands in `site/dist/`. This is the full static site ready to serve from any CDN.
+Output lands in `dist/`. This is the full static site ready to serve from any CDN.
 
 ## Preview the production build locally
 
@@ -97,10 +97,10 @@ Phase 1 (initial scaffold) ships: `/`, `/news`, `/news/[slug]`, robots.txt, llms
 3. Connect the `arpyph1/vault-system` GitHub repo
 4. Set build settings:
    - **Framework preset:** Astro
-   - **Build command:** `cd site && npm install && npm run build`
-   - **Build output directory:** `site/dist`
-   - **Root directory:** `/` (project root, not `site/`)
-   - **Environment variables:** none required for build
+   - **Build command:** `npm install && npm run build`
+   - **Build output directory:** `dist`
+   - **Root directory:** `/` (repository root)
+   - **Environment variables:** none required for build (Supabase anon key is public)
 5. Click **Save and Deploy**
 6. First build takes ~2 minutes. Cloudflare gives you a `*.pages.dev` preview URL.
 

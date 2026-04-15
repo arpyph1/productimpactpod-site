@@ -1,0 +1,283 @@
+---
+// /podcast — show homepage. Overview, hosts, listen links, latest episodes.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getLatestEpisodes } from "@lib/supabase";
+
+const episodes = await getLatestEpisodes(10);
+const siteUrl = "https://productimpactpod.com";
+
+const listenLinks = [
+  {
+    platform: "Spotify",
+    url: "https://open.spotify.com/show/productimpactpod",
+    color: "#1DB954",
+    icon: "spotify",
+  },
+  {
+    platform: "Apple Podcasts",
+    url: "https://podcasts.apple.com/productimpactpod",
+    color: "#BC5FE8",
+    icon: "apple",
+  },
+  {
+    platform: "YouTube",
+    url: "https://youtube.com/@productimpactpod",
+    color: "#FF0000",
+    icon: "youtube",
+  },
+  {
+    platform: "Substack",
+    url: "https://productimpactpod.substack.com",
+    color: "#FF6719",
+    icon: "substack",
+  },
+];
+
+const podcastJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "PodcastSeries",
+  name: "Product Impact Podcast",
+  description:
+    "AI product impact — conversations with product leaders, practitioners, and researchers about the products transforming how we work and industries.",
+  url: `${siteUrl}/podcast`,
+  image: `${siteUrl}/og-default.svg`,
+  author: [
+    {
+      "@type": "Person",
+      name: "Arpy Dragffy",
+      url: `${siteUrl}/people/arpy-dragffy`,
+    },
+    {
+      "@type": "Person",
+      name: "Brittany Hobbs",
+      url: `${siteUrl}/people/brittany-hobbs`,
+    },
+  ],
+  publisher: {
+    "@type": "Organization",
+    name: "Product Impact",
+    url: siteUrl,
+  },
+  inLanguage: "en-US",
+};
+---
+
+<BaseLayout
+  title="Podcast | Product Impact"
+  description="AI product impact — conversations with product leaders, practitioners, and researchers about the products transforming how we work and industries."
+  canonicalUrl={`${siteUrl}/podcast`}
+  jsonLd={podcastJsonLd}
+>
+  <Nav />
+
+  <main>
+    {/* ── Hero ──────────────────────────────────────────────────────── */}
+    <section class="bg-background-elevated border-b border-[#2a2a2a]">
+      <div class="container-wide py-20 md:py-28">
+        <div class="max-w-3xl">
+          <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-6">
+            Podcast
+          </div>
+          <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.05] mb-6">
+            Product Impact<br />Podcast
+          </h1>
+          <p class="text-xl text-[#d4d4d4] leading-relaxed max-w-2xl mb-8">
+            Conversations with product leaders, researchers, and practitioners about the AI
+            products reshaping industries. Formerly the Design of AI Podcast.
+          </p>
+
+          {/* Listen links */}
+          <div class="flex flex-wrap gap-3">
+            {listenLinks.map((link) => (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener"
+                class="flex items-center gap-2 bg-background-card px-5 py-2.5 rounded-full text-sm font-semibold text-white hover:bg-background-hover transition-colors"
+              >
+                <span
+                  class="w-4 h-4 rounded-full flex-shrink-0"
+                  style={`background-color: ${link.color};`}
+                ></span>
+                {link.platform}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Hosts ─────────────────────────────────────────────────────── */}
+    <section class="container-wide py-16">
+      <h2 class="text-2xl font-extrabold uppercase tracking-tight text-white mb-10">
+        Your Hosts
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Arpy */}
+        <div class="flex gap-6 bg-background-card rounded-2xl p-8">
+          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center flex-shrink-0">
+            <span class="text-white font-extrabold text-2xl">A</span>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-xl font-bold text-white mb-0.5">
+              <a href="/people/arpy-dragffy" class="hover:text-accent transition-colors">
+                Arpy Dragffy
+              </a>
+            </h3>
+            <p class="text-sm text-accent font-semibold mb-3">Co-host & Producer</p>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed">
+              Founder of{" "}
+              <a href="https://ph1.ca" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">
+                PH1 Research
+              </a>{" "}
+              and{" "}
+              <a href="https://aivalueacceleration.com" target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">
+                AI Value Acceleration
+              </a>
+              . Focused on product adoption research and enterprise AI impact.
+            </p>
+          </div>
+        </div>
+
+        {/* Brittany */}
+        <div class="flex gap-6 bg-background-card rounded-2xl p-8">
+          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#4ab8c9] to-[#1f5a66] flex items-center justify-center flex-shrink-0">
+            <span class="text-white font-extrabold text-2xl">B</span>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-xl font-bold text-white mb-0.5">
+              <a href="/people/brittany-hobbs" class="hover:text-accent transition-colors">
+                Brittany Hobbs
+              </a>
+            </h3>
+            <p class="text-sm text-accent font-semibold mb-3">Co-host</p>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed">
+              Product leader at the intersection of AI capabilities, product strategy, and
+              go-to-market. Explores what it takes to ship AI products that people actually use.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── About the show ────────────────────────────────────────────── */}
+    <section class="bg-background-elevated border-y border-[#2a2a2a] py-16">
+      <div class="container-wide">
+        <div class="max-w-3xl">
+          <h2 class="text-2xl font-extrabold uppercase tracking-tight text-white mb-6">
+            About the Show
+          </h2>
+          <div class="space-y-4 text-[#d4d4d4] leading-relaxed">
+            <p>
+              Product Impact covers the full lifecycle of AI products — from the research that
+              enables them to the go-to-market decisions that drive adoption. Each episode brings
+              on a practitioner, founder, or researcher to dig into the real challenges of building
+              and shipping AI products.
+            </p>
+            <p>
+              Topics span AI product strategy, agentic systems, UX design for AI, evaluation and
+              benchmarking, organizational change, governance, and the data foundations that make
+              AI products work.
+            </p>
+            <p>
+              Formerly the <strong class="text-white">Design of AI Podcast</strong>. Same hosts,
+              broader scope.
+            </p>
+          </div>
+
+          <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Episodes", value: episodes.length > 0 ? `${episodes.length}+` : "New" },
+              { label: "Topics", value: "8 themes" },
+              { label: "Format", value: "~45 min" },
+              { label: "Cadence", value: "Weekly" },
+            ].map((stat) => (
+              <div class="bg-background-card rounded-xl p-4 text-center">
+                <div class="text-2xl font-extrabold text-accent">{stat.value}</div>
+                <div class="text-xs uppercase tracking-wider text-[#707070] mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Episodes list ─────────────────────────────────────────────── */}
+    <section class="container-wide py-16">
+      <div class="flex items-baseline justify-between mb-8">
+        <h2 class="text-2xl font-extrabold uppercase tracking-tight text-white">
+          Recent Episodes
+        </h2>
+        <a href="/episodes" class="text-sm text-accent hover:text-accent-hover font-semibold">
+          All episodes →
+        </a>
+      </div>
+
+      {episodes.length === 0 ? (
+        <div class="text-center py-16">
+          <p class="text-[#a0a0a0]">Episodes coming soon.</p>
+        </div>
+      ) : (
+        <div class="space-y-4">
+          {episodes.map((ep, i) => {
+            const pubDate = ep.published_at
+              ? new Date(ep.published_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : null;
+            return (
+              <a
+                href={ep.slug ? `/episodes/${ep.slug}` : "/episodes"}
+                class="group flex gap-5 bg-background-card rounded-xl p-6 hover:bg-background-hover transition-colors"
+              >
+                {/* Episode number badge */}
+                <div class="w-12 h-12 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
+                  <span class="text-accent font-bold text-sm">
+                    {ep.episode_number ?? i + 1}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-bold text-white group-hover:text-accent transition-colors mb-1 line-clamp-1">
+                    {ep.title}
+                  </h3>
+                  {ep.meta_description && (
+                    <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
+                      {ep.meta_description}
+                    </p>
+                  )}
+                  <div class="flex items-center gap-2 text-xs text-[#707070] mt-2">
+                    {pubDate && <time>{pubDate}</time>}
+                    {ep.duration && (
+                      <>
+                        {pubDate && <span>·</span>}
+                        <span>{ep.duration}</span>
+                      </>
+                    )}
+                    {ep.guests && ep.guests.length > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          with {ep.guests.map((g) => g.name).join(", ")}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div class="text-[#707070] group-hover:text-accent transition-colors flex-shrink-0 self-center">
+                  →
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

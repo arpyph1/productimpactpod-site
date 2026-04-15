@@ -1,0 +1,76 @@
+---
+// /themes — 8-tile themes grid. Each tile links to its hub page.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllThemes } from "@lib/supabase";
+import { canonicalThemes } from "@lib/themes";
+
+const siteUrl = "https://productimpactpod.com";
+
+// Merge with Supabase data if available
+const dbThemes = await getAllThemes();
+const displayThemes = canonicalThemes.map((canonical) => {
+  const db = dbThemes.find((t) => t.slug === canonical.slug);
+  return {
+    ...canonical,
+    description: db?.description ?? canonical.description,
+    articleCount: null as number | null, // populated in Phase 2 with a count query
+  };
+});
+
+const collectionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Themes | Product Impact",
+  url: `${siteUrl}/themes`,
+  description: "Explore Product Impact coverage by theme — 8 areas of AI product impact.",
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+};
+---
+
+<BaseLayout
+  title="Themes | Product Impact"
+  description="Explore Product Impact coverage by theme — 8 areas where AI products are having the greatest impact on work and industries."
+  canonicalUrl={`${siteUrl}/themes`}
+  jsonLd={collectionJsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        Themes
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        Product Impact coverage organized around 8 areas where AI is reshaping products, teams, and industries.
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {displayThemes.map((theme) => (
+        <a
+          href={`/themes/${theme.slug}`}
+          class="group relative flex flex-col overflow-hidden rounded-2xl bg-background-card hover:bg-background-hover transition-colors min-h-[200px]"
+        >
+          {/* Color bar */}
+          <div class={`h-2 w-full bg-gradient-to-r ${theme.gradient} flex-shrink-0`}></div>
+          <div class="flex-1 p-6 flex flex-col">
+            <h2 class="text-lg font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors">
+              {theme.name}
+            </h2>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed flex-1">
+              {theme.description}
+            </p>
+            <div class="mt-4 text-xs text-accent font-semibold group-hover:text-accent-hover transition-colors">
+              Explore →
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

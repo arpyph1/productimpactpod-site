@@ -1,0 +1,267 @@
+---
+// Shared entity hub page layout — used by /people/[slug], /concepts/[slug], etc.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { formatLabel, themeLabel, type Entity, type Article } from "@lib/supabase";
+
+interface Props {
+  entity: Entity;
+  articles: Article[];
+  // Optional: authored articles for person entities
+  authoredArticles?: Article[];
+  siteUrl?: string;
+}
+
+const {
+  entity,
+  articles,
+  authoredArticles = [],
+  siteUrl = "https://productimpactpod.com",
+} = Astro.props;
+
+const entityTypePlural: Record<Entity["type"], string> = {
+  concept:      "concepts",
+  person:       "people",
+  organization: "organizations",
+  product:      "products",
+  framework:    "frameworks",
+  source:       "sources",
+};
+
+const entityTypeLabel: Record<Entity["type"], string> = {
+  concept:      "Concept",
+  person:       "Person",
+  organization: "Organization",
+  product:      "Product",
+  framework:    "Framework",
+  source:       "Source",
+};
+
+const canonicalUrl = `${siteUrl}/${entityTypePlural[entity.type]}/${entity.slug}`;
+
+const themeGradients: Record<string, string> = {
+  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
+  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
+  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
+};
+
+const entityJsonLd = entity.schema_jsonld ?? {
+  "@context": "https://schema.org",
+  "@type":
+    entity.type === "person"
+      ? "Person"
+      : entity.type === "organization"
+        ? "Organization"
+        : "Thing",
+  name: entity.name,
+  description: entity.description ?? undefined,
+  url: canonicalUrl,
+  ...(entity.external_links?.length
+    ? { sameAs: entity.external_links.map((l) => l.url) }
+    : {}),
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: entityTypeLabel[entity.type],
+      item: `${siteUrl}/${entityTypePlural[entity.type]}`,
+    },
+    { "@type": "ListItem", position: 3, name: entity.name, item: canonicalUrl },
+  ],
+};
+
+const allArticles = [...new Map(
+  [...authoredArticles, ...articles].map((a) => [a.slug, a])
+).values()];
+---
+
+<BaseLayout
+  title={`${entity.name} | Product Impact`}
+  description={entity.description ?? `${entity.name} — coverage and analysis on Product Impact.`}
+  canonicalUrl={canonicalUrl}
+  jsonLd={[entityJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-12">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/" class="hover:text-white">Home</a></li>
+        <li class="text-[#707070]">/</li>
+        <li>
+          <a href={`/${entityTypePlural[entity.type]}`} class="hover:text-white capitalize">
+            {entityTypeLabel[entity.type]}
+          </a>
+        </li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4]">{entity.name}</li>
+      </ol>
+    </nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] gap-16">
+      <div>
+        {/* Entity header */}
+        <div class="flex items-start gap-5 mb-10">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center flex-shrink-0">
+            <span class="text-white font-extrabold text-xl">
+              {entity.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-[#707070]">
+                {entityTypeLabel[entity.type]}
+              </span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight tracking-tight">
+              {entity.name}
+            </h1>
+            {entity.aliases && entity.aliases.length > 0 && (
+              <p class="text-sm text-[#707070] mt-1">
+                Also: {entity.aliases.join(", ")}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Description */}
+        {entity.description && (
+          <p class="text-lg text-[#d4d4d4] leading-relaxed mb-8 max-w-2xl">
+            {entity.description}
+          </p>
+        )}
+
+        {/* Long-form */}
+        {entity.long_form && (
+          <div class="article-prose mb-12" set:html={entity.long_form}></div>
+        )}
+
+        {/* Articles */}
+        {allArticles.length > 0 && (
+          <section>
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              Coverage
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-black">
+                {allArticles.length}
+              </span>
+            </h2>
+            <div class="space-y-4">
+              {allArticles.map((article) => {
+                const date = new Date(article.publish_date).toLocaleDateString("en-US", {
+                  month: "short", day: "numeric", year: "numeric",
+                });
+                return (
+                  <a
+                    href={`/news/${article.slug}`}
+                    class="group flex gap-4 bg-background-card rounded-xl p-5 hover:bg-background-hover transition-colors"
+                  >
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                          {formatLabel(article.format)}
+                        </span>
+                        {article.author_slugs?.includes(entity.slug) && (
+                          <span class="text-[10px] text-[#707070] uppercase tracking-wider">
+                            By {entity.name}
+                          </span>
+                        )}
+                      </div>
+                      <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2 mb-1">
+                        {article.title}
+                      </h3>
+                      {article.subtitle && (
+                        <p class="text-sm text-[#a0a0a0] line-clamp-1">{article.subtitle}</p>
+                      )}
+                      <div class="text-xs text-[#707070] mt-2 flex items-center gap-2">
+                        <time datetime={article.publish_date}>{date}</time>
+                        {article.read_time_minutes && (
+                          <>
+                            <span>·</span>
+                            <span>{article.read_time_minutes} min read</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div class="text-[#707070] group-hover:text-accent transition-colors self-center flex-shrink-0">
+                      →
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {allArticles.length === 0 && (
+          <div class="text-center py-16">
+            <p class="text-[#a0a0a0]">No articles yet.</p>
+            <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+              Browse all news →
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar */}
+      <aside class="hidden lg:block">
+        <div class="sticky top-24 space-y-8">
+          {/* External links */}
+          {entity.external_links && entity.external_links.length > 0 && (
+            <div>
+              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                Links
+              </div>
+              <div class="flex flex-col gap-2">
+                {entity.external_links.map((link) => (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener"
+                    class="text-sm text-accent hover:text-accent-hover transition-colors"
+                  >
+                    {link.label} →
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Themes */}
+          {entity.themes && entity.themes.length > 0 && (
+            <div>
+              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                Themes
+              </div>
+              <div class="flex flex-col gap-2">
+                {entity.themes.map((t) => (
+                  <a
+                    href={`/themes/${t}`}
+                    class="text-sm text-[#d4d4d4] hover:text-accent transition-colors"
+                  >
+                    {themeLabel(t)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

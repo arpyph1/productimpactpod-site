@@ -1,0 +1,187 @@
+---
+// /contact — editorial, corrections, tips, partnerships contact directory.
+// Aggregators like Google News and Apple News read contact info off this page
+// as a trust signal. Separate, clearly-labelled inboxes per function.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+
+// ContactPoint array is already carried by the site-wide publisher schema
+// (@lib/publisher); this page just points at it by @id reference.
+const contactPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  name: "Contact | Product Impact",
+  url: `${siteUrl}/contact`,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: { "@id": `${siteUrl}/#organization` },
+};
+
+const channels = [
+  {
+    title: "Editorial",
+    email: "info@productimpactpod.com",
+    description:
+      "General editorial questions, feedback on coverage, letters to the editor, guest pitches for the podcast.",
+    responseTime: "We aim to respond within two business days.",
+  },
+  {
+    title: "Corrections",
+    email: "corrections@productimpactpod.com",
+    description:
+      "Factual errors, misattributions, or technical inaccuracies in published articles or episodes. Include the URL and a clear description of the correction.",
+    responseTime:
+      "Acknowledged within one business day. Confirmed corrections are published promptly.",
+  },
+  {
+    title: "Tips & story pitches",
+    email: "tips@productimpactpod.com",
+    description:
+      "Story ideas, product launches, research findings, or confidential tips. If you need secure contact (end-to-end encrypted), email first and we'll arrange a channel.",
+    responseTime:
+      "We read everything. We don't always reply — if the tip is something we'd pursue, you'll hear back within a week.",
+  },
+  {
+    title: "Partnerships & sponsorships",
+    email: "partner@productimpactpod.com",
+    description:
+      "Sponsorship inquiries, newsletter partnerships, event collaborations, research syndication. See our Partnerships page for the media kit.",
+    responseTime: "Responded within three business days.",
+  },
+  {
+    title: "Privacy & data",
+    email: "privacy@productimpactpod.com",
+    description:
+      "GDPR / CCPA requests, data access or deletion requests, questions about our Privacy Policy.",
+    responseTime:
+      "Acknowledged within one business day. Substantive response within 30 days per applicable law.",
+  },
+];
+
+const socialLinks = [
+  { platform: "Substack", url: "https://productimpactpod.substack.com", description: "Newsletter & subscriber community" },
+  { platform: "LinkedIn", url: "https://linkedin.com/company/product-impact-podcast", description: "Company page & episode announcements" },
+  { platform: "YouTube", url: "https://youtube.com/@productimpactpod", description: "Video episodes & clips" },
+  { platform: "Spotify", url: "https://open.spotify.com/show/productimpactpod", description: "Podcast" },
+  { platform: "Apple Podcasts", url: "https://podcasts.apple.com/productimpactpod", description: "Podcast" },
+];
+---
+
+<BaseLayout
+  title="Contact | Product Impact"
+  description="Editorial, corrections, tips, and partnerships contacts for Product Impact. How to reach us and what to expect."
+  canonicalUrl={`${siteUrl}/contact`}
+  jsonLd={contactPageJsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16 max-w-4xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
+        Contact
+      </h1>
+      <p class="text-xl text-[#d4d4d4] leading-relaxed max-w-3xl">
+        We read every message. Use the right channel below so it reaches the
+        right person.
+      </p>
+    </header>
+
+    {/* Contact channels */}
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-white mb-6">By topic</h2>
+      <div class="space-y-4">
+        {channels.map((c) => (
+          <div class="bg-background-card rounded-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-1">{c.title}</h3>
+            <a
+              href={`mailto:${c.email}`}
+              class="text-accent hover:text-accent-hover font-semibold text-sm break-all"
+            >
+              {c.email}
+            </a>
+            <p class="text-[#d4d4d4] mt-3 leading-relaxed">{c.description}</p>
+            <p class="text-xs text-[#707070] mt-3 italic">{c.responseTime}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* What we don't reply to */}
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-white mb-4">What we don't reply to</h2>
+      <div class="bg-background-card rounded-xl p-6 border-l-4 border-[#707070]">
+        <ul class="space-y-2 text-[#d4d4d4]">
+          <li>
+            <strong class="text-white">PR blast emails</strong> — mass-addressed
+            press releases not tailored to our coverage. If you think a launch is
+            a real fit, email the editorial address with a one-line pitch.
+          </li>
+          <li>
+            <strong class="text-white">Guest post offers</strong> — we don't
+            accept unsolicited written articles for publication. Pitches from
+            practitioners with direct expertise are welcome.
+          </li>
+          <li>
+            <strong class="text-white">SEO / backlink offers</strong> — no.
+          </li>
+          <li>
+            <strong class="text-white">"Quick call" requests with no context</strong>
+            {" "}— send a written pitch with specifics first.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    {/* Social + listen */}
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-white mb-6">Follow &amp; listen</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {socialLinks.map((s) => (
+          <a
+            href={s.url}
+            target="_blank"
+            rel="noopener"
+            class="group flex items-center gap-4 bg-background-card hover:bg-background-hover rounded-xl p-5 transition-colors"
+          >
+            <div class="flex-1">
+              <div class="font-bold text-white group-hover:text-accent transition-colors">
+                {s.platform}
+              </div>
+              <div class="text-sm text-[#a0a0a0] mt-0.5">{s.description}</div>
+            </div>
+            <span class="text-[#707070] group-hover:text-accent transition-colors">→</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    {/* Additional resources */}
+    <section>
+      <h2 class="text-2xl font-bold text-white mb-4">See also</h2>
+      <ul class="space-y-2 text-[#d4d4d4]">
+        <li>
+          <a href="/about" class="text-accent hover:text-accent-hover">About &amp; editorial standards</a>
+        </li>
+        <li>
+          <a href="/partnerships" class="text-accent hover:text-accent-hover">Partnerships &amp; sponsorships</a>
+        </li>
+        <li>
+          <a href="/privacy" class="text-accent hover:text-accent-hover">Privacy Policy</a>
+        </li>
+        <li>
+          <a href="/terms" class="text-accent hover:text-accent-hover">Terms of Service</a>
+        </li>
+        <li>
+          <a href="/rss.xml" class="text-accent hover:text-accent-hover">RSS feed</a> ·{" "}
+          <a href="/news/rss.xml" class="text-accent hover:text-accent-hover">News RSS</a> ·{" "}
+          <a href="/podcast/rss.xml" class="text-accent hover:text-accent-hover">Podcast RSS</a>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

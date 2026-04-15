@@ -68,15 +68,16 @@ const collectionPageJsonLd = {
       </p>
     </header>
 
-    {/* Filter tabs — static for now, wire up client-side filtering in v2 */}
+    {/* Format filter tabs — "All" is active on this page */}
     <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
       <a
         href="/news"
         class="px-4 py-2 rounded-full text-sm font-semibold bg-background-card text-white border border-accent"
+        aria-current="page"
       >
         All
       </a>
-      {[
+      {([
         "news-brief",
         "news-analysis",
         "release-note",
@@ -87,12 +88,12 @@ const collectionPageJsonLd = {
         "explainer",
         "product-review",
         "research-brief",
-      ].map((fmt) => (
+      ] as const).map((fmt) => (
         <a
           href={`/news/format/${fmt}`}
           class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
         >
-          {formatLabel(fmt as any)}
+          {formatLabel(fmt)}
         </a>
       ))}
     </div>
