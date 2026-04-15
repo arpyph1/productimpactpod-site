@@ -290,6 +290,54 @@ export async function getArticlesByEntity(
   return (data ?? []) as Article[];
 }
 
+// ── YouTube Shorts (via Supabase edge function) ─────────────────────────────
+
+export interface YouTubeShort {
+  videoId: string;
+  title: string;
+  thumbnail: string;
+  publishedAt: string;
+}
+
+export interface LatestShortsResult {
+  shorts: YouTubeShort[];      // most-recent first
+  mostWatched: YouTubeShort | null;
+}
+
+/**
+ * Fetch the latest Shorts + the most-watched Short for a YouTube channel.
+ * Backed by the Supabase edge function `get-latest-short` (deployed on the
+ * shared Supabase project) which holds the YOUTUBE_API_KEY server-side.
+ *
+ * Called at BUILD TIME from /podcast.astro — result is baked into the
+ * generated HTML. Content refreshes on every site rebuild (triggered by
+ * publish_articles.py or a scheduled CF Pages rebuild).
+ *
+ * Returns empty results on failure so the build doesn't break.
+ */
+export async function getLatestShorts(
+  channelId: string,
+  count = 2,
+): Promise<LatestShortsResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke<LatestShortsResult>(
+      "get-latest-short",
+      { body: { channelId, count } },
+    );
+    if (error) {
+      console.error("getLatestShorts error:", error.message);
+      return { shorts: [], mostWatched: null };
+    }
+    return {
+      shorts: data?.shorts ?? [],
+      mostWatched: data?.mostWatched ?? null,
+    };
+  } catch (err) {
+    console.error("getLatestShorts threw:", err);
+    return { shorts: [], mostWatched: null };
+  }
+}
+
 export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
   const { data, error } = await supabase
     .from("shownotes")
