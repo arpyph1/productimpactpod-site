@@ -41,9 +41,8 @@ const {
 } = Astro.props;
 
 const siteUrl = "https://productimpactpod.com";
-const fullOgImage =
-  ogImage ??
-  `${siteUrl}/og-default.png`; // TODO: add a default OG image asset
+// SVG served from /og-default.svg — replace with /og-default.png once exported
+const fullOgImage = ogImage ?? `${siteUrl}/og-default.svg`;
 
 const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 ---
@@ -128,7 +127,6 @@ const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
       />
     ))}
 
-    <!-- Global styles -->
   </head>
   <body class="bg-background text-foreground antialiased font-body">
     <slot />

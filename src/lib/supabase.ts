@@ -174,6 +174,24 @@ export async function getRelatedArticles(
   return (data ?? []) as Article[];
 }
 
+export async function getArticlesByTheme(
+  themeSlug: string,
+  limit = 50,
+): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .contains("themes", [themeSlug])
+    .order("publish_date", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getArticlesByTheme error:", error);
+    return [];
+  }
+  return (data ?? []) as Article[];
+}
+
 export async function getAllThemes(): Promise<Theme[]> {
   const { data, error } = await supabase
     .from("themes")
@@ -184,6 +202,21 @@ export async function getAllThemes(): Promise<Theme[]> {
     return [];
   }
   return (data ?? []) as Theme[];
+}
+
+export async function getAllEntitiesByType(
+  type: Entity["type"],
+): Promise<Entity[]> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select("*")
+    .eq("type", type)
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("getAllEntitiesByType error:", error);
+    return [];
+  }
+  return (data ?? []) as Entity[];
 }
 
 export async function getEntityBySlug(
@@ -203,6 +236,60 @@ export async function getEntityBySlug(
   return data as Entity;
 }
 
+// ArticleEntity: a row from the article_entities join table with entity data joined in.
+export interface ArticleEntity {
+  entity_slug: string;
+  entity_type: Entity["type"];
+  entity_name: string;
+  role: string | null; // e.g. "subject", "mentioned", "author"
+}
+
+/**
+ * Fetch entities mentioned in an article via the article_entities join table.
+ * Returns empty array if the table doesn't exist yet or the article has no entities.
+ */
+export async function getArticleEntities(
+  articleSlug: string,
+): Promise<ArticleEntity[]> {
+  const { data, error } = await supabase
+    .from("article_entities")
+    .select("entity_slug, entity_type, entity_name, role")
+    .eq("article_slug", articleSlug)
+    .order("role", { ascending: true });
+  if (error) {
+    // Table may not exist yet — fail silently so builds don't break
+    return [];
+  }
+  return (data ?? []) as ArticleEntity[];
+}
+
+/**
+ * Fetch all articles that mention a given entity slug.
+ * Used by entity hub pages (/people/[slug], /concepts/[slug], etc.)
+ */
+export async function getArticlesByEntity(
+  entitySlug: string,
+  limit = 20,
+): Promise<Article[]> {
+  // article_entities join → articles
+  const { data: rows, error } = await supabase
+    .from("article_entities")
+    .select("article_slug")
+    .eq("entity_slug", entitySlug)
+    .limit(limit);
+  if (error || !rows || rows.length === 0) return [];
+
+  const slugs = rows.map((r: { article_slug: string }) => r.article_slug);
+  const { data, error: articlesError } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .in("slug", slugs)
+    .order("publish_date", { ascending: false });
+  if (articlesError) return [];
+  return (data ?? []) as Article[];
+}
+
 export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
   const { data, error } = await supabase
     .from("shownotes")
@@ -215,6 +302,33 @@ export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
     return [];
   }
   return (data ?? []) as Episode[];
+}
+
+export async function getAllEpisodes(): Promise<Episode[]> {
+  const { data, error } = await supabase
+    .from("shownotes")
+    .select("*")
+    .eq("published", true)
+    .order("published_at", { ascending: false });
+  if (error) {
+    console.error("getAllEpisodes error:", error);
+    return [];
+  }
+  return (data ?? []) as Episode[];
+}
+
+export async function getEpisodeBySlug(slug: string): Promise<Episode | null> {
+  const { data, error } = await supabase
+    .from("shownotes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("published", true)
+    .single();
+  if (error) {
+    console.error("getEpisodeBySlug error:", error);
+    return null;
+  }
+  return data as Episode;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

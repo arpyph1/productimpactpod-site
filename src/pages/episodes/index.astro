@@ -1,0 +1,110 @@
+---
+// /episodes — full episode browser.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllEpisodes } from "@lib/supabase";
+
+const episodes = await getAllEpisodes();
+const siteUrl = "https://productimpactpod.com";
+
+const collectionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Episodes | Product Impact Podcast",
+  url: `${siteUrl}/episodes`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+};
+---
+
+<BaseLayout
+  title="Episodes | Product Impact Podcast"
+  description="Browse all Product Impact Podcast episodes — conversations with product leaders, researchers, and practitioners about AI products."
+  canonicalUrl={`${siteUrl}/episodes`}
+  jsonLd={collectionJsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <div class="mb-3">
+        <a href="/podcast" class="text-sm text-[#a0a0a0] hover:text-white">← Podcast</a>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        Episodes
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        All episodes of the Product Impact Podcast, newest first.
+      </p>
+    </header>
+
+    {episodes.length === 0 ? (
+      <div class="text-center py-24">
+        <p class="text-xl text-[#a0a0a0]">Episodes coming soon.</p>
+        <a href="/podcast" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          About the podcast →
+        </a>
+      </div>
+    ) : (
+      <div class="space-y-4">
+        {episodes.map((ep, i) => {
+          const pubDate = ep.published_at
+            ? new Date(ep.published_at).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : null;
+          return (
+            <a
+              href={ep.slug ? `/episodes/${ep.slug}` : "#"}
+              class="group flex gap-5 bg-background-card rounded-xl p-6 hover:bg-background-hover transition-colors"
+            >
+              <div class="w-14 h-14 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
+                <span class="text-accent font-bold">
+                  {ep.episode_number ?? episodes.length - i}
+                </span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h2 class="font-bold text-lg text-white group-hover:text-accent transition-colors mb-1 line-clamp-1">
+                  {ep.title}
+                </h2>
+                {ep.meta_description && (
+                  <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
+                    {ep.meta_description}
+                  </p>
+                )}
+                <div class="flex flex-wrap items-center gap-2 text-xs text-[#707070] mt-2">
+                  {pubDate && <time>{pubDate}</time>}
+                  {ep.duration && (
+                    <>
+                      {pubDate && <span>·</span>}
+                      <span>{ep.duration}</span>
+                    </>
+                  )}
+                  {ep.guests && ep.guests.length > 0 && (
+                    <>
+                      <span>·</span>
+                      <span>with {ep.guests.map((g) => g.name).join(", ")}</span>
+                    </>
+                  )}
+                  {ep.themes && ep.themes.slice(0, 2).map((t) => (
+                    <span class="px-1.5 py-0.5 rounded bg-background-elevated text-[10px] uppercase tracking-wider">
+                      {t.replace(/-/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div class="text-[#707070] group-hover:text-accent transition-colors flex-shrink-0 self-center pl-4">
+                →
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

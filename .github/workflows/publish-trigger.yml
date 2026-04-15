@@ -1,0 +1,38 @@
+name: Cloudflare Pages rebuild
+
+# Triggered by publish_articles.py via:
+#   gh api repos/arpyph1/productimpactpod-site/dispatches \
+#     --field event_type=content-published
+#
+# Setup required:
+#   1. In Cloudflare Pages → Settings → Build triggers → Add deploy hook
+#      Name it "GitHub Actions trigger", copy the webhook URL.
+#   2. Add that URL as a GitHub Actions secret named CF_DEPLOY_HOOK_URL:
+#      Settings → Secrets and variables → Actions → New repository secret
+#   3. Add a GitHub personal access token (with repo scope) as GH_PAT if
+#      publish_articles.py calls the GitHub dispatch API with authentication.
+
+on:
+  repository_dispatch:
+    types: [content-published]
+
+jobs:
+  trigger-rebuild:
+    name: Trigger Cloudflare Pages rebuild
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Cloudflare deploy hook
+        run: |
+          curl -X POST "${{ secrets.CF_DEPLOY_HOOK_URL }}" \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 30
+        env:
+          CF_DEPLOY_HOOK_URL: ${{ secrets.CF_DEPLOY_HOOK_URL }}
+
+      - name: Log trigger context
+        run: |
+          echo "Rebuild triggered at $(date -u)"
+          echo "Event: ${{ github.event.action }}"
+          echo "Payload: ${{ toJson(github.event.client_payload) }}"

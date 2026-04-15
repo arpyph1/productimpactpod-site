@@ -1,0 +1,293 @@
+---
+// /themes/[slug] — theme hub page.
+// Long-form theme intro + all articles tagged with this theme.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import {
+  getAllThemes,
+  getArticlesByTheme,
+  formatLabel,
+  themeLabel,
+  type Theme,
+} from "@lib/supabase";
+
+const canonicalThemes = [
+  {
+    slug: "ai-product-strategy",
+    name: "AI Product Strategy",
+    description: "How to define, build, and position AI products in competitive markets.",
+    intro: "AI product strategy is the practice of deciding what to build, for whom, and why — in an era when the capabilities themselves are evolving faster than most product frameworks. This theme covers product vision, positioning, competitive differentiation, and the strategic decisions that separate AI products that create lasting value from those that don't.",
+    gradient: "from-[#ff6b4a] to-[#8a3a28]",
+    color: "#ff6b4a",
+  },
+  {
+    slug: "agents-agentic-systems",
+    name: "Agents & Agentic Systems",
+    description: "The architecture, design, and deployment of autonomous AI agents.",
+    intro: "Agentic systems are AI products that can plan, reason, use tools, and take actions on behalf of users — autonomously, over extended time horizons. This theme covers multi-agent architectures, tool use, memory, orchestration, safety constraints, and the UX challenges of building products that users trust to act.",
+    gradient: "from-[#9b7bff] to-[#4a3a80]",
+    color: "#9b7bff",
+  },
+  {
+    slug: "ux-experience-design-for-ai",
+    name: "UX & Experience Design for AI",
+    description: "Designing AI-powered interfaces that earn trust and drive adoption.",
+    intro: "AI changes the fundamental contract between software and users. When outputs are probabilistic and capabilities shift with each model update, traditional UX heuristics need rethinking. This theme covers interaction design for AI, trust-building UI patterns, error recovery, progressive disclosure of AI capabilities, and what good AI product design looks like in practice.",
+    gradient: "from-[#4ab8c9] to-[#1f5a66]",
+    color: "#4ab8c9",
+  },
+  {
+    slug: "adoption-organizational-change",
+    name: "Adoption & Organizational Change",
+    description: "Getting teams to use AI products — and building orgs that sustain it.",
+    intro: "The hardest part of AI products is rarely the model — it's getting people to use them, and building the organizational structures that sustain adoption over time. This theme covers change management, workflow integration, training, resistance patterns, and the organizational design decisions that separate AI deployments that stick from those that don't.",
+    gradient: "from-[#f5a623] to-[#7a5310]",
+    color: "#f5a623",
+  },
+  {
+    slug: "evaluation-benchmarking",
+    name: "Evaluation & Benchmarking",
+    description: "Measuring AI product quality, reliability, and business impact.",
+    intro: "How do you know if your AI product is working? Evaluation is one of the hardest open problems in AI product development. This theme covers evals design, human evaluation, automated metrics, A/B testing for AI, quality regression detection, and how to connect model performance to business outcomes that actually matter.",
+    gradient: "from-[#6bbf71] to-[#2d5a30]",
+    color: "#6bbf71",
+  },
+  {
+    slug: "go-to-market-distribution",
+    name: "Go-to-Market & Distribution",
+    description: "Bringing AI products to market — channels, pricing, and growth.",
+    intro: "AI products create new GTM challenges: usage-based pricing, trust hurdles, enterprise procurement complexity, and the challenge of demonstrating ROI on probabilistic outputs. This theme covers positioning, channel strategy, pricing models, sales motion, and the growth tactics that are working for AI-native companies.",
+    gradient: "from-[#ff8566] to-[#8a3a28]",
+    color: "#ff8566",
+  },
+  {
+    slug: "data-semantics-knowledge-foundations",
+    name: "Data, Semantics & Knowledge Foundations",
+    description: "The data infrastructure, ontologies, and knowledge graphs that power AI products.",
+    intro: "AI products are only as good as the data and knowledge representations underlying them. This theme covers data pipelines, knowledge graphs, ontologies, RAG architectures, semantic search, embeddings, and the data engineering decisions that determine whether AI products deliver accurate, grounded, and trustworthy outputs.",
+    gradient: "from-[#5ba3cc] to-[#1f4a66]",
+    color: "#5ba3cc",
+  },
+  {
+    slug: "governance-risk-trust",
+    name: "Governance, Risk & Trust",
+    description: "Safety, compliance, and building AI products that organisations can trust.",
+    intro: "As AI products move from experimental to mission-critical, governance becomes a product requirement rather than a checkbox. This theme covers AI safety, bias and fairness, regulatory compliance (EU AI Act, NIST AI RMF), responsible AI frameworks, red-teaming, and the policies and processes that help organizations deploy AI responsibly.",
+    gradient: "from-[#c96bff] to-[#5a2a80]",
+    color: "#c96bff",
+  },
+];
+
+export async function getStaticPaths() {
+  return canonicalThemes.map((t) => ({
+    params: { slug: t.slug },
+    props: { themeConfig: t },
+  }));
+}
+
+interface Props {
+  themeConfig: (typeof canonicalThemes)[0];
+}
+
+const { themeConfig } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+
+// Fetch articles and DB theme data in parallel
+const [articles, dbThemes] = await Promise.all([
+  getArticlesByTheme(themeConfig.slug),
+  getAllThemes(),
+]);
+
+const dbTheme = dbThemes.find((t) => t.slug === themeConfig.slug);
+const longForm = dbTheme?.long_form_intro ?? themeConfig.intro;
+const metaDescription = dbTheme?.meta_description ?? themeConfig.description;
+
+const themeGradients: Record<string, string> = {
+  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
+  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
+  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
+};
+
+const hubJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `${themeConfig.name} | Product Impact`,
+  description: metaDescription,
+  url: `${siteUrl}/themes/${themeConfig.slug}`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "Themes", item: `${siteUrl}/themes` },
+    { "@type": "ListItem", position: 3, name: themeConfig.name, item: `${siteUrl}/themes/${themeConfig.slug}` },
+  ],
+};
+---
+
+<BaseLayout
+  title={`${themeConfig.name} | Product Impact`}
+  description={metaDescription}
+  canonicalUrl={`${siteUrl}/themes/${themeConfig.slug}`}
+  jsonLd={[hubJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main>
+    {/* Hero */}
+    <section class={`bg-gradient-to-br ${themeConfig.gradient} relative`}>
+      <div class="absolute inset-0 bg-black/60"></div>
+      <div class="relative container-wide py-20">
+        <nav class="text-sm text-white/60 mb-6">
+          <a href="/themes" class="hover:text-white">Themes</a>
+          <span class="mx-2">/</span>
+          <span class="text-white">{themeConfig.name}</span>
+        </nav>
+        <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-[1.08] tracking-tight mb-4 max-w-3xl">
+          {themeConfig.name}
+        </h1>
+        <p class="text-lg text-white/80 max-w-2xl">{themeConfig.description}</p>
+        <div class="mt-6 flex items-center gap-2 text-sm text-white/60">
+          <span>{articles.length} article{articles.length !== 1 ? "s" : ""}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="container-wide py-16">
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] gap-16">
+        <div>
+          {/* Long-form intro */}
+          {longForm && (
+            <div class="mb-16 p-8 rounded-2xl bg-background-card border-l-4" style={`border-left-color: ${themeConfig.color};`}>
+              <div class="text-[11px] font-bold uppercase tracking-[0.08em] mb-4" style={`color: ${themeConfig.color};`}>
+                About this theme
+              </div>
+              <p class="text-[17px] text-[#d4d4d4] leading-[1.75]">{longForm}</p>
+            </div>
+          )}
+
+          {/* Articles */}
+          <h2 class="text-2xl font-bold text-white mb-8">
+            {articles.length > 0 ? `${articles.length} article${articles.length !== 1 ? "s" : ""}` : "No articles yet"}
+          </h2>
+
+          {articles.length === 0 ? (
+            <div class="text-center py-16">
+              <p class="text-[#a0a0a0]">No articles published in this theme yet.</p>
+              <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+                Browse all news →
+              </a>
+            </div>
+          ) : (
+            <div class="space-y-6">
+              {articles.map((article) => {
+                const date = new Date(article.publish_date).toLocaleDateString("en-US", {
+                  month: "short", day: "numeric", year: "numeric",
+                });
+                const gradient = themeGradients[article.themes?.[0] ?? "ai-product-strategy"] ?? themeGradients["ai-product-strategy"];
+                return (
+                  <a
+                    href={`/news/${article.slug}`}
+                    class="group flex gap-5 bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+                  >
+                    {article.hero_image_url ? (
+                      <img
+                        src={article.hero_image_url}
+                        alt={article.hero_image_alt ?? article.title}
+                        loading="lazy"
+                        class="w-32 md:w-48 object-cover flex-shrink-0 self-stretch"
+                      />
+                    ) : (
+                      <div
+                        class={`w-32 md:w-48 flex-shrink-0 bg-gradient-to-br ${gradient} flex items-center justify-center`}
+                      >
+                        <div class="text-[9px] uppercase tracking-widest text-white/60 font-semibold px-2 text-center">
+                          Product Impact
+                        </div>
+                      </div>
+                    )}
+                    <div class="flex-1 p-5 min-w-0">
+                      <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                          {formatLabel(article.format)}
+                        </span>
+                      </div>
+                      <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2 mb-1">
+                        {article.title}
+                      </h3>
+                      {article.subtitle && (
+                        <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
+                          {article.subtitle}
+                        </p>
+                      )}
+                      <div class="text-xs text-[#707070] mt-3 flex items-center gap-2">
+                        <time datetime={article.publish_date}>{date}</time>
+                        {article.read_time_minutes && (
+                          <>
+                            <span>·</span>
+                            <span>{article.read_time_minutes} min read</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar — other themes */}
+        <aside class="hidden lg:block">
+          <div class="sticky top-24">
+            <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-4">
+              Other Themes
+            </div>
+            <div class="flex flex-col gap-2">
+              {canonicalThemes
+                .filter((t) => t.slug !== themeConfig.slug)
+                .map((t) => (
+                  <a
+                    href={`/themes/${t.slug}`}
+                    class="flex items-center gap-2 text-sm text-[#d4d4d4] hover:text-white transition-colors group py-1"
+                  >
+                    <span
+                      class="w-2 h-2 rounded-full flex-shrink-0"
+                      style={`background-color: ${t.color};`}
+                    ></span>
+                    <span class="group-hover:text-accent transition-colors">{t.name}</span>
+                  </a>
+                ))}
+            </div>
+            <div class="mt-6 pt-4 border-t border-[#2a2a2a]">
+              <a href="/themes" class="text-sm text-accent hover:text-accent-hover">
+                ← All themes
+              </a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

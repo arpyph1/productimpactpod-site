@@ -1,0 +1,127 @@
+---
+// /themes — 8-tile themes grid. Each tile links to its hub page.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllThemes } from "@lib/supabase";
+
+const siteUrl = "https://productimpactpod.com";
+
+// Canonical theme list — Supabase themes table overrides if populated
+const canonicalThemes = [
+  {
+    slug: "ai-product-strategy",
+    name: "AI Product Strategy",
+    description: "How to define, build, and position AI products in competitive markets.",
+    gradient: "from-[#ff6b4a] to-[#8a3a28]",
+  },
+  {
+    slug: "agents-agentic-systems",
+    name: "Agents & Agentic Systems",
+    description: "The architecture, design, and deployment of autonomous AI agents.",
+    gradient: "from-[#9b7bff] to-[#4a3a80]",
+  },
+  {
+    slug: "ux-experience-design-for-ai",
+    name: "UX & Experience Design for AI",
+    description: "Designing AI-powered interfaces that earn trust and drive adoption.",
+    gradient: "from-[#4ab8c9] to-[#1f5a66]",
+  },
+  {
+    slug: "adoption-organizational-change",
+    name: "Adoption & Organizational Change",
+    description: "Getting teams to use AI products — and building orgs that sustain it.",
+    gradient: "from-[#f5a623] to-[#7a5310]",
+  },
+  {
+    slug: "evaluation-benchmarking",
+    name: "Evaluation & Benchmarking",
+    description: "Measuring AI product quality, reliability, and business impact.",
+    gradient: "from-[#6bbf71] to-[#2d5a30]",
+  },
+  {
+    slug: "go-to-market-distribution",
+    name: "Go-to-Market & Distribution",
+    description: "Bringing AI products to market — channels, pricing, and growth.",
+    gradient: "from-[#ff8566] to-[#8a3a28]",
+  },
+  {
+    slug: "data-semantics-knowledge-foundations",
+    name: "Data, Semantics & Knowledge Foundations",
+    description: "The data infrastructure, ontologies, and knowledge graphs that power AI products.",
+    gradient: "from-[#5ba3cc] to-[#1f4a66]",
+  },
+  {
+    slug: "governance-risk-trust",
+    name: "Governance, Risk & Trust",
+    description: "Safety, compliance, and building AI products that organisations can trust.",
+    gradient: "from-[#c96bff] to-[#5a2a80]",
+  },
+];
+
+// Merge with Supabase data if available
+const dbThemes = await getAllThemes();
+const displayThemes = canonicalThemes.map((canonical) => {
+  const db = dbThemes.find((t) => t.slug === canonical.slug);
+  return {
+    ...canonical,
+    description: db?.description ?? canonical.description,
+    articleCount: null as number | null, // populated in Phase 2 with a count query
+  };
+});
+
+const collectionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Themes | Product Impact",
+  url: `${siteUrl}/themes`,
+  description: "Explore Product Impact coverage by theme — 8 areas of AI product impact.",
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+};
+---
+
+<BaseLayout
+  title="Themes | Product Impact"
+  description="Explore Product Impact coverage by theme — 8 areas where AI products are having the greatest impact on work and industries."
+  canonicalUrl={`${siteUrl}/themes`}
+  jsonLd={collectionJsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        Themes
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        Product Impact coverage organized around 8 areas where AI is reshaping products, teams, and industries.
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {displayThemes.map((theme) => (
+        <a
+          href={`/themes/${theme.slug}`}
+          class="group relative flex flex-col overflow-hidden rounded-2xl bg-background-card hover:bg-background-hover transition-colors min-h-[200px]"
+        >
+          {/* Color bar */}
+          <div class={`h-2 w-full bg-gradient-to-r ${theme.gradient} flex-shrink-0`}></div>
+          <div class="flex-1 p-6 flex flex-col">
+            <h2 class="text-lg font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors">
+              {theme.name}
+            </h2>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed flex-1">
+              {theme.description}
+            </p>
+            <div class="mt-4 text-xs text-accent font-semibold group-hover:text-accent-hover transition-colors">
+              Explore →
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

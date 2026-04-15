@@ -1,28 +1,55 @@
 ---
-// Homepage placeholder — Phase 1 focuses on article pages for SEO critical path.
-// Full homepage with hero + 2×2 grid + episode strip + themes + voices + partner
-// ribbon lands in Phase 2 per the design brief.
+// Homepage — hero lead story + 2×2 grid + episode strip + themes grid + hosts section.
+// Full layout per the design brief. Phase 2 adds admin curation and partner ribbon.
 
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllArticles, formatLabel, themeLabel } from "@lib/supabase";
+import {
+  getAllArticles,
+  getAllThemes,
+  getLatestEpisodes,
+  formatLabel,
+  themeLabel,
+} from "@lib/supabase";
 
-const articles = await getAllArticles();
+const [articles, themes, episodes] = await Promise.all([
+  getAllArticles(),
+  getAllThemes(),
+  getLatestEpisodes(3),
+]);
+
 const siteUrl = "https://productimpactpod.com";
 const leadStory = articles[0] ?? null;
 const secondaryArticles = articles.slice(1, 5);
 
 const themeGradients: Record<string, string> = {
-  "ai-product-strategy": "from-[#ff6b4a] to-[#8a3a28]",
-  "agents-agentic-systems": "from-[#9b7bff] to-[#4a3a80]",
-  "ux-experience-design-for-ai": "from-[#4ab8c9] to-[#1f5a66]",
-  "adoption-organizational-change": "from-[#f5a623] to-[#7a5310]",
-  "evaluation-benchmarking": "from-[#6bbf71] to-[#2d5a30]",
-  "go-to-market-distribution": "from-[#ff8566] to-[#8a3a28]",
+  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
   "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
-  "governance-risk-trust": "from-[#c96bff] to-[#5a2a80]",
+  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
 };
+
+// Canonical theme list as fallback when Supabase themes table is empty
+const canonicalThemes = [
+  { slug: "ai-product-strategy",                  name: "AI Product Strategy" },
+  { slug: "agents-agentic-systems",               name: "Agents & Agentic Systems" },
+  { slug: "ux-experience-design-for-ai",          name: "UX & Experience Design for AI" },
+  { slug: "adoption-organizational-change",       name: "Adoption & Organizational Change" },
+  { slug: "evaluation-benchmarking",              name: "Evaluation & Benchmarking" },
+  { slug: "go-to-market-distribution",            name: "Go-to-Market & Distribution" },
+  { slug: "data-semantics-knowledge-foundations", name: "Data, Semantics & Knowledge Foundations" },
+  { slug: "governance-risk-trust",                name: "Governance, Risk & Trust" },
+];
+
+const displayThemes =
+  themes.length > 0
+    ? themes.map((t) => ({ slug: t.slug, name: t.name, description: t.description }))
+    : canonicalThemes.map((t) => ({ ...t, description: null }));
 
 const websiteJsonLd = {
   "@context": "https://schema.org",
@@ -62,7 +89,7 @@ const websiteJsonLd = {
   <Nav />
 
   <main>
-    {/* Lead story hero */}
+    {/* ── Lead story hero ─────────────────────────────────────────────── */}
     {leadStory && (
       <section class="container-wide pt-12 pb-16">
         <a
@@ -78,7 +105,7 @@ const websiteJsonLd = {
           ) : (
             <div
               class={`w-full aspect-video bg-gradient-to-br ${
-                themeGradients[leadStory.themes?.[0] ?? "ai-product-strategy"]
+                themeGradients[leadStory.themes?.[0] ?? "ai-product-strategy"] ?? themeGradients["ai-product-strategy"]
               }`}
             ></div>
           )}
@@ -106,9 +133,7 @@ const websiteJsonLd = {
               <span>
                 {leadStory.author_slugs
                   .map((s) =>
-                    s
-                      .replace(/-/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase()),
+                    s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
                   )
                   .join(", ")}
               </span>
@@ -124,13 +149,13 @@ const websiteJsonLd = {
       </section>
     )}
 
-    {/* Secondary 2×2 grid */}
+    {/* ── Secondary 2×2 grid ──────────────────────────────────────────── */}
     {secondaryArticles.length > 0 && (
       <section class="container-wide pb-16">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           {secondaryArticles.map((article) => {
             const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
-            const gradient = themeGradients[firstTheme];
+            const gradient = themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
             return (
               <a
                 href={`/news/${article.slug}`}
@@ -171,8 +196,210 @@ const websiteJsonLd = {
             );
           })}
         </div>
+
+        {/* More news link */}
+        <div class="mt-8 text-center">
+          <a
+            href="/news"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+          >
+            All news →
+          </a>
+        </div>
       </section>
     )}
+
+    {/* ── Episode strip ───────────────────────────────────────────────── */}
+    {episodes.length > 0 && (
+      <section class="bg-background-elevated border-y border-[#2a2a2a] py-16">
+        <div class="container-wide">
+          <div class="flex items-baseline justify-between mb-8">
+            <h2 class="text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-white">
+              Latest Episodes
+            </h2>
+            <a href="/episodes" class="text-sm text-accent hover:text-accent-hover font-semibold">
+              All episodes →
+            </a>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {episodes.map((ep) => {
+              const pubDate = ep.published_at
+                ? new Date(ep.published_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : null;
+              return (
+                <a
+                  href={ep.slug ? `/episodes/${ep.slug}` : "/episodes"}
+                  class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+                >
+                  <div class="aspect-square bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center p-8">
+                    <div class="text-center">
+                      {ep.episode_number && (
+                        <div class="text-[11px] uppercase tracking-widest text-white/70 mb-2">
+                          Episode {ep.episode_number}
+                        </div>
+                      )}
+                      <div class="text-5xl font-extrabold text-white opacity-20">PI</div>
+                    </div>
+                  </div>
+                  <div class="p-5">
+                    <h3 class="text-base font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
+                      {ep.title}
+                    </h3>
+                    {ep.meta_description && (
+                      <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
+                        {ep.meta_description}
+                      </p>
+                    )}
+                    <div class="flex items-center gap-2 text-xs text-[#707070] mt-3">
+                      {pubDate && <time>{pubDate}</time>}
+                      {ep.duration && (
+                        <>
+                          {pubDate && <span>·</span>}
+                          <span>{ep.duration}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {/* ── Themes grid ─────────────────────────────────────────────────── */}
+    <section class="container-wide py-16">
+      <div class="flex items-baseline justify-between mb-8">
+        <h2 class="text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-white">
+          Explore by Theme
+        </h2>
+        <a href="/themes" class="text-sm text-accent hover:text-accent-hover font-semibold">
+          All themes →
+        </a>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {displayThemes.map((theme) => {
+          const gradient = themeGradients[theme.slug] ?? themeGradients["ai-product-strategy"];
+          return (
+            <a
+              href={`/themes/${theme.slug}`}
+              class={`group relative rounded-xl overflow-hidden aspect-[4/3] bg-gradient-to-br ${gradient} flex items-end p-4 hover:opacity-90 transition-opacity`}
+            >
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+              <span class="relative text-sm font-bold text-white leading-tight">
+                {theme.name}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    {/* ── Hosts section ───────────────────────────────────────────────── */}
+    <section class="bg-background-elevated border-y border-[#2a2a2a] py-16">
+      <div class="container-wide">
+        <h2 class="text-2xl md:text-3xl font-extrabold uppercase tracking-tight text-white mb-10 text-center">
+          Your Hosts
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          {/* Arpy */}
+          <div class="bg-background-card rounded-2xl p-8 flex flex-col items-center text-center">
+            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-[#8a3a28] flex items-center justify-center mb-5 flex-shrink-0">
+              <span class="text-white font-extrabold text-3xl">A</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">
+              <a href="/people/arpy-dragffy" class="hover:text-accent transition-colors">
+                Arpy Dragffy
+              </a>
+            </h3>
+            <p class="text-sm text-accent font-semibold mb-3">Co-host & Producer</p>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed">
+              Founder of PH1 Research and AI Value Acceleration. Focused on how AI products drive
+              measurable business impact across enterprise and growth-stage companies.
+            </p>
+            <div class="flex gap-3 mt-5">
+              <a
+                href="https://ph1.ca"
+                target="_blank"
+                rel="noopener"
+                class="text-xs text-accent hover:text-accent-hover font-semibold"
+              >
+                PH1 Research →
+              </a>
+              <a
+                href="https://linkedin.com/in/arpydragffy"
+                target="_blank"
+                rel="noopener"
+                class="text-xs text-[#a0a0a0] hover:text-white font-semibold"
+              >
+                LinkedIn
+              </a>
+            </div>
+          </div>
+
+          {/* Brittany */}
+          <div class="bg-background-card rounded-2xl p-8 flex flex-col items-center text-center">
+            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-[#4ab8c9] to-[#1f5a66] flex items-center justify-center mb-5 flex-shrink-0">
+              <span class="text-white font-extrabold text-3xl">B</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">
+              <a href="/people/brittany-hobbs" class="hover:text-accent transition-colors">
+                Brittany Hobbs
+              </a>
+            </h3>
+            <p class="text-sm text-accent font-semibold mb-3">Co-host</p>
+            <p class="text-sm text-[#a0a0a0] leading-relaxed">
+              Product leader focused on bringing AI capabilities to market. Explores the intersection
+              of product strategy, design, and go-to-market for AI-native products.
+            </p>
+            <div class="flex gap-3 mt-5">
+              <a
+                href="https://linkedin.com/in/brittanyhobbs"
+                target="_blank"
+                rel="noopener"
+                class="text-xs text-[#a0a0a0] hover:text-white font-semibold"
+              >
+                LinkedIn
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Newsletter / listen CTA ─────────────────────────────────────── */}
+    <section class="container-wide py-16">
+      <div class="max-w-2xl mx-auto text-center">
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4 tracking-tight">
+          Stay ahead of AI product impact
+        </h2>
+        <p class="text-[#d4d4d4] mb-8 leading-relaxed">
+          Subscribe on your favourite podcast platform or follow on Substack for weekly
+          news, analysis, and episode releases.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="https://productimpactpod.substack.com"
+            target="_blank"
+            rel="noopener"
+            class="px-6 py-3 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover transition-colors"
+          >
+            Subscribe on Substack
+          </a>
+          <a
+            href="/podcast"
+            class="px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+          >
+            About the podcast →
+          </a>
+        </div>
+      </div>
+    </section>
   </main>
 
   <Footer />

@@ -1,0 +1,212 @@
+---
+// /news/format/[format] — filtered news index by article format.
+// getStaticPaths enumerates all 10 formats at build time.
+// Active tab highlight and per-format title/description for SEO.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllArticles, formatLabel, themeLabel, type ArticleFormat } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const formats: ArticleFormat[] = [
+    "news-brief",
+    "news-analysis",
+    "release-note",
+    "feature",
+    "interview",
+    "case-study",
+    "opinion",
+    "explainer",
+    "product-review",
+    "research-brief",
+  ];
+
+  const allArticles = await getAllArticles();
+
+  return formats.map((fmt) => ({
+    params: { format: fmt },
+    props: {
+      format: fmt,
+      articles: allArticles.filter((a) => a.format === fmt),
+    },
+  }));
+}
+
+interface Props {
+  format: ArticleFormat;
+  articles: Awaited<ReturnType<typeof getAllArticles>>;
+}
+
+const { format, articles } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+
+const formatDescriptions: Record<ArticleFormat, string> = {
+  "news-brief":     "Quick dispatches on AI product developments, releases, and market moves.",
+  "news-analysis":  "In-depth analysis of AI product trends, decisions, and their industry implications.",
+  "release-note":   "Coverage of new AI product releases, feature launches, and platform updates.",
+  feature:          "Long-form feature stories exploring the AI products reshaping industries.",
+  interview:        "Conversations with product leaders, researchers, and practitioners in AI.",
+  "case-study":     "Real-world case studies of AI product adoption, outcomes, and lessons learned.",
+  opinion:          "Perspective and commentary on the forces shaping AI product development.",
+  explainer:        "Clear explainers on AI product concepts, frameworks, and how things work.",
+  "product-review": "Hands-on reviews of AI products, tools, and platforms.",
+  "research-brief": "Summaries of research relevant to AI product practitioners.",
+};
+
+const label = formatLabel(format);
+const description = formatDescriptions[format];
+
+const themeGradients: Record<string, string> = {
+  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
+  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
+  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
+  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
+  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
+  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
+  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
+  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
+};
+
+const allFormats: ArticleFormat[] = [
+  "news-brief", "news-analysis", "release-note", "feature",
+  "interview", "case-study", "opinion", "explainer",
+  "product-review", "research-brief",
+];
+
+const collectionPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `${label} | Product Impact`,
+  description,
+  url: `${siteUrl}/news/format/${format}`,
+  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+---
+
+<BaseLayout
+  title={`${label} | Product Impact`}
+  description={description}
+  canonicalUrl={`${siteUrl}/news/format/${format}`}
+  jsonLd={collectionPageJsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <div class="mb-3">
+        <a href="/news" class="text-sm text-[#a0a0a0] hover:text-white">← All News</a>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        {label}
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">{description}</p>
+    </header>
+
+    {/* Format tabs — active tab highlighted */}
+    <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
+      <a
+        href="/news"
+        class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
+      >
+        All
+      </a>
+      {allFormats.map((fmt) => (
+        <a
+          href={`/news/format/${fmt}`}
+          class={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+            fmt === format
+              ? "bg-background-card text-white border border-accent"
+              : "text-[#d4d4d4] hover:text-white hover:bg-background-card"
+          }`}
+        >
+          {formatLabel(fmt)}
+        </a>
+      ))}
+    </div>
+
+    {articles.length === 0 ? (
+      <div class="text-center py-24">
+        <p class="text-xl text-[#a0a0a0]">No {label} articles published yet.</p>
+        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          Browse all news →
+        </a>
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {articles.map((article) => {
+          const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+          const gradient = themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
+          const date = new Date(article.publish_date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+          return (
+            <a
+              href={`/news/${article.slug}`}
+              class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+            >
+              {article.hero_image_url ? (
+                <img
+                  src={article.hero_image_url}
+                  alt={article.hero_image_alt ?? article.title}
+                  loading="lazy"
+                  class="w-full aspect-video object-cover"
+                />
+              ) : (
+                <div
+                  class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}
+                >
+                  <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
+                    Product Impact
+                  </div>
+                </div>
+              )}
+              <div class="p-6">
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                    {formatLabel(article.format)}
+                  </span>
+                  {article.themes?.slice(0, 2).map((t) => (
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#a0a0a0]">
+                      {themeLabel(t)}
+                    </span>
+                  ))}
+                </div>
+                <h2 class="text-xl font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
+                  {article.title}
+                </h2>
+                {article.subtitle && (
+                  <p class="text-sm text-[#d4d4d4] line-clamp-3 leading-relaxed">
+                    {article.subtitle}
+                  </p>
+                )}
+                <div class="text-xs text-[#707070] mt-4 flex items-center gap-2">
+                  <time datetime={article.publish_date}>{date}</time>
+                  {article.read_time_minutes && (
+                    <>
+                      <span>·</span>
+                      <span>{article.read_time_minutes} min read</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

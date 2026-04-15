@@ -1,0 +1,19 @@
+---
+import EntityPage from "@components/EntityPage.astro";
+import { getAllEntitiesByType, getEntityBySlug, getArticlesByEntity } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const entities = await getAllEntitiesByType("concept");
+  return entities.map((e) => ({ params: { slug: e.slug } }));
+}
+
+const { slug } = Astro.params;
+const [entity, articles] = await Promise.all([
+  getEntityBySlug("concept", slug),
+  getArticlesByEntity(slug),
+]);
+
+if (!entity) return Astro.redirect("/404", 302);
+---
+
+<EntityPage entity={entity} articles={articles} />

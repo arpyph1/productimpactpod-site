@@ -16,8 +16,8 @@ import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import {
   getAllArticles,
-  getArticleBySlug,
   getRelatedArticles,
+  getArticleEntities,
   authorDisplayName,
   formatLabel,
   themeLabel,
@@ -40,8 +40,11 @@ interface Props {
 
 const { article } = Astro.props;
 
-// Fetch related articles at build time (not runtime — this is static HTML)
-const related = await getRelatedArticles(article, 3);
+// Fetch related articles and entity mentions at build time
+const [related, articleEntities] = await Promise.all([
+  getRelatedArticles(article, 3),
+  getArticleEntities(article.slug),
+]);
 
 // Content processing
 const cleanedHtml = stripFirstH1(article.content_html);
@@ -178,7 +181,7 @@ const breadcrumbJsonLd = {
         </ol>
       </nav>
 
-      {/* Format + theme badges */}
+      {/* Format + theme + lens badges */}
       <div class="flex flex-wrap items-center gap-2 mb-5">
         <span
           class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent text-black"
@@ -192,6 +195,11 @@ const breadcrumbJsonLd = {
           >
             {themeLabel(t)}
           </a>
+        ))}
+        {article.lenses?.map((lens) => (
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-background-card text-[#a0a0a0]">
+            {lens.replace(/-/g, " ")}
+          </span>
         ))}
       </div>
 
@@ -370,15 +378,71 @@ const breadcrumbJsonLd = {
           </p>
         </div>
 
-        {/* Entity sidebar — desktop only. Hidden until we wire up article_entities join. */}
+        {/* Entity sidebar — desktop only */}
         <aside class="hidden lg:block">
           <div class="sticky top-24 space-y-8">
-            <div class="text-xs font-bold uppercase tracking-wider text-[#707070]">
-              Related content
-            </div>
+            {/* Theme links */}
+            {article.themes && article.themes.length > 0 && (
+              <div>
+                <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                  Themes
+                </div>
+                <div class="flex flex-col gap-2">
+                  {article.themes.map((t) => (
+                    <a
+                      href={`/themes/${t}`}
+                      class="text-sm text-[#d4d4d4] hover:text-accent transition-colors"
+                    >
+                      {themeLabel(t)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Entities mentioned in this article */}
+            {articleEntities.length > 0 && (
+              <div>
+                <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                  In this article
+                </div>
+                <div class="flex flex-col gap-2">
+                  {articleEntities.map((e) => (
+                    <a
+                      href={`/${e.entity_type === "concept" ? "concepts" : e.entity_type === "person" ? "people" : e.entity_type === "organization" ? "organizations" : e.entity_type === "product" ? "products" : e.entity_type === "framework" ? "frameworks" : "sources"}/${e.entity_slug}`}
+                      class="group flex items-center gap-2"
+                    >
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-background-card text-[#707070] flex-shrink-0">
+                        {e.entity_type}
+                      </span>
+                      <span class="text-sm text-[#d4d4d4] group-hover:text-accent transition-colors">
+                        {e.entity_name}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Topics / keywords */}
+            {article.topics && article.topics.length > 0 && (
+              <div>
+                <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
+                  Topics
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  {article.topics.map((topic) => (
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-[#a0a0a0] bg-background-card border border-[#2a2a2a]">
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <a
               href="/news"
-              class="block text-[15px] text-accent hover:text-accent-hover"
+              class="block text-[14px] text-accent hover:text-accent-hover pt-2 border-t border-[#2a2a2a]"
             >
               ← All news
             </a>
