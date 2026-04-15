@@ -1,0 +1,76 @@
+---
+// Shared article card component used by /news, /news/page/[page],
+// /news/format/[format], /news/[year], /news/[year]/[month], /topics/[slug],
+// /themes/[slug], and entity hubs. Single source of truth for card markup.
+
+import { formatLabel, themeLabel, type Article } from "@lib/supabase";
+import { themeGradients } from "@lib/themes";
+
+interface Props {
+  article: Article;
+  showThemes?: boolean;
+}
+
+const { article, showThemes = true } = Astro.props;
+
+const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+const gradient =
+  themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
+
+const date = new Date(article.publish_date).toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+---
+
+<a
+  href={`/news/${article.slug}`}
+  class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+>
+  {article.hero_image_url ? (
+    <img
+      src={article.hero_image_url}
+      alt={article.hero_image_alt ?? article.title}
+      loading="lazy"
+      class="w-full aspect-video object-cover"
+    />
+  ) : (
+    <div
+      class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}
+    >
+      <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
+        Product Impact
+      </div>
+    </div>
+  )}
+  <div class="p-6">
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+        {formatLabel(article.format)}
+      </span>
+      {showThemes && article.themes?.slice(0, 2).map((t) => (
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#a0a0a0]">
+          {themeLabel(t)}
+        </span>
+      ))}
+    </div>
+    <h2 class="text-xl font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
+      {article.title}
+    </h2>
+    {article.subtitle && (
+      <p class="text-sm text-[#d4d4d4] line-clamp-3 leading-relaxed">
+        {article.subtitle}
+      </p>
+    )}
+    <div class="text-xs text-[#707070] mt-4 flex items-center gap-2">
+      <time datetime={article.publish_date}>{date}</time>
+      {article.read_time_minutes && (
+        <>
+          <span>·</span>
+          <span>{article.read_time_minutes} min read</span>
+        </>
+      )}
+    </div>
+  </div>
+</a>

@@ -4,9 +4,29 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getLatestEpisodes } from "@lib/supabase";
+import { getLatestEpisodes, getLatestShorts } from "@lib/supabase";
 
-const episodes = await getLatestEpisodes(10);
+const YOUTUBE_CHANNEL_ID = "UCb1nY02YcJYZZ_XtvcIBcrw";
+
+// Parallel fetch — both hit the shared Supabase project
+const [episodes, shortsData] = await Promise.all([
+  getLatestEpisodes(10),
+  getLatestShorts(YOUTUBE_CHANNEL_ID, 2),
+]);
+
+// Assemble the three vertical-video slots per product spec:
+//   1. Most recent short
+//   2. 2nd most recent short
+//   3. Short with the most views (falls back to nothing if unavailable)
+const shortSlots = [
+  shortsData.shorts[0] ?? null,
+  shortsData.shorts[1] ?? null,
+  shortsData.mostWatched ?? null,
+].map((short, i) => ({
+  short,
+  label: i === 0 ? "Latest Short" : i === 1 ? "2nd Latest" : "Most Watched",
+}));
+
 const siteUrl = "https://productimpactpod.com";
 
 const listenLinks = [
@@ -43,7 +63,7 @@ const podcastJsonLd = {
   description:
     "AI product impact — conversations with product leaders, practitioners, and researchers about the products transforming how we work and industries.",
   url: `${siteUrl}/podcast`,
-  image: `${siteUrl}/og-default.svg`,
+  image: `${siteUrl}/og-default.png`,
   author: [
     {
       "@type": "Person",
@@ -104,6 +124,141 @@ const podcastJsonLd = {
                 ></span>
                 {link.platform}
               </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── YouTube Shorts ─────────────────────────────────────────────
+         Three vertical 9:16 cards in a staircase layout on desktop,
+         horizontal scroll on mobile. Click thumbnail → inline iframe
+         embed (vanilla JS, no React hydration). Data fetched at build
+         time via Supabase edge function.
+    */}
+    <section class="container-wide py-16 border-b border-[#2a2a2a]">
+      <div class="flex items-baseline justify-between mb-10">
+        <h2 class="text-2xl font-extrabold uppercase tracking-tight text-white">
+          Shorts
+        </h2>
+        <a
+          href={`https://youtube.com/channel/${YOUTUBE_CHANNEL_ID}/shorts`}
+          target="_blank"
+          rel="noopener"
+          class="text-sm text-accent hover:text-accent-hover font-semibold"
+        >
+          All Shorts on YouTube →
+        </a>
+      </div>
+
+      <div class="max-w-3xl mx-auto">
+        {/* Desktop: staircase 3-column */}
+        <div class="hidden md:grid md:grid-cols-3 gap-7 items-start">
+          {shortSlots.map((slot, i) => (
+            <div style={`margin-top: ${i * 2.5}rem;`}>
+              {slot.short ? (
+                <div
+                  class="short-card relative rounded-xl overflow-hidden bg-background-card border border-[#2a2a2a] group shadow-xl"
+                  style="aspect-ratio: 9 / 16;"
+                  data-video-id={slot.short.videoId}
+                >
+                  <img
+                    src={slot.short.thumbnail}
+                    alt={slot.short.title}
+                    class="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-colors"></div>
+
+                  <button
+                    type="button"
+                    class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer"
+                    aria-label={`Play: ${slot.short.title}`}
+                  >
+                    <span class="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="black" aria-hidden="true">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </span>
+                  </button>
+
+                  <div class="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                    {slot.label}
+                  </div>
+                  <div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+                    <span class="text-xs font-medium text-white/90 line-clamp-2 leading-snug">
+                      {slot.short.title}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  class="relative rounded-xl overflow-hidden bg-background-card border border-dashed border-[#3a3a3a]"
+                  style="aspect-ratio: 9 / 16;"
+                >
+                  <div class="absolute inset-0 flex items-center justify-center p-6 text-center">
+                    <span class="text-xs text-[#707070]">
+                      {slot.label} unavailable
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile: horizontal scroll */}
+        <div class="md:hidden -mx-6 px-6">
+          <div
+            class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4"
+            style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+          >
+            {shortSlots.map((slot) => (
+              <div class="snap-center shrink-0" style="width: 65vw; max-width: 240px;">
+                {slot.short ? (
+                  <div
+                    class="short-card relative rounded-xl overflow-hidden bg-background-card border border-[#2a2a2a] group"
+                    style="aspect-ratio: 9 / 16;"
+                    data-video-id={slot.short.videoId}
+                  >
+                    <img
+                      src={slot.short.thumbnail}
+                      alt={slot.short.title}
+                      class="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-black/50"></div>
+                    <button
+                      type="button"
+                      class="short-play-btn absolute inset-0 flex items-center justify-center"
+                      aria-label={`Play: ${slot.short.title}`}
+                    >
+                      <span class="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-xl">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="black" aria-hidden="true">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </span>
+                    </button>
+                    <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-accent text-black">
+                      {slot.label}
+                    </div>
+                    <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+                      <span class="text-[11px] font-medium text-white/90 line-clamp-2">
+                        {slot.short.title}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    class="relative rounded-xl overflow-hidden bg-background-card border border-dashed border-[#3a3a3a]"
+                    style="aspect-ratio: 9 / 16;"
+                  >
+                    <div class="absolute inset-0 flex items-center justify-center p-4 text-center">
+                      <span class="text-xs text-[#707070]">{slot.label} unavailable</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -281,3 +436,31 @@ const podcastJsonLd = {
 
   <Footer />
 </BaseLayout>
+
+<script>
+  // Click-to-play for YouTube Shorts.
+  // Build-time render leaves thumbnails on the page — hydrating with an iframe
+  // only on click keeps the initial page lightweight (no YouTube iframe on
+  // pageload = better LCP, fewer 3rd-party cookies until user opts in).
+  document.querySelectorAll<HTMLElement>(".short-card").forEach((card) => {
+    const videoId = card.dataset.videoId;
+    if (!videoId) return;
+
+    const playBtn = card.querySelector<HTMLButtonElement>(".short-play-btn");
+    if (!playBtn) return;
+
+    playBtn.addEventListener("click", () => {
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+      iframe.title = playBtn.getAttribute("aria-label") ?? "YouTube Short";
+      iframe.allow =
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allowFullscreen = true;
+      iframe.className = "absolute inset-0 w-full h-full";
+
+      // Swap: wipe the card, drop in the iframe
+      card.innerHTML = "";
+      card.appendChild(iframe);
+    });
+  });
+</script>

@@ -1,45 +1,36 @@
 ---
-// /news — canonical index of all editorial articles.
-// Server-side rendered list from the articles table.
+// /news — page 1 of the paginated news index.
+// Later pages live at /news/page/2, /news/page/3 etc.
+// Split from /news/page/[page] to avoid URL collision with /news/[year]
+// date archives.
 
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import {
-  getAllArticles,
-  formatLabel,
-  themeLabel,
-} from "@lib/supabase";
+import ArticleCard from "@components/ArticleCard.astro";
+import Pagination from "@components/Pagination.astro";
+import { getAllArticles, formatLabel } from "@lib/supabase";
 
+const PAGE_SIZE = 24;
 const articles = await getAllArticles();
+const pageArticles = articles.slice(0, PAGE_SIZE);
+const lastPage = Math.max(1, Math.ceil(articles.length / PAGE_SIZE));
+const hasNext = articles.length > PAGE_SIZE;
+
 const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/news`;
 
-const themeGradients: Record<string, string> = {
-  "ai-product-strategy": "from-[#ff6b4a] to-[#8a3a28]",
-  "agents-agentic-systems": "from-[#9b7bff] to-[#4a3a80]",
-  "ux-experience-design-for-ai": "from-[#4ab8c9] to-[#1f5a66]",
-  "adoption-organizational-change": "from-[#f5a623] to-[#7a5310]",
-  "evaluation-benchmarking": "from-[#6bbf71] to-[#2d5a30]",
-  "go-to-market-distribution": "from-[#ff8566] to-[#8a3a28]",
-  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
-  "governance-risk-trust": "from-[#c96bff] to-[#5a2a80]",
-};
-
-const collectionPageJsonLd = {
+const jsonLd = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  name: "Product Impact News",
+  name: "News | Product Impact",
   description:
     "AI product impact — news, releases, and case studies about the products transforming how we work and industries.",
-  url: `${siteUrl}/news`,
-  isPartOf: {
-    "@type": "WebSite",
-    name: "Product Impact",
-    url: siteUrl,
-  },
+  url: canonicalUrl,
+  isPartOf: { "@id": `${siteUrl}/#website` },
   mainEntity: {
     "@type": "ItemList",
-    itemListElement: articles.map((a, i) => ({
+    itemListElement: pageArticles.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
       url: `${siteUrl}/news/${a.slug}`,
@@ -52,13 +43,12 @@ const collectionPageJsonLd = {
 <BaseLayout
   title="News | Product Impact"
   description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
-  canonicalUrl={`${siteUrl}/news`}
-  jsonLd={collectionPageJsonLd}
+  canonicalUrl={canonicalUrl}
+  jsonLd={jsonLd}
 >
   <Nav />
 
   <main class="container-wide py-16">
-    {/* Page header */}
     <header class="mb-12">
       <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
         News
@@ -68,7 +58,7 @@ const collectionPageJsonLd = {
       </p>
     </header>
 
-    {/* Format filter tabs — "All" is active on this page */}
+    {/* Format filter tabs */}
     <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
       <a
         href="/news"
@@ -78,16 +68,9 @@ const collectionPageJsonLd = {
         All
       </a>
       {([
-        "news-brief",
-        "news-analysis",
-        "release-note",
-        "feature",
-        "interview",
-        "case-study",
-        "opinion",
-        "explainer",
-        "product-review",
-        "research-brief",
+        "news-brief", "news-analysis", "release-note", "feature",
+        "interview", "case-study", "opinion", "explainer",
+        "product-review", "research-brief",
       ] as const).map((fmt) => (
         <a
           href={`/news/format/${fmt}`}
@@ -98,77 +81,22 @@ const collectionPageJsonLd = {
       ))}
     </div>
 
-    {/* Articles grid */}
-    {articles.length === 0 ? (
+    {pageArticles.length === 0 ? (
       <div class="text-center py-24">
         <p class="text-xl text-[#a0a0a0]">No articles published yet.</p>
       </div>
     ) : (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {articles.map((article) => {
-          const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
-          const gradient =
-            themeGradients[firstTheme] ??
-            themeGradients["ai-product-strategy"];
-          const date = new Date(article.publish_date).toLocaleDateString(
-            "en-US",
-            { month: "short", day: "numeric", year: "numeric" },
-          );
-          return (
-            <a
-              href={`/news/${article.slug}`}
-              class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
-            >
-              {article.hero_image_url ? (
-                <img
-                  src={article.hero_image_url}
-                  alt={article.hero_image_alt ?? article.title}
-                  loading="lazy"
-                  class="w-full aspect-video object-cover"
-                />
-              ) : (
-                <div
-                  class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}
-                >
-                  <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
-                    Product Impact
-                  </div>
-                </div>
-              )}
-              <div class="p-6">
-                <div class="flex flex-wrap items-center gap-2 mb-3">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
-                    {formatLabel(article.format)}
-                  </span>
-                  {article.themes?.slice(0, 2).map((t) => (
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#a0a0a0]">
-                      {themeLabel(t)}
-                    </span>
-                  ))}
-                </div>
-                <h2 class="text-xl font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
-                  {article.title}
-                </h2>
-                {article.subtitle && (
-                  <p class="text-sm text-[#d4d4d4] line-clamp-3 leading-relaxed">
-                    {article.subtitle}
-                  </p>
-                )}
-                <div class="text-xs text-[#707070] mt-4 flex items-center gap-2">
-                  <time datetime={article.publish_date}>{date}</time>
-                  {article.read_time_minutes && (
-                    <>
-                      <span>·</span>
-                      <span>{article.read_time_minutes} min read</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </a>
-          );
-        })}
+        {pageArticles.map((article) => <ArticleCard article={article} />)}
       </div>
     )}
+
+    <Pagination
+      currentPage={1}
+      lastPage={lastPage}
+      prevUrl={null}
+      nextUrl={hasNext ? "/news/page/2" : null}
+    />
   </main>
 
   <Footer />

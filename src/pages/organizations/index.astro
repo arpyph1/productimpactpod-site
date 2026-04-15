@@ -1,0 +1,14 @@
+---
+import EntityIndex from "@components/EntityIndex.astro";
+import { getAllEntitiesByType } from "@lib/supabase";
+
+const entities = await getAllEntitiesByType("organization");
+---
+
+<EntityIndex
+  entities={entities}
+  type="organization"
+  title="Organizations | Product Impact"
+  description="AI companies, research labs, and organizations covered on Product Impact."
+  lead="Companies, research labs, and organizations shaping AI product development."
+/>

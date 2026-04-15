@@ -1,0 +1,123 @@
+---
+// /topics — index of every topic tagged across the archive.
+// Complements /themes (the 8 canonical editorial categories) with
+// long-tail topic hubs that capture specific search intent.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllTopics } from "@lib/supabase";
+
+const topics = await getAllTopics();
+const siteUrl = "https://productimpactpod.com";
+
+// Group by first letter for quick browsing
+const grouped = new Map<string, typeof topics>();
+for (const t of topics) {
+  const letter = (t.slug[0] ?? "#").toUpperCase();
+  const key = /[A-Z]/.test(letter) ? letter : "#";
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(t);
+}
+// Sort each group alphabetically by slug
+for (const list of grouped.values()) {
+  list.sort((a, b) => a.slug.localeCompare(b.slug));
+}
+const sortedGroups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+const topicsForDisplay = (slug: string) =>
+  slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Topics | Product Impact",
+  url: `${siteUrl}/topics`,
+  description:
+    "Every topic covered on Product Impact — browse AI product news and analysis by subject.",
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: topics.length,
+    itemListElement: topics.slice(0, 100).map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/topics/${t.slug}`,
+      name: topicsForDisplay(t.slug),
+    })),
+  },
+};
+---
+
+<BaseLayout
+  title="Topics | Product Impact"
+  description="Every topic covered on Product Impact — browse AI product news and analysis by subject, from specific products to broader concepts."
+  canonicalUrl={`${siteUrl}/topics`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        Topics
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        Every specific topic, product, concept, or keyword we've covered.
+        For the eight editorial themes, see <a href="/themes" class="text-accent hover:text-accent-hover">Themes</a>.
+      </p>
+    </header>
+
+    {topics.length === 0 ? (
+      <div class="text-center py-24">
+        <p class="text-xl text-[#a0a0a0]">No topics indexed yet.</p>
+        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          Browse news →
+        </a>
+      </div>
+    ) : (
+      <>
+        {/* A–Z quick-jump */}
+        <nav aria-label="Jump to letter" class="flex flex-wrap gap-1.5 mb-10 pb-6 border-b border-[#2a2a2a]">
+          {sortedGroups.map(([letter]) => (
+            <a
+              href={`#letter-${letter}`}
+              class="w-8 h-8 flex items-center justify-center rounded-md text-sm font-bold text-[#d4d4d4] bg-background-card hover:bg-background-hover hover:text-accent transition-colors"
+            >
+              {letter}
+            </a>
+          ))}
+        </nav>
+
+        <div class="space-y-10">
+          {sortedGroups.map(([letter, list]) => (
+            <section id={`letter-${letter}`}>
+              <h2 class="text-3xl font-extrabold text-accent mb-5 border-b border-[#2a2a2a] pb-2">
+                {letter}
+              </h2>
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {list.map((t) => (
+                  <a
+                    href={`/topics/${t.slug}`}
+                    class="group flex items-baseline justify-between gap-2 px-3 py-2 rounded-md hover:bg-background-card transition-colors"
+                  >
+                    <span class="text-sm text-[#d4d4d4] group-hover:text-accent transition-colors truncate">
+                      {topicsForDisplay(t.slug)}
+                    </span>
+                    <span class="text-xs text-[#707070] flex-shrink-0">{t.count}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <p class="text-sm text-[#707070] italic mt-12 pt-6 border-t border-[#2a2a2a]">
+          {topics.length} topics indexed across the archive.
+        </p>
+      </>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

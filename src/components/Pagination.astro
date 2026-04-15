@@ -1,0 +1,55 @@
+---
+// Pagination nav — previous/next links + page indicator.
+// Designed to work with Astro's Page<T> object or manually computed page state.
+
+interface Props {
+  currentPage: number;
+  lastPage: number;
+  prevUrl: string | null;
+  nextUrl: string | null;
+  labels?: { prev?: string; next?: string };
+}
+
+const {
+  currentPage,
+  lastPage,
+  prevUrl,
+  nextUrl,
+  labels = { prev: "← Newer", next: "Older →" },
+} = Astro.props;
+---
+
+{lastPage > 1 && (
+  <nav
+    aria-label="Pagination"
+    class="flex items-center justify-between mt-16 pt-8 border-t border-[#2a2a2a]"
+  >
+    {prevUrl ? (
+      <a
+        href={prevUrl}
+        rel="prev"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+      >
+        {labels.prev}
+      </a>
+    ) : (
+      <span></span>
+    )}
+
+    <span class="text-sm text-[#707070]">
+      Page {currentPage} of {lastPage}
+    </span>
+
+    {nextUrl ? (
+      <a
+        href={nextUrl}
+        rel="next"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
+      >
+        {labels.next}
+      </a>
+    ) : (
+      <span></span>
+    )}
+  </nav>
+)}

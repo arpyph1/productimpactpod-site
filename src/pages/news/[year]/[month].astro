@@ -1,0 +1,139 @@
+---
+// /news/[year]/[month] — month archive.
+// Lists every article published in the given YYYY/MM, newest first.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import ArticleCard from "@components/ArticleCard.astro";
+import { type Article } from "@lib/supabase";
+
+export async function getStaticPaths() {
+  const { getAllArticles } = await import("@lib/supabase");
+  const articles = await getAllArticles();
+  const byMonth = new Map<string, Article[]>();
+  for (const a of articles) {
+    const d = new Date(a.publish_date);
+    if (isNaN(d.getTime())) continue;
+    const year = String(d.getUTCFullYear());
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const key = `${year}/${month}`;
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key)!.push(a);
+  }
+  return [...byMonth.entries()].map(([key, list]) => {
+    const [year, month] = key.split("/");
+    return {
+      params: { year, month },
+      props: { year, month, articles: list },
+    };
+  });
+}
+
+interface Props {
+  year: string;
+  month: string;
+  articles: Article[];
+}
+
+const { year, month, articles } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/news/${year}/${month}`;
+
+const monthDate = new Date(Date.UTC(+year, +month - 1, 1));
+const monthName = monthDate.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+const displayLabel = `${monthName} ${year}`;
+
+// Compute prev/next month for navigation
+function shiftMonth(delta: number): { year: string; month: string } {
+  const d = new Date(Date.UTC(+year, +month - 1 + delta, 1));
+  return {
+    year: String(d.getUTCFullYear()),
+    month: String(d.getUTCMonth() + 1).padStart(2, "0"),
+  };
+}
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `News — ${displayLabel} | Product Impact`,
+  url: canonicalUrl,
+  description: `Every Product Impact article published in ${displayLabel}.`,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news` },
+    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive` },
+    { "@type": "ListItem", position: 4, name: year, item: `${siteUrl}/news/${year}` },
+    { "@type": "ListItem", position: 5, name: displayLabel, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={`${displayLabel} | Product Impact News`}
+  description={`Every Product Impact article published in ${displayLabel} — AI product news, releases, and analysis.`}
+  canonicalUrl={canonicalUrl}
+  jsonLd={[jsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/news" class="hover:text-white">News</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/news/archive" class="hover:text-white">Archive</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href={`/news/${year}`} class="hover:text-white">{year}</a></li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4]">{monthName}</li>
+      </ol>
+    </nav>
+
+    <header class="mb-12">
+      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
+        {displayLabel}
+      </h1>
+      <p class="text-lg text-[#d4d4d4]">
+        {articles.length} article{articles.length !== 1 ? "s" : ""} published this month.
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {articles.map((article) => <ArticleCard article={article} />)}
+    </div>
+
+    {/* Month nav — prev/next from archive index */}
+    <div class="mt-16 pt-8 border-t border-[#2a2a2a] flex items-center justify-between">
+      <a
+        href={`/news/archive`}
+        class="text-sm text-accent hover:text-accent-hover"
+      >
+        ← All archives
+      </a>
+      <a
+        href={`/news/${year}`}
+        class="text-sm text-accent hover:text-accent-hover"
+      >
+        All of {year} →
+      </a>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>

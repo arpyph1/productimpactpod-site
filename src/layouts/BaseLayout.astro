@@ -70,12 +70,12 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
       content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}
     />
 
-    <!-- Favicon set. Modern browsers prefer the SVG; fallbacks cover older UAs. -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Favicon set. Browsers pick the best size for their UI. -->
     <link rel="icon" type="image/png" sizes="16x16"  href="/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32"  href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="96x96"  href="/favicon-96.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Open Graph -->

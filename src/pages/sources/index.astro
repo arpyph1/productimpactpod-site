@@ -1,0 +1,14 @@
+---
+import EntityIndex from "@components/EntityIndex.astro";
+import { getAllEntitiesByType } from "@lib/supabase";
+
+const entities = await getAllEntitiesByType("source");
+---
+
+<EntityIndex
+  entities={entities}
+  type="source"
+  title="Sources | Product Impact"
+  description="Primary sources, research papers, and references cited across Product Impact coverage."
+  lead="Primary sources, research papers, company announcements, and references cited in our coverage."
+/>

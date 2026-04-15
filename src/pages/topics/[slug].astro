@@ -1,0 +1,252 @@
+---
+// /topics/[slug] — topic hub page.
+// One page per unique topic slug. The "definer" article (if any exists —
+// the most recent explainer tagged with this topic) is featured at the
+// top; all other articles follow, newest first.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import {
+  getArticlesByTopic,
+  formatLabel,
+  themeLabel,
+  type Article,
+} from "@lib/supabase";
+import { themeGradients } from "@lib/themes";
+
+export async function getStaticPaths() {
+  const { getAllTopics } = await import("@lib/supabase");
+  const topics = await getAllTopics();
+  return topics.map((t) => ({
+    params: { slug: t.slug },
+    props: { topicSlug: t.slug, count: t.count },
+  }));
+}
+
+interface Props {
+  topicSlug: string;
+  count: number;
+}
+
+const { topicSlug, count } = Astro.props;
+const siteUrl = "https://productimpactpod.com";
+
+const articles = await getArticlesByTopic(topicSlug);
+
+// Pick a "definer" — prefer an explainer format, else the most recent article
+const explainer = articles.find((a) => a.format === "explainer");
+const definer = explainer ?? articles[0] ?? null;
+const otherArticles = definer
+  ? articles.filter((a) => a.slug !== definer.slug)
+  : [];
+
+const topicName = topicSlug
+  .replace(/-/g, " ")
+  .replace(/\b\w/g, (c) => c.toUpperCase());
+
+const metaDescription =
+  articles.length > 0
+    ? `Product Impact coverage of ${topicName} — ${count} article${count !== 1 ? "s" : ""} on AI products, news, and analysis.`
+    : `${topicName} coverage on Product Impact.`;
+
+const hubJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `${topicName} | Product Impact`,
+  description: metaDescription,
+  url: `${siteUrl}/topics/${topicSlug}`,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: articles.length,
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+  about: { "@type": "Thing", name: topicName },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "Topics", item: `${siteUrl}/topics` },
+    { "@type": "ListItem", position: 3, name: topicName, item: `${siteUrl}/topics/${topicSlug}` },
+  ],
+};
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+
+function articleCard(article: Article) {
+  const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+  const gradient = themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
+  return { article, firstTheme, gradient };
+}
+---
+
+<BaseLayout
+  title={`${topicName} | Product Impact`}
+  description={metaDescription}
+  canonicalUrl={`${siteUrl}/topics/${topicSlug}`}
+  jsonLd={[hubJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-12">
+    {/* Breadcrumb */}
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/" class="hover:text-white">Home</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/topics" class="hover:text-white">Topics</a></li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4]">{topicName}</li>
+      </ol>
+    </nav>
+
+    <header class="mb-12 max-w-3xl">
+      <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-4">
+        Topic
+      </div>
+      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.1] mb-4">
+        {topicName}
+      </h1>
+      <p class="text-lg text-[#d4d4d4] leading-relaxed">
+        {articles.length > 0
+          ? `${articles.length} article${articles.length !== 1 ? "s" : ""} on ${topicName}.`
+          : "No coverage yet — check back soon."}
+      </p>
+    </header>
+
+    {/* Definer article (if explainer exists, or latest article as fallback) */}
+    {definer && (
+      <section class="mb-16">
+        {explainer && (
+          <div class="text-[11px] font-bold uppercase tracking-[0.08em] text-accent mb-3">
+            Explainer
+          </div>
+        )}
+        <a
+          href={`/news/${definer.slug}`}
+          class="group block bg-background-card rounded-2xl overflow-hidden hover:bg-background-hover transition-colors"
+        >
+          <div class="grid grid-cols-1 md:grid-cols-[2fr_3fr]">
+            {definer.hero_image_url ? (
+              <img
+                src={definer.hero_image_url}
+                alt={definer.hero_image_alt ?? definer.title}
+                class="w-full h-full object-cover aspect-[1.91/1]"
+                loading="eager"
+              />
+            ) : (
+              <div
+                class={`w-full aspect-[1.91/1] bg-gradient-to-br ${themeGradients[definer.themes?.[0] ?? "ai-product-strategy"] ?? themeGradients["ai-product-strategy"]}`}
+              ></div>
+            )}
+            <div class="p-8 md:p-10 flex flex-col justify-center">
+              <div class="flex items-center gap-2 mb-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                  {formatLabel(definer.format)}
+                </span>
+                {definer.themes?.slice(0, 1).map((t) => (
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#a0a0a0]">
+                    {themeLabel(t)}
+                  </span>
+                ))}
+              </div>
+              <h2 class="text-2xl md:text-3xl font-bold text-white leading-snug group-hover:text-accent transition-colors mb-3">
+                {definer.title}
+              </h2>
+              {definer.subtitle && (
+                <p class="text-base text-[#d4d4d4] line-clamp-3 mb-4 leading-relaxed">
+                  {definer.subtitle}
+                </p>
+              )}
+              <div class="text-xs text-[#707070] flex items-center gap-2">
+                <time datetime={definer.publish_date}>{formatDate(definer.publish_date)}</time>
+                {definer.read_time_minutes && (
+                  <>
+                    <span>·</span>
+                    <span>{definer.read_time_minutes} min read</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
+      </section>
+    )}
+
+    {/* All other articles */}
+    {otherArticles.length > 0 && (
+      <section>
+        <h2 class="text-xl font-bold text-white mb-6">
+          {explainer ? "More coverage" : "All coverage"}
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {otherArticles.map((article) => {
+            const { gradient } = articleCard(article);
+            return (
+              <a
+                href={`/news/${article.slug}`}
+                class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+              >
+                {article.hero_image_url ? (
+                  <img
+                    src={article.hero_image_url}
+                    alt={article.hero_image_alt ?? article.title}
+                    loading="lazy"
+                    class="w-full aspect-video object-cover"
+                  />
+                ) : (
+                  <div
+                    class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}
+                  >
+                    <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
+                      Product Impact
+                    </div>
+                  </div>
+                )}
+                <div class="p-5">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                      {formatLabel(article.format)}
+                    </span>
+                  </div>
+                  <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2 mb-1">
+                    {article.title}
+                  </h3>
+                  {article.subtitle && (
+                    <p class="text-sm text-[#a0a0a0] line-clamp-2">{article.subtitle}</p>
+                  )}
+                  <div class="text-xs text-[#707070] mt-3">
+                    <time datetime={article.publish_date}>{formatDate(article.publish_date)}</time>
+                  </div>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {articles.length === 0 && (
+      <div class="text-center py-16">
+        <p class="text-[#a0a0a0]">No articles tagged with this topic yet.</p>
+        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          Browse all news →
+        </a>
+      </div>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>
