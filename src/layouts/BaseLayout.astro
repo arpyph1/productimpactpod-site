@@ -41,8 +41,8 @@ const {
 } = Astro.props;
 
 const siteUrl = "https://productimpactpod.com";
-// SVG served from /og-default.svg — replace with /og-default.png once exported
-const fullOgImage = ogImage ?? `${siteUrl}/og-default.svg`;
+// PNG generated from src/brand/og-default.svg via scripts/build-brand-assets.mjs
+const fullOgImage = ogImage ?? `${siteUrl}/og-default.png`;
 
 const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 ---
@@ -64,10 +64,13 @@ const jsonLdBlocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
       content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}
     />
 
-    <!-- Favicon -->
+    <!-- Favicon set. Modern browsers prefer the SVG; fallbacks cover older UAs. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="16x16"  href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32"  href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="96x96"  href="/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
