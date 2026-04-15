@@ -92,7 +92,6 @@ export interface Theme {
   hero_image_url: string | null;
   theme_color: string | null;
   icon: string | null;
-  display_order: number;
 }
 
 export interface Episode {
@@ -237,10 +236,13 @@ export async function getArticlesByTheme(
 }
 
 export async function getAllThemes(): Promise<Theme[]> {
+  // Order by name — schema has no display_order column. For canonical
+  // ordering, consumers should map Supabase rows onto src/lib/themes.ts
+  // canonicalThemes (which carries the authoritative ordering).
   const { data, error } = await supabase
     .from("themes")
     .select("*")
-    .order("display_order", { ascending: true });
+    .order("name", { ascending: true });
   if (error) {
     console.error("getAllThemes error:", error);
     return [];
@@ -280,58 +282,80 @@ export async function getEntityBySlug(
   return data as Entity;
 }
 
-// ArticleEntity: a row from the article_entities join table with entity data joined in.
+// Row shape from article_entities joined with entities — what the sidebar renders.
 export interface ArticleEntity {
   entity_slug: string;
   entity_type: Entity["type"];
   entity_name: string;
-  role: string | null; // e.g. "subject", "mentioned", "author"
+  relevance: string | null; // 'mention' | 'subject' | 'author' (per schema default 'mention')
 }
 
 /**
- * Fetch entities mentioned in an article via the article_entities join table.
- * Returns empty array if the table doesn't exist yet or the article has no entities.
+ * Fetch entities linked to an article via the article_entities join table.
+ * The join table uses UUID foreign keys (article_id, entity_id), so we use a
+ * Supabase nested-select with the articles!inner filter to look up by slug in
+ * a single query.
+ *
+ * Returns empty array if the article has no linked entities or the table is
+ * absent — build must never fail on this.
  */
 export async function getArticleEntities(
   articleSlug: string,
 ): Promise<ArticleEntity[]> {
   const { data, error } = await supabase
     .from("article_entities")
-    .select("entity_slug, entity_type, entity_name, role")
-    .eq("article_slug", articleSlug)
-    .order("role", { ascending: true });
-  if (error) {
-    // Table may not exist yet — fail silently so builds don't break
-    return [];
-  }
-  return (data ?? []) as ArticleEntity[];
+    .select(
+      `
+      relevance,
+      entities!inner ( slug, type, name ),
+      articles!inner ( slug )
+    `,
+    )
+    .eq("articles.slug", articleSlug);
+  if (error) return [];
+  return (data ?? []).map((row: any) => ({
+    entity_slug: row.entities.slug,
+    entity_type: row.entities.type,
+    entity_name: row.entities.name,
+    relevance: row.relevance ?? null,
+  }));
 }
 
 /**
- * Fetch all articles that mention a given entity slug.
+ * Fetch all articles linked to a given entity slug.
  * Used by entity hub pages (/people/[slug], /concepts/[slug], etc.)
+ *
+ * Uses the same nested-select pattern: filter article_entities by the joined
+ * entity's slug, then hydrate the full article rows.
  */
 export async function getArticlesByEntity(
   entitySlug: string,
   limit = 20,
 ): Promise<Article[]> {
-  // article_entities join → articles
   const { data: rows, error } = await supabase
     .from("article_entities")
-    .select("article_slug")
-    .eq("entity_slug", entitySlug)
+    .select(
+      `
+      articles!inner (*),
+      entities!inner ( slug )
+    `,
+    )
+    .eq("entities.slug", entitySlug)
     .limit(limit);
   if (error || !rows || rows.length === 0) return [];
 
-  const slugs = rows.map((r: { article_slug: string }) => r.article_slug);
-  const { data, error: articlesError } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("published", true)
-    .in("slug", slugs)
-    .order("publish_date", { ascending: false });
-  if (articlesError) return [];
-  return (data ?? []) as Article[];
+  // Deduplicate + filter to published + newest first
+  const articles = rows
+    .map((r: any) => r.articles as Article)
+    .filter((a) => a && a.published);
+  const seen = new Set<string>();
+  const unique = articles.filter((a) => {
+    if (seen.has(a.slug)) return false;
+    seen.add(a.slug);
+    return true;
+  });
+  unique.sort((a, b) => (a.publish_date < b.publish_date ? 1 : -1));
+  return unique;
 }
 
 // ── YouTube Shorts (via Supabase edge function) ─────────────────────────────

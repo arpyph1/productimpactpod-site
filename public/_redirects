@@ -1,0 +1,48 @@
+# Cloudflare Pages redirects — Netlify-compatible syntax.
+# Format: <from> <to> <status>
+#
+# Migration from the Lovable-era URL structure (arpyph1/product-impact-podcast-web).
+# Most paths (/news/[slug], /themes/[slug], /people/[slug], /concepts/[slug],
+# /organizations/[slug], /products/[slug], /frameworks/[slug], /sources/[slug],
+# /partnerships) match identically between the two sites — no redirect needed.
+#
+# Differences:
+#   Lovable: /      → podcast home     |  /hub  → content home
+#   Astro:   /      → content home     |  /podcast → podcast home
+#
+# /hub was the canonical content-hub URL on Lovable; redirect to new homepage.
+
+/hub                /                              301
+/hub/               /                              301
+
+# Legacy listen-link subpaths that may have been scraped from Lovable
+/home               /                              301
+/index              /                              301
+
+# Trailing slash hygiene — Cloudflare Pages serves both forms by default, but
+# these explicit 301s ensure canonical consistency when crawlers follow both.
+# (The Astro build emits /news/ directory-style paths per astro.config.mjs
+# build.format="directory", so trailing slashes are the canonical form.)
+
+# Known legacy article-path shapes from early Lovable drafts (if any exist in
+# the wild, they redirect; if not, they 404 harmlessly without this file).
+/articles/*         /news/:splat                   301
+/article/*          /news/:splat                   301
+/post/*             /news/:splat                   301
+
+# Category → theme migration (some Lovable-era links may have used /category/)
+/category/*         /themes/:splat                 301
+
+# RSS feed URL canonicalisation — legacy variants
+/feed               /rss.xml                       301
+/feed.xml           /rss.xml                       301
+/atom.xml           /rss.xml                       301
+/news/feed          /news/rss.xml                  301
+/news/feed.xml      /news/rss.xml                  301
+
+# Sitemap canonicalisation
+/sitemap            /sitemap.xml                   301
+/sitemap_index.xml  /sitemap-index.xml             301
+
+# Social/unfurl bot compatibility — some platforms strip trailing slashes
+# and re-append with quotes. These are harmless no-ops if never hit.
