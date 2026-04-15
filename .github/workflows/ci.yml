@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  typecheck:
-    name: Type check
+  verify:
+    name: Typecheck + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,3 +24,36 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
+
+      # `npm run build` runs prebuild (build:assets via sharp) and then
+      # astro build. This catches the full route graph — including getStaticPaths
+      # scope bugs, colliding dynamic routes, and missing Supabase columns
+      # (the build warns but doesn't fail on Supabase host-not-in-allowlist;
+      # CF Pages can reach Supabase at deploy time).
+      - name: Build
+        env:
+          # The build calls Supabase at build time to enumerate articles,
+          # entities, topics, themes, episodes. CI has no network access to
+          # the Supabase project here — the site helpers return [] on failure
+          # so the build still produces empty listings and completes.
+          PUBLIC_SUPABASE_URL: https://cyqkfkvsrdbbjuaqiglx.supabase.co
+        run: npm run build
+
+      - name: Verify key outputs exist
+        run: |
+          for f in dist/index.html dist/news/index.html dist/podcast/index.html \
+                   dist/sitemap.xml dist/sitemap-index.xml dist/sitemap-0.xml \
+                   dist/news-sitemap.xml dist/rss.xml \
+                   dist/robots.txt dist/favicon.png dist/og-default.png \
+                   dist/logo.png dist/about/index.html dist/privacy/index.html \
+                   dist/terms/index.html dist/contact/index.html \
+                   dist/partnerships/index.html dist/404.html dist/500.html \
+                   dist/_redirects dist/topics/index.html \
+                   dist/people/index.html dist/themes/index.html \
+                   dist/news/archive/index.html; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Expected build output missing: $f"
+              exit 1
+            fi
+          done
+          echo "✓ All required build outputs present"
