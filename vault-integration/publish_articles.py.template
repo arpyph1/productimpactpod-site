@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""
+publish_articles.py — vault-system orchestrator for Product Impact publishes.
+
+Copy this to `vault-system/product-impact/scripts/publish_articles.py`
+and customise the vault-specific parts marked TODO.
+
+Usage:
+  python3 publish_articles.py drafts/claude-46-platform-shift.md
+  python3 publish_articles.py drafts/*.md                          # batch
+  python3 publish_articles.py --dry-run drafts/article.md          # validate + image gen, no publish
+
+Flow:
+  1. Parse vault markdown (your parser) → article dict
+  2. validate_article.py — block publish if required fields are missing
+  3. generate_hero_image.py — create + upload hero image if frontmatter is null
+  4. Link entities (from [[wiki links]] in the body → article_entities rows)
+  5. supabase.table("articles").upsert(...)
+  6. Move draft → published/YYYY/MM/ for audit trail
+  7. dispatch_rebuild.py — trigger CF Pages rebuild (once at end of batch)
+
+Env vars required:
+  ANTHROPIC_API_KEY, REPLICATE_API_TOKEN, SUPABASE_SERVICE_ROLE_KEY,
+  PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, GITHUB_TOKEN
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import shutil
+import subprocess
+import sys
+from datetime import date
+from pathlib import Path
+
+# ── Path wiring ────────────────────────────────────────────────────────────
+# Submodule path — site repo lives at scripts/site under vault-system
+THIS_FILE = Path(__file__).resolve()
+VAULT_ROOT = THIS_FILE.parent.parent.parent   # vault-system root
+SITE_DIR = THIS_FILE.parent / "site"           # submodule checkout
+PUBLISHING_DIR = SITE_DIR / "scripts" / "publishing"
+
+if not PUBLISHING_DIR.exists():
+    print(f"✗ site submodule not initialised. Run:", file=sys.stderr)
+    print(f"    cd {VAULT_ROOT} && git submodule update --init --recursive", file=sys.stderr)
+    sys.exit(2)
+
+sys.path.insert(0, str(PUBLISHING_DIR))
+from validate_article import validate, has_errors      # noqa: E402
+from generate_hero_image import generate as generate_hero  # noqa: E402
+from dispatch_rebuild import dispatch                  # noqa: E402
+
+# ── Supabase client ────────────────────────────────────────────────────────
+try:
+    from supabase import create_client, Client
+except ImportError:
+    print("✗ pip install supabase", file=sys.stderr)
+    sys.exit(2)
+
+SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", "https://cyqkfkvsrdbbjuaqiglx.supabase.co")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+if not SERVICE_KEY:
+    print("✗ SUPABASE_SERVICE_ROLE_KEY not set", file=sys.stderr)
+    sys.exit(2)
+
+sb: Client = create_client(SUPABASE_URL, SERVICE_KEY)
+
+# ── Logging ────────────────────────────────────────────────────────────────
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-7s %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("publish")
+
+
+# ── Vault markdown parser (TODO: replace with your real parser) ────────────
+
+def parse_vault_markdown(md_path: Path) -> dict:
+    """
+    Parse a vault draft file into an article dict suitable for validate()
+    and Supabase insert.
+
+    TODO: Replace the stub below with your actual vault parser. The
+    expected output shape matches articles table columns (slug, title,
+    format, themes, author_slugs, meta_description, publish_date,
+    canonical_url, content_markdown, content_html, topics, lenses, etc).
+
+    For a production implementation, see vault-integration/article-template.md
+    for the full frontmatter schema.
+    """
+    raise NotImplementedError(
+        "Implement parse_vault_markdown() for your vault's YAML-frontmatter "
+        "markdown. It should return a dict matching the Supabase articles "
+        "table schema. See vault-integration/article-template.md for the "
+        "canonical field list."
+    )
+
+
+# ── Entity linking ─────────────────────────────────────────────────────────
+
+def link_entities(article: dict) -> None:
+    """
+    Wire up article_entities rows. Runs AFTER the article has been
+    upserted (we need articles.id).
+
+    TODO: Extract entity references from the article body. Options:
+      - [[wiki links]]: look up entities.slug = wiki-slug
+      - explicit `entity_slugs: [...]` in frontmatter
+      - automated classification via the batch-classify edge function
+    """
+    # Fetch article ID from the slug we just upserted
+    a = sb.table("articles").select("id").eq("slug", article["slug"]).single().execute()
+    article_id = a.data["id"]
+
+    # TODO: your extraction logic here — example stub:
+    entity_slugs = article.get("_entity_slugs", [])   # convention: leading underscore = not persisted
+    if not entity_slugs:
+        return
+
+    # Look up entity IDs
+    ents = sb.table("entities").select("id, slug").in_("slug", entity_slugs).execute()
+    rows = [
+        {"article_id": article_id, "entity_id": e["id"], "relevance": "mention"}
+        for e in (ents.data or [])
+    ]
+    if rows:
+        sb.table("article_entities").upsert(rows, on_conflict="article_id,entity_id").execute()
+
+
+# ── Archive helper ─────────────────────────────────────────────────────────
+
+def archive_to_published(draft_path: Path, article: dict) -> Path:
+    """Move the draft file to published/YYYY/MM/slug.md after successful publish."""
+    publish_date = article.get("publish_date") or date.today().isoformat()
+    year, month = publish_date[:4], publish_date[5:7]
+
+    dest_dir = VAULT_ROOT / "product-impact" / "published" / year / month
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / f"{article['slug']}.md"
+
+    shutil.move(str(draft_path), str(dest_path))
+    log.info(f"Archived → {dest_path.relative_to(VAULT_ROOT)}")
+    return dest_path
+
+
+# ── Main publish ───────────────────────────────────────────────────────────
+
+def publish_one(md_path: Path, dry_run: bool = False) -> bool:
+    log.info(f"── {md_path.name} ─────────────────────────────────")
+
+    try:
+        article = parse_vault_markdown(md_path)
+    except Exception as e:
+        log.error(f"parse failed: {e}")
+        return False
+
+    # 1. Validate
+    issues = validate(article)
+    for i in issues:
+        (log.error if i.severity == "error" else log.warning)(str(i))
+    if has_errors(issues):
+        log.error(f"blocked by validation — fix the errors above and retry")
+        return False
+
+    # 2. Hero image (if not already set)
+    if not article.get("hero_image_url"):
+        log.info("generating hero image via Flux…")
+        try:
+            result = generate_hero(article)
+            article["hero_image_url"] = result.image_url
+            if not article.get("hero_image_alt"):
+                article["hero_image_alt"] = f"Editorial photograph: {article['title']}"
+            if not article.get("hero_image_credit"):
+                article["hero_image_credit"] = "Generated via Flux 1.1 Pro"
+            log.info(f"  prompt: {result.prompt[:120]}…")
+            log.info(f"  uploaded: {result.image_url}")
+        except Exception as e:
+            log.error(f"hero image generation failed: {e}")
+            return False
+
+    # Flip to published ONLY after all preconditions are green
+    article["published"] = True
+
+    if dry_run:
+        log.info("--dry-run: skipping INSERT + dispatch")
+        print(json.dumps(article, indent=2, default=str))
+        return True
+
+    # 3. Upsert article
+    log.info(f"upserting articles[slug={article['slug']}]…")
+    sb.table("articles").upsert(article, on_conflict="slug").execute()
+
+    # 4. Link entities
+    try:
+        link_entities(article)
+    except Exception as e:
+        log.warning(f"entity linking failed (non-fatal): {e}")
+
+    # 5. Archive the draft
+    try:
+        archive_to_published(md_path, article)
+    except Exception as e:
+        log.warning(f"archive move failed (non-fatal): {e}")
+
+    log.info(f"✓ published: https://productimpactpod.com/news/{article['slug']}")
+    return True
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Publish Product Impact articles.")
+    parser.add_argument("paths", nargs="+", type=Path, help="Draft markdown files")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Validate + generate image but skip INSERT and dispatch")
+    args = parser.parse_args()
+
+    successes = 0
+    for p in args.paths:
+        if not p.is_file():
+            log.error(f"not a file: {p}")
+            continue
+        if publish_one(p, dry_run=args.dry_run):
+            successes += 1
+
+    if successes == 0:
+        log.error("nothing published")
+        return 1
+
+    if args.dry_run:
+        log.info(f"dry-run complete — {successes} article(s) would be published")
+        return 0
+
+    # 6. Dispatch one rebuild for the whole batch
+    log.info("triggering CF Pages rebuild…")
+    ok, msg = dispatch({"count": successes})
+    if ok:
+        log.info(f"✓ {msg}")
+    else:
+        log.warning(f"dispatch failed (non-fatal): {msg}")
+        log.warning("site won't auto-rebuild — trigger manually in Cloudflare Pages dashboard")
+
+    log.info(f"done — {successes} article(s) published")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
