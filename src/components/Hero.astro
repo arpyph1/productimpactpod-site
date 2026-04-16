@@ -1,0 +1,196 @@
+---
+// Hero — podcast homepage hero matching Lovable's Hero.tsx.
+// Headline + subscribe platform pills + three vertical 9:16 video cards
+// (YouTube Shorts in a staircase layout) + description.
+//
+// YouTube Shorts data fetched at build time via the Supabase edge function
+// get-latest-short (reused from /podcast.astro). Click-to-play embed.
+
+import { getLatestShorts } from "@lib/supabase";
+
+interface Props {
+  heroTitle?: string;
+  heroDescription?: string;
+  youtubeChannelId?: string;
+  spotifyUrl?: string;
+  appleUrl?: string;
+  youtubeUrl?: string;
+}
+
+const {
+  heroTitle = "PRODUCT IMPACT — AI PRODUCT NEWS AND ANALYSIS",
+  heroDescription = "News, releases, and case studies about the AI products<br>transforming how we work and industries.",
+  youtubeChannelId = "UCb1nY02YcJYZZ_XtvcIBcrw",
+  spotifyUrl = "https://open.spotify.com/show/productimpactpod",
+  appleUrl = "https://podcasts.apple.com/productimpactpod",
+  youtubeUrl = "https://youtube.com/@productimpactpod",
+} = Astro.props;
+
+// Fetch YouTube Shorts at build time
+const shortsData = await getLatestShorts(youtubeChannelId, 2);
+const shortSlots = [
+  { short: shortsData.shorts[0] ?? null,   label: "Latest Short" },
+  { short: shortsData.shorts[1] ?? null,   label: "2nd Latest"  },
+  { short: shortsData.mostWatched ?? null, label: "Most Watched" },
+];
+
+const platforms = [
+  { label: "Spotify",        url: spotifyUrl, color: "#1DB954" },
+  { label: "Apple Podcasts", url: appleUrl,   color: "#B150E2" },
+  { label: "YouTube",        url: youtubeUrl, color: "#FF0000" },
+];
+---
+
+<section id="podcast-hero" class="relative bg-background pt-8" aria-label="Podcast hero">
+  {/* Headline + platform buttons */}
+  <div class="container-wide pb-8 text-center">
+    <h1
+      class="font-display font-black uppercase leading-[0.92] tracking-tight text-foreground mb-5 mx-auto"
+      style="font-size: clamp(2.4rem, 6vw, 5.5rem); font-weight: 900; letter-spacing: -0.03em; max-width: 65%;"
+    >
+      {heroTitle}
+    </h1>
+
+    <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+      {platforms.map((p) => (
+        <a
+          href={p.url}
+          target="_blank"
+          rel="noopener"
+          class="group flex items-center gap-3 px-7 py-4 rounded-full border border-border text-base font-medium text-foreground hover:border-foreground transition-all duration-200"
+        >
+          <span
+            class="w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-white"
+            style={`background: ${p.color};`}
+          ></span>
+          {p.label}
+        </a>
+      ))}
+    </div>
+  </div>
+
+  {/* Three vertical 9:16 video cards — staircase on desktop, scroll on mobile */}
+  <div class="container-wide pb-12">
+    <div class="max-w-3xl mx-auto">
+      {/* Desktop staircase */}
+      <div class="hidden md:grid md:grid-cols-3 gap-7 items-start">
+        {shortSlots.map((slot, i) => (
+          <div style={`margin-top: ${i * 2.5}rem;`}>
+            {slot.short ? (
+              <div
+                class="short-card relative rounded-xl overflow-hidden bg-card border border-border group shadow-xl"
+                style="aspect-ratio: 9 / 16;"
+                data-video-id={slot.short.videoId}
+              >
+                <img
+                  src={slot.short.thumbnail}
+                  alt={slot.short.title}
+                  class="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-black/45 group-hover:bg-black/15 transition-all duration-500"></div>
+                <button
+                  type="button"
+                  class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer"
+                  aria-label={`Play: ${slot.short.title}`}
+                >
+                  <span class="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="black" aria-hidden="true">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </span>
+                </button>
+                <div class="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground">
+                  {slot.label}
+                </div>
+                <div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+                  <span class="text-xs font-medium text-white/90 line-clamp-2 leading-snug">{slot.short.title}</span>
+                </div>
+              </div>
+            ) : (
+              <div
+                class="relative rounded-xl overflow-hidden bg-card border border-dashed border-border"
+                style="aspect-ratio: 9 / 16;"
+              >
+                <div class="absolute inset-0 flex items-center justify-center p-6 text-center">
+                  <span class="text-xs text-muted-foreground">{slot.label} unavailable</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile horizontal scroll */}
+      <div class="md:hidden -mx-6 px-6">
+        <div
+          class="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
+          style="scrollbar-width: none;"
+        >
+          {shortSlots.map((slot) => (
+            <div class="snap-center shrink-0" style="width: 55vw; max-width: 220px;">
+              {slot.short ? (
+                <div
+                  class="short-card relative rounded-xl overflow-hidden bg-card border border-border group"
+                  style="aspect-ratio: 9 / 16;"
+                  data-video-id={slot.short.videoId}
+                >
+                  <img src={slot.short.thumbnail} alt={slot.short.title} loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-black/45"></div>
+                  <button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center" aria-label={`Play: ${slot.short.title}`}>
+                    <span class="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-xl">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="black" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                    </span>
+                  </button>
+                  <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-primary text-primary-foreground">{slot.label}</div>
+                  <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+                    <span class="text-[11px] font-medium text-white/90 line-clamp-2">{slot.short.title}</span>
+                  </div>
+                </div>
+              ) : (
+                <div class="relative rounded-xl overflow-hidden bg-card border border-dashed border-border" style="aspect-ratio: 9 / 16;">
+                  <div class="absolute inset-0 flex items-center justify-center p-4 text-center">
+                    <span class="text-xs text-muted-foreground">{slot.label} unavailable</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Hero description (h2 for SEO) */}
+  <div class="container-wide pb-16">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2
+        class="text-muted-foreground leading-relaxed font-light"
+        style="font-size: 1.5rem; line-height: 1.7; font-family: 'Inter', system-ui, sans-serif;"
+        set:html={heroDescription}
+      />
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+</section>
+
+<script>
+  // Click-to-play for Shorts — matches /podcast.astro pattern
+  document.querySelectorAll<HTMLElement>("#podcast-hero .short-card").forEach((card) => {
+    const videoId = card.dataset.videoId;
+    if (!videoId) return;
+    const playBtn = card.querySelector<HTMLButtonElement>(".short-play-btn");
+    if (!playBtn) return;
+    playBtn.addEventListener("click", () => {
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+      iframe.title = playBtn.getAttribute("aria-label") ?? "YouTube Short";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allowFullscreen = true;
+      iframe.className = "absolute inset-0 w-full h-full";
+      card.innerHTML = "";
+      card.appendChild(iframe);
+    });
+  });
+</script>
