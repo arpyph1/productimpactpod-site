@@ -1,0 +1,109 @@
+---
+// Newsletter — Substack RSS feed rendered at build time.
+// Matches Lovable's Newsletter.tsx layout and styling.
+
+import { getSubstackPosts, type SubstackPost } from "@lib/substack";
+
+interface Props {
+  substackUrl?: string;
+  title?: string;
+  limit?: number;
+}
+
+const {
+  substackUrl = "https://productimpactpod.substack.com",
+  title = "From the Blog",
+  limit = 6,
+} = Astro.props;
+
+const posts: SubstackPost[] = await getSubstackPosts(substackUrl, limit);
+---
+
+<section id="newsletter" class="bg-background" aria-label="Newsletter and blog posts">
+  <div class="container-wide">
+    {/* Section header */}
+    <div class="flex items-end justify-between py-10 border-b border-border gap-4 flex-wrap">
+      <h3
+        class="font-display font-extrabold uppercase leading-none tracking-tight text-foreground"
+        style="font-size: clamp(1.5rem, 3.5vw, 2.8rem); letter-spacing: -0.02em;"
+      >
+        {title}
+      </h3>
+
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" stroke-width="2" aria-hidden="true">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+        <span>Substack</span>
+      </div>
+    </div>
+
+    {posts.length === 0 ? (
+      <div class="py-16 text-center text-muted-foreground text-sm">
+        No newsletter posts available right now. Visit{" "}
+        <a href={substackUrl} target="_blank" rel="noopener" class="text-primary hover:underline">
+          our Substack
+        </a>{" "}
+        directly.
+      </div>
+    ) : (
+      <div class="divide-y divide-border">
+        {posts.map((post) => (
+          <a
+            href={post.link}
+            target="_blank"
+            rel="noopener"
+            class="group flex items-start justify-between gap-6 py-6 hover:bg-card/40 transition-colors px-4 -mx-1 rounded md:max-w-[60%] md:mx-auto"
+          >
+            <div class="flex-1 min-w-0">
+              {post.pubDate && (
+                <time
+                  datetime={post.pubDateISO}
+                  class="text-[11px] text-muted-foreground font-medium uppercase tracking-wide block mb-1.5"
+                >
+                  {post.pubDate}
+                </time>
+              )}
+              <h3
+                class="font-display font-bold text-foreground leading-snug tracking-tight group-hover:text-primary transition-colors mb-2"
+                style="font-size: clamp(1rem, 1.5vw, 1.25rem);"
+              >
+                {post.title}
+              </h3>
+              {post.description && (
+                <p class="text-sm text-muted-foreground leading-relaxed">{post.description}</p>
+              )}
+            </div>
+            <div class="shrink-0 pt-1">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full border border-border group-hover:border-foreground group-hover:bg-foreground transition-all">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-foreground group-hover:text-background transition-colors" aria-hidden="true">
+                  <line x1="7" y1="17" x2="17" y2="7" />
+                  <polyline points="7 7 17 7 17 17" />
+                </svg>
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+
+    {posts.length > 0 && (
+      <div class="py-8 border-t border-border text-center">
+        <a
+          href={substackUrl}
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all glow-orange"
+        >
+          Subscribe on Substack
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
+          </svg>
+        </a>
+      </div>
+    )}
+  </div>
+  <div class="section-divider"></div>
+</section>
