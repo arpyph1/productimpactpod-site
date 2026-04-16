@@ -1254,5 +1254,390 @@ git submodule update --init --recursive
 
 ---
 
-*Final: section 11 walks through the milestones for your first real
-publish, and section 12 covers the ongoing publishing rhythm.*
+## 11. First publish — milestones in order
+
+Sequence of 8 milestones. Each is a concrete, verifiable gate. Don't
+move to the next one until the current one reports green.
+
+### Milestone 1: Submodule + scaffold committed
+
+**Do:** Follow section 8.1–8.4 end to end.
+
+**Verify:**
+```bash
+ls product-impact/scripts/site/scripts/publishing/validate_article.py
+# Should print the path (exit 0). If it doesn't, submodule isn't initialized.
+
+ls product-impact/drafts/_TEMPLATE.md
+# Should print the path. If not, scaffold didn't run.
+
+git log --oneline -1
+# Should show your "chore: wire product-impact publishing pipeline" commit.
+```
+
+### Milestone 2: Environment loaded + verifier green
+
+**Do:**
+- Populate `product-impact/.env` with all 6 real credentials (section 9.2)
+- Source them: `set -a; source product-impact/.env; set +a`
+
+**Verify:**
+```bash
+python3 product-impact/scripts/site/scripts/publishing/verify_supabase.py \
+  --verbose
+```
+
+Expected last line:
+```
+✓ All checks passed — site is ready to publish.
+```
+
+If any check is ✗, stop and fix it — don't proceed to milestone 3.
+
+### Milestone 3: Parse one real vault markdown file
+
+**Do:** Open your existing vault structure and find an example episode
+transcript or article. Inspect its frontmatter format. Then open
+`product-impact/scripts/publish_articles.py` and find the
+`parse_vault_markdown()` stub.
+
+Replace the `NotImplementedError` with your actual parser. Reference
+implementation using `python-frontmatter`:
+
+```python
+# pip install python-frontmatter markdown
+import frontmatter
+import markdown as md_lib
+
+def parse_vault_markdown(md_path: Path) -> dict:
+    post = frontmatter.load(md_path)
+    article = dict(post.metadata)
+
+    # Body as markdown
+    article["content_markdown"] = post.content
+
+    # Convert to HTML for the article.content_html column
+    article["content_html"] = md_lib.markdown(
+        post.content,
+        extensions=["extra", "toc", "tables", "fenced_code"],
+    )
+
+    # Derive word_count + read_time_minutes if not in frontmatter
+    if not article.get("word_count"):
+        words = len(post.content.split())
+        article["word_count"] = words
+        article["read_time_minutes"] = max(1, round(words / 230))
+
+    # Canonical URL (defence — should already be in frontmatter)
+    if not article.get("canonical_url"):
+        article["canonical_url"] = f"https://productimpactpod.com/news/{article['slug']}"
+
+    return article
+```
+
+**Verify:** Write a tiny test against a real file:
+
+```bash
+python3 -c "
+from pathlib import Path
+import sys
+sys.path.insert(0, 'product-impact/scripts')
+sys.path.insert(0, 'product-impact/scripts/site/scripts/publishing')
+from publish_articles import parse_vault_markdown
+import json
+article = parse_vault_markdown(Path('product-impact/pre-production/episodes/ep-042/some-file.md'))
+print(json.dumps(article, indent=2, default=str))
+"
+```
+
+Should print a dict with your frontmatter fields + content keys.
+
+### Milestone 4: Write a brief + draft from one episode
+
+**Do:**
+- Pick the most recent episode in `product-impact/pre-production/episodes/`
+- Read the transcript
+- Write a 1-paragraph brief to `product-impact/pre-production/briefs/<slug>.md`
+  (copy from `_TEMPLATE.md`)
+- Copy `product-impact/drafts/_TEMPLATE.md` → `product-impact/drafts/<slug>.md`
+- Fill in the frontmatter and write 300–800 words of body
+
+**Verify:** Open the draft. Every required field from section 5.2 is
+populated. `canonical_url` starts with `https://productimpactpod.com/news/`
+and ends with your slug.
+
+### Milestone 5: Dry-run publish
+
+**Do:**
+```bash
+python3 product-impact/scripts/publish_articles.py \
+  --dry-run \
+  product-impact/drafts/<slug>.md
+```
+
+The `--dry-run` flag should: validate, generate hero image (and upload
+to Storage — this happens even on dry-run), but NOT insert into the
+articles table and NOT fire the dispatch.
+
+**Verify:**
+- Log shows `✓` for each validation check
+- Log shows `uploaded: https://...storage...article-heroes/<slug>.png`
+- Open that URL in a browser — image should render
+- Article dict printed to stdout looks sensible
+
+If validation fails, fix the draft and rerun. Each fix cycle is fast.
+
+### Milestone 6: Real publish
+
+**Do:**
+```bash
+python3 product-impact/scripts/publish_articles.py \
+  product-impact/drafts/<slug>.md
+```
+
+**Verify the log ends with:**
+```
+✓ published: https://productimpactpod.com/news/<slug>
+triggering CF Pages rebuild…
+✓ dispatch accepted — CF Pages rebuild queued
+done — 1 article(s) published
+```
+
+**Verify in Supabase:**
+```bash
+export PUBLIC_SUPABASE_URL="https://pgsljoqwfhufubodlqjk.supabase.co"
+export PUBLIC_SUPABASE_ANON_KEY="<anon>"
+
+curl -s -H "apikey: $PUBLIC_SUPABASE_ANON_KEY" \
+  "$PUBLIC_SUPABASE_URL/rest/v1/articles?select=slug,title,published&slug=eq.<slug>"
+```
+
+Should return one row with `"published": true`.
+
+**Verify the draft was archived:**
+```bash
+ls product-impact/published/$(date +%Y)/$(date +%m)/<slug>.md
+# Should exist (no error)
+
+ls product-impact/drafts/<slug>.md
+# Should NOT exist (error: No such file or directory)
+```
+
+### Milestone 7: CF Pages rebuild succeeded
+
+**Do:** wait ~90 seconds. Watch the Actions tab:
+
+```
+https://github.com/arpyph1/productimpactpod-site/actions
+```
+
+You should see **"Cloudflare Pages rebuild"** with a green check from
+the dispatch your publish just fired. Then Cloudflare Pages starts a
+new deployment (visible at
+https://dash.cloudflare.com/ → Workers & Pages → productimpactpod-site
+→ Deployments).
+
+### Milestone 8: Article is live
+
+**Do:**
+```bash
+curl -s https://productimpactpod.com/news/<slug>/ | \
+  grep -oE '<title>[^<]+|"@type":"NewsArticle"'
+```
+
+Expected:
+```
+<title>Your Article Title | Product Impact
+"@type":"NewsArticle"
+```
+
+Also visually: open `https://productimpactpod.com/news/<slug>/` in a
+browser. Check:
+- Hero image renders
+- Body text displays correctly
+- Byline shows your author
+- Overview bullets render (if you set them)
+- Related articles section
+- Theme + format badges
+
+Also validate the structured data:
+
+```
+https://search.google.com/test/rich-results?url=https://productimpactpod.com/news/<slug>/
+```
+
+Should parse as NewsArticle + WebSite + NewsMediaOrganization (3 valid
+items, 0 errors).
+
+Commit the vault changes (draft removal + published archive addition):
+
+```bash
+cd ~/code/vault-system
+git add product-impact/drafts/ product-impact/published/
+git commit -m "publish: <slug>"
+git push
+```
+
+**You're live.** 🎉
+
+---
+
+## 12. Ongoing publishing workflow
+
+After the first publish, every subsequent one is this:
+
+### Single article
+
+```bash
+# Load env (once per shell session)
+set -a; source product-impact/.env; set +a
+
+# Draft
+cp product-impact/drafts/_TEMPLATE.md product-impact/drafts/<new-slug>.md
+$EDITOR product-impact/drafts/<new-slug>.md     # write article
+
+# Dry-run (optional — recommended first time)
+python3 product-impact/scripts/publish_articles.py \
+  --dry-run product-impact/drafts/<new-slug>.md
+
+# Publish
+python3 product-impact/scripts/publish_articles.py \
+  product-impact/drafts/<new-slug>.md
+
+# Commit vault state
+git add product-impact/drafts/ product-impact/published/
+git commit -m "publish: <new-slug>"
+git push
+```
+
+### Batch (multiple articles, one rebuild)
+
+Drop all the drafts into `product-impact/drafts/`, then:
+
+```bash
+python3 product-impact/scripts/publish_articles.py \
+  product-impact/drafts/*.md
+```
+
+The orchestrator publishes each (validates + image + insert + archive)
+then fires ONE `dispatch_rebuild` at the end. More efficient than
+looping one-at-a-time.
+
+### Correcting a published article
+
+Two options depending on severity:
+
+**Small correction** (typo, broken link) — edit in Supabase directly:
+
+```bash
+# Fetch current state
+curl -s -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  "$PUBLIC_SUPABASE_URL/rest/v1/articles?slug=eq.<slug>" | python3 -m json.tool
+
+# Update via SQL Editor or PATCH request. Then trigger a rebuild:
+python3 product-impact/scripts/site/scripts/publishing/dispatch_rebuild.py
+```
+
+**Structural change** (new angle, major rewrite) — move the published
+archive back to drafts, edit, re-publish:
+
+```bash
+mv product-impact/published/2026/04/<slug>.md product-impact/drafts/
+$EDITOR product-impact/drafts/<slug>.md                   # rewrite
+python3 product-impact/scripts/publish_articles.py \
+  product-impact/drafts/<slug>.md
+```
+
+The UPSERT in step 4 of the pipeline handles the case where the article
+already exists — it updates in place.
+
+### Unpublishing (rare — GDPR, retraction, legal)
+
+```bash
+# Set published=false in Supabase
+curl -X PATCH -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"published":false}' \
+  "$PUBLIC_SUPABASE_URL/rest/v1/articles?slug=eq.<slug>"
+
+# Trigger rebuild so the page 404s
+python3 product-impact/scripts/site/scripts/publishing/dispatch_rebuild.py
+```
+
+The article row stays in the database (audit trail) but isn't rendered
+to the public site. To actually delete: issue a DELETE instead, and
+also remove the archived markdown from `product-impact/published/`.
+
+### Bumping the site submodule
+
+When the site repo gets a new feature you want to use (new validator
+check, new image model, new RLS policy expectation):
+
+```bash
+cd product-impact/scripts/site
+git pull origin main
+cd -
+
+git add product-impact/scripts/site
+git commit -m "chore: bump site submodule to $(cd product-impact/scripts/site && git rev-parse --short HEAD)"
+git push
+```
+
+Keep an eye on the site repo's changelog — breaking changes (new
+required validator rules, frontmatter field renames) show up there.
+
+---
+
+## 13. Quick reference URLs
+
+Everything that's browse-able in one list:
+
+### Site repo files (on GitHub main)
+
+- [This doc (latest)](https://github.com/arpyph1/productimpactpod-site/blob/main/docs/vault-session-handoff.md)
+- [Publishing scripts directory](https://github.com/arpyph1/productimpactpod-site/tree/main/scripts/publishing)
+- [Supabase schema (0001)](https://github.com/arpyph1/productimpactpod-site/blob/main/supabase/migrations/0001_initial_schema.sql)
+- [Supabase bootstrap (0002)](https://github.com/arpyph1/productimpactpod-site/blob/main/supabase/migrations/0002_site_bootstrap.sql)
+- [Site Supabase client (table shapes)](https://github.com/arpyph1/productimpactpod-site/blob/main/src/lib/supabase.ts)
+- [Canonical themes](https://github.com/arpyph1/productimpactpod-site/blob/main/src/lib/themes.ts)
+- [Vault integration templates](https://github.com/arpyph1/productimpactpod-site/tree/main/vault-integration)
+- [Schema reference doc](https://github.com/arpyph1/productimpactpod-site/blob/main/docs/supabase-schema.md)
+- [Supabase migration runbook](https://github.com/arpyph1/productimpactpod-site/blob/main/docs/supabase-migration.md)
+
+### Dashboards
+
+- [Supabase — productimpactpod project](https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk)
+- [Supabase API settings (keys)](https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk/settings/api)
+- [Supabase SQL Editor](https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk/sql/new)
+- [Supabase Edge Functions](https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk/functions)
+- [Supabase Storage](https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk/storage/buckets)
+- [GitHub Actions (rebuilds)](https://github.com/arpyph1/productimpactpod-site/actions)
+- [Cloudflare Pages deployments](https://dash.cloudflare.com/) → Workers & Pages → productimpactpod-site
+
+### Credentials creation
+
+- [Anthropic API keys](https://console.anthropic.com/settings/keys)
+- [Replicate API tokens](https://replicate.com/account/api-tokens)
+- [GitHub personal access tokens](https://github.com/settings/tokens)
+- [Google Cloud Console (YouTube API key)](https://console.cloud.google.com/apis/credentials)
+
+### Live URLs
+
+- [Site preview](https://productimpactpod-site.pages.dev/)
+- [Site production](https://productimpactpod.com/)
+- [Rich Results Test](https://search.google.com/test/rich-results)
+- [Google Publisher Center](https://publishercenter.google.com/)
+
+---
+
+## End of doc
+
+This is self-contained. A new Claude session inside `vault-system` can
+follow this document top to bottom and reach first publish without any
+other context from the site-building session.
+
+If you discover anything this doc doesn't cover, add a section and
+commit it back. The canonical copy lives at
+`productimpactpod-site/docs/vault-session-handoff.md`.
