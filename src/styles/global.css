@@ -2,216 +2,425 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@700;800;900&display=swap');
+
+/* =====================================================
+   PRODUCT IMPACT — Particle.news-inspired Dark Theme
+   Editorial, dense, news-publication aesthetic.
+   All colours HSL — see tailwind.config.js for token map.
+   Ported from Lovable's Home design (April 2026).
+   ===================================================== */
+
+@layer base {
+  :root {
+    /* Dark foundation */
+    --background:       0 0% 4%;
+    --foreground:       0 0% 95%;
+
+    --card:             0 0% 7%;
+    --card-foreground:  0 0% 95%;
+
+    --popover:          0 0% 7%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Brand — coral/terracotta primary */
+    --primary:          4 75% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:        0 0% 12%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted:            0 0% 12%;
+    --muted-foreground: 0 0% 65%;
+
+    /* Accent — warm amber/gold */
+    --accent:           4 75% 55%;          /* alias of primary for legacy code */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive:      0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:           0 0% 14%;
+    --input:            0 0% 14%;
+    --ring:             4 75% 55%;
+
+    --radius: 0.75rem;
+
+    /* Named brand palette */
+    --coral:    4 75% 55%;
+    --teal:     182 55% 42%;
+    --amber:    38 90% 50%;
+    --lavender: 260 50% 58%;
+    --sage:     140 35% 45%;
+    --orange:   20 90% 55%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
- * Base styles
- * The Lovable build had low-contrast gray-on-gray body text. Fix that here
- * with explicit high-contrast tokens per the design brief's readability spec.
+ * Containers — match Lovable's `container mx-auto px-6` pattern
  * ──────────────────────────────────────────────────────────────────────────── */
 
-:root {
-  color-scheme: dark;
-  --bg: #0a0a0a;
-  --bg-elevated: #141414;
-  --bg-card: #1a1a1a;
-  --bg-hover: #1f1f1f;
-  --fg: #f5f5f5;
-  --fg-muted: #d4d4d4;
-  --fg-subtle: #a0a0a0;
-  --fg-faint: #707070;
-  --accent: #ff6b4a;
-  --accent-hover: #ff8566;
-  --border: #2a2a2a;
-  --border-strong: #3a3a3a;
+.container-prose {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
-html {
-  background-color: var(--bg);
-  color: var(--fg);
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  background-color: var(--bg);
-  color: var(--fg);
-  margin: 0;
-  min-height: 100vh;
+.container-wide {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
- * Article prose — the typography fix for the "wall of gray text" problem.
- * Apply this class to the article body container.
+ * Section divider — subtle horizontal rule between major sections
  * ──────────────────────────────────────────────────────────────────────────── */
 
+.section-divider {
+  height: 1px;
+  background: hsl(var(--border));
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Studio card — the Particle-style card used for articles, episodes, etc.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.studio-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04), 0 1px 2px hsl(0 0% 0% / 0.06);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.studio-card:hover {
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08), 0 2px 4px hsl(0 0% 0% / 0.06);
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Agency-style underline-on-hover link
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.agency-link {
+  position: relative;
+  display: inline-block;
+}
+.agency-link::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.agency-link:hover::after { width: 100%; }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Episode card hover
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.episode-card {
+  transition: transform 0.2s ease;
+}
+.episode-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Animated waveform bars (under "Listen" indicators)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.wave-bar {
+  display: inline-block;
+  width: 2px;
+  background: hsl(var(--primary));
+  border-radius: 1px;
+  animation: wave 1.4s ease-in-out infinite;
+}
+.wave-bar:nth-child(2) { animation-delay: 0.1s; background: hsl(var(--teal)); }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s; background: hsl(var(--amber)); }
+.wave-bar:nth-child(5) { animation-delay: 0.4s; background: hsl(var(--lavender)); }
+.wave-bar:nth-child(6) { animation-delay: 0.5s; background: hsl(var(--sage)); }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Marquee (sponsor logos, listen-on platforms)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 24s linear infinite;
+}
+.marquee-track:hover { animation-play-state: paused; }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Fade-in animation
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s ease forwards; }
+.fade-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
+.fade-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
+.fade-up-delay-3 { animation-delay: 0.35s; opacity: 0; }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Gradient text — used for splash headlines
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.gradient-text {
+  background: linear-gradient(135deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--coral)) 40%,
+    hsl(var(--amber)) 70%,
+    hsl(var(--teal)) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Particle-style hero overlay (article hero image gradient)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.particle-hero-overlay {
+  background: linear-gradient(to top,
+    hsl(0 0% 0% / 0.85) 0%,
+    hsl(0 0% 0% / 0.5) 40%,
+    hsl(0 0% 0% / 0.1) 70%,
+    transparent 100%
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Overview card — for TL;DR bullet boxes on article pages
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.overview-card {
+  background: hsl(var(--muted));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Glow effects — subtle accents on primary CTAs
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.glow-orange { box-shadow: 0 0 30px hsl(var(--coral) / 0.15); }
+.glow-purple { box-shadow: 0 0 30px hsl(var(--lavender) / 0.15); }
+.glow-teal   { box-shadow: 0 0 20px hsl(var(--teal) / 0.15); }
+.glow-amber  { box-shadow: 0 0 20px hsl(var(--amber) / 0.15); }
+
+.neon-border       { border: 1px solid hsl(var(--primary) / 0.2); }
+.neon-border-teal  { border: 1px solid hsl(var(--teal) / 0.2); }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Article body typography (Anthropic-article style)
+ * Apply .article-body to the article's content container.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.article-body,
 .article-prose {
-  color: #e5e5e5;
   font-size: 19px;
   line-height: 1.75;
+  color: hsl(var(--foreground));
+  font-weight: 400;
+  font-family: 'Inter', system-ui, sans-serif;
   max-width: 720px;
   margin-left: auto;
   margin-right: auto;
 }
-
-@media (max-width: 767px) {
-  .article-prose {
-    font-size: 17px;
-    padding-left: 20px;
-    padding-right: 20px;
-  }
+@media (max-width: 639px) {
+  .article-body,
+  .article-prose { font-size: 17px; padding-left: 1.25rem; padding-right: 1.25rem; }
 }
 
+.article-body p,
 .article-prose p {
   margin-top: 0;
   margin-bottom: 1.5em;
-  color: #e5e5e5;
 }
 
-.article-prose strong {
-  color: #ffffff;
-  font-weight: 700;
+.article-body h1,
+.article-prose h1 {
+  font-family: 'Montserrat', 'Inter', sans-serif;
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin-top: 64px;
+  margin-bottom: 20px;
 }
 
-.article-prose a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 107, 74, 0.4);
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
-  transition: color 0.15s, text-decoration-color 0.15s;
-}
-
-.article-prose a:hover {
-  color: var(--accent-hover);
-  text-decoration-color: var(--accent-hover);
-}
-
+.article-body h2,
 .article-prose h2 {
+  font-family: 'Montserrat', 'Inter', sans-serif;
   font-size: 36px;
   font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.01em;
   margin-top: 64px;
   margin-bottom: 20px;
-  color: #ffffff;
-  border-left: 4px solid var(--accent);
-  padding-left: 20px;
-  letter-spacing: -0.01em;
+  padding-left: 16px;
+  border-left: 4px solid hsl(var(--primary));
+  color: hsl(var(--foreground));
 }
 
-@media (max-width: 767px) {
-  .article-prose h2 {
-    font-size: 28px;
-    margin-top: 48px;
-    padding-left: 16px;
-  }
-}
-
+.article-body h3,
 .article-prose h3 {
+  font-family: 'Montserrat', 'Inter', sans-serif;
   font-size: 26px;
   font-weight: 700;
   line-height: 1.3;
   margin-top: 40px;
-  margin-bottom: 16px;
-  color: #ffffff;
-  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+  color: hsl(var(--foreground));
 }
 
-@media (max-width: 767px) {
-  .article-prose h3 {
-    font-size: 22px;
-    margin-top: 32px;
-  }
+@media (max-width: 639px) {
+  .article-body h1, .article-prose h1 { font-size: 36px; }
+  .article-body h2, .article-prose h2 { font-size: 28px; margin-top: 48px; }
+  .article-body h3, .article-prose h3 { font-size: 22px; }
 }
 
+.article-body blockquote,
 .article-prose blockquote {
   font-size: 22px;
   font-style: italic;
-  line-height: 1.55;
-  color: #ffffff;
-  border-left: 4px solid var(--accent);
+  line-height: 1.5;
+  color: hsl(var(--foreground));
+  border-left: 4px solid hsl(var(--primary));
   padding-left: 24px;
-  margin-top: 48px;
-  margin-bottom: 48px;
-  max-width: 720px;
+  margin: 48px 0;
+}
+@media (max-width: 639px) {
+  .article-body blockquote, .article-prose blockquote { font-size: 18px; margin: 32px 0; }
 }
 
-@media (max-width: 767px) {
-  .article-prose blockquote {
-    font-size: 19px;
-    padding-left: 20px;
-    margin-top: 36px;
-    margin-bottom: 36px;
-  }
+.article-body a,
+.article-prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: color 0.15s;
+}
+.article-body a:hover,
+.article-prose a:hover {
+  color: hsl(var(--coral) / 0.85);
 }
 
-.article-prose blockquote p {
-  color: #ffffff;
-  font-size: inherit;
-  margin-bottom: 0.8em;
+.article-body strong,
+.article-prose strong {
+  color: hsl(var(--foreground));
+  font-weight: 700;
 }
 
-.article-prose blockquote p:last-child {
-  margin-bottom: 0;
-}
-
-.article-prose ul,
-.article-prose ol {
-  margin-top: 1em;
+.article-body ul, .article-body ol,
+.article-prose ul, .article-prose ol {
   margin-bottom: 1.5em;
   padding-left: 1.5em;
 }
-
-.article-prose ul li,
-.article-prose ol li {
+.article-body li,
+.article-prose li {
   margin-bottom: 0.5em;
-  color: #e5e5e5;
-  line-height: 1.7;
+  color: hsl(var(--foreground));
 }
-
+.article-body ul li::marker,
 .article-prose ul li::marker {
-  color: var(--accent);
+  color: hsl(var(--primary));
 }
 
-.article-prose hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin-top: 48px;
-  margin-bottom: 48px;
-}
-
+.article-body img,
 .article-prose img {
-  max-width: 100%;
-  height: auto;
+  width: 100%;
   border-radius: 8px;
-  margin-top: 32px;
-  margin-bottom: 32px;
+  margin: 2em 0;
 }
 
+.article-body code,
 .article-prose code {
-  background-color: var(--bg-card);
+  background: hsl(var(--muted));
   padding: 0.15em 0.4em;
   border-radius: 4px;
   font-size: 0.92em;
-  color: var(--accent);
+  color: hsl(var(--primary));
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 }
 
+.article-body pre,
 .article-prose pre {
-  background-color: var(--bg-card);
+  background: hsl(var(--muted));
   padding: 20px;
   border-radius: 8px;
   overflow-x: auto;
-  margin-top: 24px;
-  margin-bottom: 24px;
+  margin: 24px 0;
 }
-
+.article-body pre code,
 .article-prose pre code {
   background: none;
   padding: 0;
-  color: #e5e5e5;
+  color: hsl(var(--foreground));
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Hide horizontal scrollbars (used on episode strips, marquees)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Custom scrollbar (page-level)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 2px; }
 
 /* ────────────────────────────────────────────────────────────────────────────
  * Accessibility helpers
@@ -230,27 +439,7 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
   border-radius: 2px;
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Utility classes used across components
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.container-prose {
-  max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.container-wide {
-  max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 24px;
-  padding-right: 24px;
 }

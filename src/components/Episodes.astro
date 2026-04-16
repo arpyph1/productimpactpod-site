@@ -1,0 +1,129 @@
+---
+// Episodes — podcast RSS feed rendered at build time.
+// Mirrors Lovable's Episodes.tsx + EpisodeCard.tsx layout.
+//
+// Default feed URL is a placeholder — pass the real podcast RSS via the
+// `feedUrl` prop when this is consumed (in src/pages/index.astro). Or set
+// PUBLIC_PODCAST_RSS_URL in .env / Cloudflare Pages env vars and we'll
+// pick it up here.
+
+import { getPodcastEpisodes, formatDuration, type PodcastEpisode } from "@lib/podcast-rss";
+
+interface Props {
+  feedUrl?: string;
+  title?: string;
+  limit?: number;
+}
+
+const {
+  feedUrl = import.meta.env.PUBLIC_PODCAST_RSS_URL ?? "",
+  title = "Latest Episodes",
+  limit = 8,
+} = Astro.props;
+
+const { episodes, channelImage } = await getPodcastEpisodes(feedUrl, limit);
+---
+
+<section id="episodes" class="bg-background" aria-label="Podcast episodes">
+  <div class="container-wide">
+    {/* Section header */}
+    <div class="flex items-end justify-between py-10 border-b border-border gap-4">
+      <h3
+        class="font-display font-extrabold uppercase leading-none tracking-tight text-foreground"
+        style="font-size: clamp(1.5rem, 3.5vw, 2.8rem); letter-spacing: -0.02em;"
+      >
+        {title}
+      </h3>
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {/* Animated mini waveform — ties to the .wave-bar utility */}
+        <span class="inline-flex items-end gap-px h-3" aria-hidden="true">
+          <span class="wave-bar" style="height:100%"></span>
+          <span class="wave-bar" style="height:100%"></span>
+          <span class="wave-bar" style="height:100%"></span>
+          <span class="wave-bar" style="height:100%"></span>
+          <span class="wave-bar" style="height:100%"></span>
+          <span class="wave-bar" style="height:100%"></span>
+        </span>
+        <span>Live RSS</span>
+      </div>
+    </div>
+
+    {episodes.length === 0 ? (
+      <div class="text-center py-20 text-muted-foreground text-sm">
+        {feedUrl
+          ? "No episodes returned — check the podcast RSS URL or wait for the next site build."
+          : "Podcast RSS URL not yet configured. Set PUBLIC_PODCAST_RSS_URL in your environment."}
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border" style="font-size: 0.75rem;">
+        {episodes.map((ep) => (
+          <article class="bg-background p-3 episode-card">
+            <a
+              href={ep.link || "#"}
+              target={ep.link ? "_blank" : undefined}
+              rel={ep.link ? "noopener" : undefined}
+              class="block"
+            >
+              {/* Cover art — square, fills width */}
+              <div class="relative aspect-square mb-3 rounded-md overflow-hidden bg-card">
+                {(ep.imageUrl || channelImage) ? (
+                  <img
+                    src={ep.imageUrl || channelImage}
+                    alt={`${ep.title} cover art`}
+                    loading="lazy"
+                    class="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/30 to-card">
+                    <span class="font-display font-extrabold text-foreground/30 text-3xl">
+                      {ep.episodeNumber}
+                    </span>
+                  </div>
+                )}
+                {/* Play indicator on hover */}
+                <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity">
+                  <span class="w-10 h-10 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="black" aria-hidden="true">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Episode metadata */}
+              <div class="flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">
+                <span>Ep {ep.episodeNumber}</span>
+                {ep.duration && <span>{formatDuration(ep.duration)}</span>}
+              </div>
+
+              <h4 class="font-display font-bold text-sm text-foreground leading-snug line-clamp-3 group-hover:text-primary transition-colors">
+                {ep.title}
+              </h4>
+
+              {ep.pubDate && (
+                <time datetime={ep.pubDateISO} class="text-[11px] text-muted-foreground mt-2 block">
+                  {ep.pubDate}
+                </time>
+              )}
+            </a>
+          </article>
+        ))}
+      </div>
+    )}
+
+    {episodes.length > 0 && (
+      <div class="py-8 border-t border-border text-center">
+        <a
+          href="/episodes"
+          class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+          All episodes
+        </a>
+      </div>
+    )}
+  </div>
+  <div class="section-divider"></div>
+</section>
