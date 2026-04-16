@@ -1,66 +1,231 @@
 ---
-// Primary navigation — 6 items per PRD Section 2.
-// Logo in the center links to /. Hamburger on mobile.
+// Primary navigation with mega-menu dropdowns — matches Lovable's Navbar.tsx.
+// News + Themes open panels with icon-labelled links; Podcast/Episodes/
+// Partnerships are flat links. Contact button on the right.
+//
+// Scroll-aware: header shrinks from 80px to 64px once past 60px scroll.
+// Logo also shrinks. Pure vanilla JS (no React hydration needed).
 ---
 
-<nav class="bg-background-elevated border-b border-[#2a2a2a] sticky top-0 z-40 backdrop-blur-sm bg-opacity-90">
-  <div class="container-wide flex items-center justify-between h-16">
-    <!-- Left nav -->
-    <ul class="hidden md:flex items-center gap-8 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
-      <li><a href="/news" class="hover:text-white transition-colors">News</a></li>
-      <li><a href="/themes" class="hover:text-white transition-colors">Themes</a></li>
-    </ul>
+<header
+  id="site-nav"
+  class="fixed top-0 left-0 right-0 z-50 border-b border-transparent bg-card/80 backdrop-blur-sm transition-all duration-300"
+>
+  <div
+    id="nav-inner"
+    class="container-wide flex items-center justify-between"
+    style="height: 80px; transition: height 0.3s ease;"
+  >
+    {/* Left nav (News + Themes with mega-menus) */}
+    <nav class="hidden md:flex items-center gap-6 flex-1">
+      {/* NEWS — mega menu */}
+      <div class="relative nav-dropdown" data-dropdown="news">
+        <a
+          href="/news"
+          class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors inline-flex items-center gap-1"
+        >
+          News
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </a>
+        <div
+          class="nav-panel absolute top-full left-0 mt-3 w-[520px] bg-card border border-border rounded-xl shadow-xl p-5 z-50 opacity-0 invisible transition-all duration-200"
+          data-panel="news"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Browse by format</span>
+            <a href="/news" class="text-xs text-primary hover:underline">View all →</a>
+          </div>
+          <div class="grid grid-cols-2 gap-1">
+            {[
+              { label: "All News",      format: "",              desc: "Everything published" },
+              { label: "Features",      format: "feature",       desc: "In-depth reporting" },
+              { label: "News Analysis", format: "news-analysis", desc: "What it means" },
+              { label: "Case Studies",  format: "case-study",    desc: "Real-world impact" },
+              { label: "Releases",      format: "release-note",  desc: "Product launches" },
+              { label: "Interviews",    format: "interview",     desc: "Conversations with leaders" },
+              { label: "Explainers",    format: "explainer",     desc: "How it works" },
+              { label: "Opinion",       format: "opinion",       desc: "Editorial takes" },
+            ].map((n) => (
+              <a
+                href={n.format ? `/news/format/${n.format}` : "/news"}
+                class="flex items-start gap-3 px-3 py-3 rounded-lg hover:bg-muted transition-colors group"
+              >
+                <span class="w-4 h-4 rounded-full mt-0.5 flex-shrink-0 bg-primary/20 border border-primary/40"></span>
+                <div>
+                  <span class="text-sm font-medium group-hover:text-primary transition-colors block">{n.label}</span>
+                  <span class="text-xs text-muted-foreground">{n.desc}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
 
-    <!-- Logo (center) -->
-    <a href="/" class="flex items-center gap-2" aria-label="Product Impact home">
-      <img
-        src="/logo.png"
-        alt="Product Impact Podcast"
-        width="64"
-        height="64"
-        class="h-12 w-12 rounded-full"
-      />
-      <span class="sr-only">Product Impact</span>
-    </a>
+      {/* THEMES — mega menu */}
+      <div class="relative nav-dropdown" data-dropdown="themes">
+        <a
+          href="/themes"
+          class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors inline-flex items-center gap-1"
+        >
+          Themes
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </a>
+        <div
+          class="nav-panel absolute top-full left-0 mt-3 w-[560px] bg-card border border-border rounded-xl shadow-xl p-5 z-50 opacity-0 invisible transition-all duration-200"
+          data-panel="themes"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Explore themes</span>
+            <a href="/themes" class="text-xs text-primary hover:underline">View all →</a>
+          </div>
+          <div class="grid grid-cols-2 gap-1">
+            {[
+              { label: "AI Product Strategy",           slug: "ai-product-strategy",                  color: "hsl(var(--coral))" },
+              { label: "Agents & Agentic Systems",      slug: "agents-agentic-systems",               color: "hsl(var(--lavender))" },
+              { label: "UX & Experience Design for AI", slug: "ux-experience-design-for-ai",          color: "hsl(var(--teal))" },
+              { label: "Adoption & Org Change",         slug: "adoption-organizational-change",       color: "hsl(var(--sage))" },
+              { label: "Evaluation & Benchmarking",     slug: "evaluation-benchmarking",              color: "hsl(var(--teal))" },
+              { label: "Go-to-Market & Distribution",   slug: "go-to-market-distribution",            color: "hsl(var(--orange))" },
+              { label: "Data, Semantics & Knowledge",   slug: "data-semantics-knowledge-foundations", color: "hsl(var(--lavender))" },
+              { label: "Governance, Risk & Trust",      slug: "governance-risk-trust",                color: "hsl(var(--amber))" },
+            ].map((t) => (
+              <a
+                href={`/themes/${t.slug}`}
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors group"
+              >
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={`background: ${t.color};`}></span>
+                <span class="text-sm font-medium group-hover:text-primary transition-colors">{t.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </nav>
 
-    <!-- Right nav -->
-    <ul class="hidden md:flex items-center gap-8 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
-      <li><a href="/podcast" class="hover:text-white transition-colors">Podcast</a></li>
-      <li><a href="/episodes" class="hover:text-white transition-colors">Episodes</a></li>
-      <li><a href="/partnerships" class="hover:text-white transition-colors">Partnerships</a></li>
-    </ul>
+    {/* Center logo */}
+    <div class="flex items-center justify-center flex-shrink-0">
+      <a href="/" class="flex items-center justify-center" aria-label="Product Impact home">
+        <img
+          id="nav-logo"
+          src="/logo.png"
+          alt="Product Impact Podcast"
+          width="72"
+          height="72"
+          style="width: 72px; height: 72px; transition: width 0.3s ease, height 0.3s ease;"
+          class="object-contain"
+        />
+      </a>
+    </div>
 
-    <!-- Mobile: hamburger -->
-    <button
-      type="button"
-      aria-label="Open menu"
-      class="md:hidden p-2 text-[#d4d4d4] hover:text-white"
-      id="mobile-menu-btn"
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
+    {/* Right nav (Podcast, Episodes, Partnerships) + Contact CTA */}
+    <div class="hidden md:flex items-center justify-end gap-6 flex-1">
+      <a href="/podcast" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Podcast</a>
+      <a href="/episodes" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Episodes</a>
+      <a href="/partnerships" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Partnerships</a>
+      <a
+        href="/contact"
+        class="flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all shadow-sm"
+      >
+        Contact
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
+        </svg>
+      </a>
+    </div>
+
+    {/* Mobile hamburger */}
+    <div class="md:hidden flex justify-end">
+      <button
+        type="button"
+        id="mobile-menu-btn"
+        aria-label="Open menu"
+        class="p-2 text-foreground/70"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
   </div>
 
-  <!-- Mobile menu (collapsible) -->
-  <div id="mobile-menu" class="md:hidden hidden border-t border-[#2a2a2a]">
-    <ul class="flex flex-col py-4 px-6 gap-4 text-sm font-semibold uppercase tracking-wider text-[#d4d4d4]">
-      <li><a href="/news" class="block py-2 hover:text-white">News</a></li>
-      <li><a href="/themes" class="block py-2 hover:text-white">Themes</a></li>
-      <li><a href="/podcast" class="block py-2 hover:text-white">Podcast</a></li>
-      <li><a href="/episodes" class="block py-2 hover:text-white">Episodes</a></li>
-      <li><a href="/partnerships" class="block py-2 hover:text-white">Partnerships</a></li>
-    </ul>
+  {/* Mobile menu */}
+  <div id="mobile-menu" class="md:hidden hidden border-t border-border bg-card px-6 py-5 flex-col gap-4 shadow-lg">
+    <a href="/news" class="text-sm font-medium text-foreground hover:text-primary transition-colors">News</a>
+    <a href="/themes" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Themes</a>
+    <a href="/podcast" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Podcast</a>
+    <a href="/episodes" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Episodes</a>
+    <a href="/partnerships" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Partnerships</a>
+    <a href="/contact" class="w-full px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold text-center">Contact</a>
   </div>
-</nav>
+</header>
+
+{/* Spacer so page content doesn't hide under fixed nav */}
+<div aria-hidden="true" style="height: 80px;"></div>
 
 <script>
+  // ── Scroll-shrink: header shrinks from 80→64px past 60px scroll ──
+  const nav = document.getElementById("site-nav");
+  const navInner = document.getElementById("nav-inner");
+  const logo = document.getElementById("nav-logo");
+
+  const onScroll = () => {
+    const scrolled = window.scrollY > 60;
+    if (!nav || !navInner || !logo) return;
+    if (scrolled) {
+      nav.classList.add("border-border", "bg-card/95", "shadow-sm");
+      nav.classList.remove("border-transparent", "bg-card/80");
+      navInner.style.height = "64px";
+      logo.style.width = "56px";
+      logo.style.height = "56px";
+    } else {
+      nav.classList.remove("border-border", "bg-card/95", "shadow-sm");
+      nav.classList.add("border-transparent", "bg-card/80");
+      navInner.style.height = "80px";
+      logo.style.width = "72px";
+      logo.style.height = "72px";
+    }
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // ── Mega-menu hover open/close with 150ms close delay ──
+  let closeTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  document.querySelectorAll<HTMLElement>(".nav-dropdown").forEach((wrap) => {
+    const id = wrap.dataset.dropdown;
+    if (!id) return;
+    const panel = wrap.querySelector<HTMLElement>(`[data-panel="${id}"]`);
+    if (!panel) return;
+
+    const open = () => {
+      if (closeTimeout) { clearTimeout(closeTimeout); closeTimeout = null; }
+      panel.classList.remove("opacity-0", "invisible");
+      panel.classList.add("opacity-100", "visible");
+    };
+    const close = () => {
+      closeTimeout = setTimeout(() => {
+        panel.classList.add("opacity-0", "invisible");
+        panel.classList.remove("opacity-100", "visible");
+      }, 150);
+    };
+
+    wrap.addEventListener("mouseenter", open);
+    wrap.addEventListener("mouseleave", close);
+    panel.addEventListener("mouseenter", open);
+    panel.addEventListener("mouseleave", close);
+  });
+
+  // ── Mobile menu toggle ──
   const btn = document.getElementById("mobile-menu-btn");
   const menu = document.getElementById("mobile-menu");
   btn?.addEventListener("click", () => {
     menu?.classList.toggle("hidden");
+    menu?.classList.toggle("flex");
   });
 </script>

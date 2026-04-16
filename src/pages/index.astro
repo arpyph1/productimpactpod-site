@@ -1,81 +1,21 @@
 ---
-// Homepage — Particle.news-inspired layout matching Lovable's Home.tsx.
-// 11 sections (gracefully degrade when content is empty):
-//   1. Hero story (full-bleed)
-//   2. Secondary 2×2 article grid
-//   3. Latest Episodes (live podcast RSS)
-//   4. Themes row (studio cards with colored top-bars)
-//   5. Latest Releases (horizontal strip)
-//   6. Case Studies (horizontal strip)
-//   7. Features (3-col grid)
-//   8. From the Field Guide (explainers)
-//   9. Voices (hosts)
-//   10. Newsletter (live Substack RSS)
-//   11. Site intro (when no articles yet)
+// Homepage — Podcast.tsx-style layout ported from Lovable.
+// Section order (matches DEFAULT_ORDER in Lovable/Podcast.tsx):
+//   1. Hero (Shorts staircase + platform pills + headline)
+//   2. Episodes (live podcast RSS, cover-art grid)
+//   3. Hosts (large 9:16 vertical portraits)
+//   4. Newsletter (Substack RSS — latest editions)
+//   5. Subscribe (listen-on-X CTAs)
 
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import Newsletter from "@components/Newsletter.astro";
+import Hero from "@components/Hero.astro";
 import Episodes from "@components/Episodes.astro";
-import {
-  getAllArticles,
-  getLatestEpisodes,
-  formatLabel,
-  themeLabel,
-} from "@lib/supabase";
-import { canonicalThemes } from "@lib/themes";
+import Hosts from "@components/Hosts.astro";
+import Newsletter from "@components/Newsletter.astro";
 
-const articles = await getAllArticles();
-const supabaseEpisodes = await getLatestEpisodes(2);
 const siteUrl = "https://productimpactpod.com";
-
-const leadArticle = articles[0] ?? null;
-const secondaryArticles = articles.slice(1, 5);
-const releases = articles.filter((a) => a.format === "release-note").slice(0, 6);
-const caseStudies = articles.filter((a) => a.format === "case-study").slice(0, 4);
-const features = articles.filter((a) => a.format === "feature").slice(0, 3);
-const explainers = articles.filter((a) => a.format === "explainer").slice(0, 3);
-
-// Format badge style map — coral/teal/amber per format, matches Lovable
-const FORMAT_BADGE: Record<string, string> = {
-  feature:          "bg-primary text-primary-foreground",
-  "news-analysis":  "bg-foreground/85 text-card",
-  "case-study":     "bg-teal text-primary-foreground",
-  "release-note":   "bg-lavender text-primary-foreground",
-  interview:        "bg-amber text-foreground",
-  opinion:          "bg-coral text-primary-foreground",
-  explainer:        "bg-teal text-primary-foreground",
-  "research-brief": "bg-foreground/70 text-card",
-  "news-brief":     "bg-primary/90 text-primary-foreground",
-  "product-review": "bg-amber text-foreground",
-};
-
-// Theme colour bars (HSL values matching the named tokens)
-const THEME_BAR: Record<string, string> = {
-  "ai-product-strategy":                  "hsl(var(--coral))",
-  "agents-agentic-systems":               "hsl(var(--lavender))",
-  "ux-experience-design-for-ai":          "hsl(var(--teal))",
-  "adoption-organizational-change":       "hsl(var(--sage))",
-  "evaluation-benchmarking":              "hsl(var(--teal))",
-  "go-to-market-distribution":            "hsl(var(--orange))",
-  "data-semantics-knowledge-foundations": "hsl(var(--lavender))",
-  "governance-risk-trust":                "hsl(var(--amber))",
-};
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-}
-
-function authorName(slug: string): string {
-  return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 const homepageJsonLd = {
   "@context": "https://schema.org",
@@ -99,296 +39,53 @@ const homepageJsonLd = {
 >
   <Nav />
 
-  <main class="min-h-screen bg-background pt-6">
+  <main class="min-h-screen bg-background">
+    {/* ── 1. HERO ────────────────────────────────────────────────── */}
+    <Hero />
 
-    {/* ── 1. HERO STORY ──────────────────────────────────────────── */}
-    <section class="container-wide pt-4 pb-8">
-      {leadArticle ? (
-        <a href={`/news/${leadArticle.slug}`} class="group relative block rounded-xl overflow-hidden shadow-lg studio-card">
-          <div class="relative aspect-[16/9] lg:aspect-[2/1]">
-            {leadArticle.hero_image_url ? (
-              <img
-                src={leadArticle.hero_image_url}
-                alt={leadArticle.hero_image_alt ?? leadArticle.title}
-                class="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700"
-              />
-            ) : (
-              <div class="absolute inset-0 bg-gradient-to-br from-primary/40 to-primary/10 flex items-center justify-center">
-                <span class="font-display font-bold text-foreground/40 text-2xl">Product Impact</span>
-              </div>
-            )}
-            <div class="absolute inset-0 particle-hero-overlay"></div>
-            <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10 lg:p-12">
-              <div class="flex flex-wrap items-center gap-2 mb-3">
-                <span class={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider shadow-sm ${FORMAT_BADGE[leadArticle.format] ?? "bg-primary text-primary-foreground"}`}>
-                  {formatLabel(leadArticle.format)}
-                </span>
-                <span class="flex items-center gap-1 text-[11px] text-white/70">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="hsl(var(--amber))" aria-hidden="true">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                  {timeAgo(leadArticle.publish_date)}
-                </span>
-                {leadArticle.themes?.slice(0, 2).map((t) => (
-                  <span class="px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-sm text-[10px] text-white/80 uppercase tracking-wider">
-                    {themeLabel(t)}
-                  </span>
-                ))}
-              </div>
-              <h1
-                class="font-display font-bold text-white leading-[1.1] tracking-tight mb-3"
-                style="font-size: clamp(1.75rem, 4vw, 3rem);"
-              >
-                {leadArticle.title}
-              </h1>
-              {leadArticle.subtitle && (
-                <p class="text-white/80 text-base md:text-lg max-w-2xl line-clamp-2 mb-3">{leadArticle.subtitle}</p>
-              )}
-              <div class="flex items-center gap-3 text-sm text-white/60">
-                {leadArticle.author_slugs?.[0] && (
-                  <span class="font-medium text-white/80">{authorName(leadArticle.author_slugs[0])}</span>
-                )}
-                {leadArticle.read_time_minutes && <span>· {leadArticle.read_time_minutes} min read</span>}
-              </div>
-            </div>
-          </div>
-        </a>
-      ) : (
-        /* Empty-state hero — when no articles published yet */
-        <div class="rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 via-card to-card border border-border p-10 md:p-16 text-center">
-          <h1 class="font-display font-extrabold text-4xl md:text-6xl tracking-tight mb-4 gradient-text">
-            Product Impact
-          </h1>
-          <p class="text-foreground/80 text-lg md:text-xl max-w-2xl mx-auto mb-6">
-            AI product news, releases, and case studies about the products transforming how we work and industries.
-          </p>
-          <p class="text-muted-foreground text-sm">
-            Articles publishing soon. In the meantime, listen to the podcast or browse our themes.
-          </p>
-          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a href="/podcast" class="px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all glow-orange">
-              Listen to the podcast →
-            </a>
-            <a href="/themes" class="px-6 py-3 rounded-full border border-border text-foreground hover:border-primary transition-all">
-              Browse themes →
-            </a>
-          </div>
-        </div>
-      )}
-    </section>
-
-    {/* ── 2. SECONDARY 2×2 GRID ───────────────────────────────────── */}
-    {secondaryArticles.length > 0 && (
-      <section class="container-wide pb-10">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-          {secondaryArticles.map((a) => (
-            <a href={`/news/${a.slug}`} class="studio-card overflow-hidden group block">
-              <div class="aspect-[16/9] relative">
-                {a.hero_image_url ? (
-                  <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} loading="lazy"
-                       class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
-                ) : (
-                  <div class="absolute inset-0 bg-gradient-to-br from-primary/30 to-card flex items-center p-6">
-                    <span class="font-display font-bold text-foreground/40 line-clamp-3">{a.title}</span>
-                  </div>
-                )}
-              </div>
-              <div class="p-5">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${FORMAT_BADGE[a.format] ?? "bg-primary text-primary-foreground"}`}>
-                    {formatLabel(a.format)}
-                  </span>
-                  <span class="text-[10px] text-muted-foreground">{timeAgo(a.publish_date)}</span>
-                </div>
-                <h2 class="font-display font-bold text-foreground text-lg leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-1.5">
-                  {a.title}
-                </h2>
-                {a.subtitle && (
-                  <p class="text-sm text-muted-foreground line-clamp-2">{a.subtitle}</p>
-                )}
-              </div>
-            </a>
-          ))}
-        </div>
-        <div class="mt-4 text-right">
-          <a href="/news" class="text-sm text-primary hover:underline inline-flex items-center gap-1 font-medium">
-            All articles →
-          </a>
-        </div>
-      </section>
-    )}
-
-    {/* ── 3. LATEST EPISODES (live podcast RSS) ─────────────────── */}
+    {/* ── 2. EPISODES (live podcast RSS) ───────────────────────── */}
     <Episodes title="Latest Episodes" limit={8} />
 
-    {/* ── 4. THEMES ROW ───────────────────────────────────────────── */}
-    <section class="container-wide py-10 border-t border-border">
-      <div class="flex items-end justify-between mb-5 gap-4 flex-wrap">
-        <div>
-          <h3
-            class="font-display font-extrabold uppercase leading-none tracking-tight text-foreground"
+    {/* ── 3. HOSTS (large vertical portraits) ──────────────────── */}
+    <Hosts />
+
+    {/* ── 4. NEWSLETTER (Substack RSS) ─────────────────────────── */}
+    <Newsletter title="From the Newsletter" />
+
+    {/* ── 5. SUBSCRIBE CTA ─────────────────────────────────────── */}
+    <section id="subscribe" class="bg-background" aria-label="Subscribe">
+      <div class="container-wide py-16">
+        <div class="studio-card p-8 md:p-14 text-center bg-gradient-to-br from-primary/5 via-card to-card">
+          <h2
+            class="font-display font-extrabold uppercase leading-none tracking-tight text-foreground mb-4"
             style="font-size: clamp(1.5rem, 3.5vw, 2.8rem); letter-spacing: -0.02em;"
           >
-            Themes
-          </h3>
-        </div>
-        <a href="/themes" class="text-sm text-primary hover:underline inline-flex items-center gap-1 font-medium">
-          View all →
-        </a>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {canonicalThemes.map((theme) => (
-          <a href={`/themes/${theme.slug}`} class="studio-card overflow-hidden group block">
-            <div class="h-1.5 rounded-t-lg" style={`background: ${THEME_BAR[theme.slug]};`}></div>
-            <div class="p-4">
-              <h4 class="font-display font-bold text-foreground text-sm mb-1 group-hover:text-primary transition-colors">
-                {theme.name}
-              </h4>
-              <p class="text-[11px] text-muted-foreground line-clamp-2">{theme.description}</p>
-            </div>
-          </a>
-        ))}
-      </div>
-    </section>
-
-    {/* ── 5. LATEST RELEASES (horizontal strip) ─────────────────── */}
-    {releases.length > 0 && (
-      <section class="container-wide py-10 border-t border-border">
-        <div class="flex items-end justify-between mb-5 gap-4 flex-wrap">
-          <h3 class="font-display font-extrabold uppercase tracking-tight text-foreground" style="font-size: clamp(1.5rem, 3.5vw, 2.8rem);">
-            Latest Releases
-          </h3>
-          <a href="/news/format/release-note" class="text-sm text-primary hover:underline font-medium">All releases →</a>
-        </div>
-        <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6">
-          {releases.map((a) => (
-            <a href={`/news/${a.slug}`} class="snap-start flex-shrink-0 studio-card overflow-hidden group block" style="width: min(300px, 80vw);">
-              <div class="aspect-[4/3] bg-gradient-to-br from-lavender/30 to-card relative">
-                {a.hero_image_url && (
-                  <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} loading="lazy"
-                       class="absolute inset-0 w-full h-full object-cover" />
-                )}
-              </div>
-              <div class="p-4">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-lavender">RELEASE</span>
-                <h4 class="font-display font-bold text-sm mt-1 line-clamp-2 group-hover:text-primary transition-colors">
-                  {a.title}
-                </h4>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {/* ── 6. CASE STUDIES (horizontal strip) ────────────────────── */}
-    {caseStudies.length > 0 && (
-      <section class="container-wide py-10 border-t border-border">
-        <div class="flex items-end justify-between mb-5 gap-4 flex-wrap">
-          <h3 class="font-display font-extrabold uppercase tracking-tight text-foreground" style="font-size: clamp(1.5rem, 3.5vw, 2.8rem);">
-            Case Studies
-          </h3>
-          <a href="/news/format/case-study" class="text-sm text-primary hover:underline font-medium">All case studies →</a>
-        </div>
-        <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6">
-          {caseStudies.map((a) => (
-            <a href={`/news/${a.slug}`} class="snap-start flex-shrink-0 studio-card overflow-hidden group block" style="width: min(360px, 85vw);">
-              <div class="aspect-[16/9] bg-gradient-to-br from-teal/30 to-card relative">
-                {a.hero_image_url && (
-                  <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} loading="lazy"
-                       class="absolute inset-0 w-full h-full object-cover" />
-                )}
-              </div>
-              <div class="p-4">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-teal">CASE STUDY</span>
-                <h4 class="font-display font-bold text-sm mt-1 line-clamp-2 group-hover:text-primary transition-colors">
-                  {a.title}
-                </h4>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {/* ── 7. FEATURES (3-col) ───────────────────────────────────── */}
-    {features.length > 0 && (
-      <section class="container-wide py-10 border-t border-border">
-        <div class="flex items-end justify-between mb-5 gap-4 flex-wrap">
-          <h3 class="font-display font-extrabold uppercase tracking-tight text-foreground" style="font-size: clamp(1.5rem, 3.5vw, 2.8rem);">
-            Features
-          </h3>
-          <a href="/news/format/feature" class="text-sm text-primary hover:underline font-medium">All features →</a>
-        </div>
-        <div class="grid md:grid-cols-3 gap-4 md:gap-5">
-          {features.map((a) => (
-            <a href={`/news/${a.slug}`} class="studio-card overflow-hidden group block">
-              <div class="aspect-[16/9] bg-gradient-to-br from-primary/30 to-card relative">
-                {a.hero_image_url && (
-                  <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} loading="lazy"
-                       class="absolute inset-0 w-full h-full object-cover" />
-                )}
-              </div>
-              <div class="p-5">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-primary">FEATURE</span>
-                <h4 class="font-display font-bold text-base mt-1.5 mb-2 group-hover:text-primary transition-colors line-clamp-2">{a.title}</h4>
-                {a.subtitle && <p class="text-sm text-muted-foreground line-clamp-2">{a.subtitle}</p>}
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {/* ── 8. FROM THE FIELD GUIDE (explainers) ─────────────────── */}
-    {explainers.length > 0 && (
-      <section class="container-wide py-10 border-t border-border">
-        <div class="flex items-end justify-between mb-5 gap-4 flex-wrap">
-          <h3 class="font-display font-extrabold uppercase tracking-tight text-foreground" style="font-size: clamp(1.5rem, 3.5vw, 2.8rem);">
-            From the Field Guide
-          </h3>
-          <a href="/news/format/explainer" class="text-sm text-primary hover:underline font-medium">Browse →</a>
-        </div>
-        <div class="grid md:grid-cols-3 gap-4">
-          {explainers.map((a) => (
-            <a href={`/news/${a.slug}`} class="studio-card p-5 group block">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-teal mb-2 block">EXPLAINER</span>
-              <h4 class="font-display font-bold text-base mb-2 group-hover:text-primary transition-colors">{a.title}</h4>
-              <p class="text-sm text-muted-foreground line-clamp-3">{a.subtitle ?? a.meta_description ?? ""}</p>
-            </a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {/* ── 9. VOICES (Hosts) ─────────────────────────────────────── */}
-    <section class="container-wide py-10 border-t border-border">
-      <h2 class="font-display font-bold text-foreground text-xl md:text-2xl tracking-tight mb-1">Voices</h2>
-      <p class="text-sm text-muted-foreground mb-5">Hosted by</p>
-      <div class="grid md:grid-cols-2 gap-5">
-        {[
-          { name: "Arpy Dragffy",   role: "Founder, PH1 Research · Co-host, Product Impact Podcast", slug: "arpy-dragffy",   bio: "Focused on enterprise AI adoption and product-impact research. Founder of PH1 Research and AI Value Acceleration." },
-          { name: "Brittany Hobbs", role: "Co-host, Product Impact Podcast",                          slug: "brittany-hobbs", bio: "Product leader at the intersection of AI capabilities, product strategy, and go-to-market." },
-        ].map((host) => (
-          <div class="studio-card p-5 flex gap-4">
-            <div class="flex-shrink-0 w-20 h-20 md:w-[110px] md:h-[110px] rounded-xl overflow-hidden bg-muted flex items-center justify-center bg-gradient-to-br from-primary/15 to-primary/5">
-              <span class="font-display font-extrabold text-foreground/30 text-2xl">{host.name.charAt(0)}</span>
-            </div>
-            <div>
-              <h4 class="font-display font-bold text-foreground text-base">{host.name}</h4>
-              <p class="text-xs text-muted-foreground mb-2">{host.role}</p>
-              <p class="text-sm text-foreground/70 line-clamp-2">{host.bio}</p>
-              <a href={`/people/${host.slug}`} class="text-xs text-primary hover:underline mt-2 inline-block font-medium">
-                View profile →
+            Listen on your platform
+          </h2>
+          <p class="text-muted-foreground mb-8 max-w-lg mx-auto">
+            New episodes weekly. Subscribe wherever you listen to podcasts.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            {[
+              { label: "Spotify",         url: "https://open.spotify.com/show/productimpactpod",   color: "#1DB954" },
+              { label: "Apple Podcasts",  url: "https://podcasts.apple.com/productimpactpod",      color: "#B150E2" },
+              { label: "YouTube",         url: "https://youtube.com/@productimpactpod",            color: "#FF0000" },
+              { label: "Substack",        url: "https://productimpactpod.substack.com",            color: "#FF6719" },
+            ].map((p) => (
+              <a
+                href={p.url}
+                target="_blank"
+                rel="noopener"
+                class="flex items-center gap-3 px-6 py-3 rounded-full border border-border bg-card text-foreground font-medium hover:border-foreground transition-all"
+              >
+                <span class="w-3 h-3 rounded-full flex-shrink-0" style={`background: ${p.color};`}></span>
+                {p.label}
               </a>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </section>
-
-    {/* ── 10. NEWSLETTER (Substack RSS) ─────────────────────────── */}
-    <Newsletter />
 
     <div class="py-6"></div>
   </main>
