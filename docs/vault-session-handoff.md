@@ -1018,5 +1018,241 @@ Listed here so you know the full surface area:
 
 ---
 
-*Next: Section 10 covers every gotcha the site-building session ran into
-— the reproducible issues so you don't waste time rediscovering them.*
+## 10. Known gotchas
+
+Every bug the site-building session hit, preserved here so you don't
+rediscover them. Grouped by category.
+
+### 10.1 Python / shell environment
+
+#### macOS Python SSL certificate verify fails
+
+**Symptom:** `verify_supabase.py` (or any Python urllib HTTPS call) fails with:
+
+```
+urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed:
+unable to get local issuer certificate (_ssl.c:1032)
+```
+
+**Cause:** macOS Python installs often ship without a root CA bundle. `curl` is
+unaffected because it uses the system cert store; Python uses OpenSSL's.
+
+**Fix (one-time):**
+
+```bash
+pip3 install certifi
+echo 'export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")' \
+  >> ~/.zshrc
+source ~/.zshrc
+```
+
+#### zsh `quote>` prompt stuck after pasting commands
+
+**Symptom:** pasted a command with placeholder like `"<your-key>"` and now
+stuck at a `quote>` or `dquote>` continuation prompt.
+
+**Cause:** The literal `<` / `>` broke quote matching, or you pasted a
+multi-line command with a broken quote.
+
+**Fix:** press **Ctrl+C** to bail out. Re-type the command without angle
+brackets.
+
+#### zsh complains about `#` comments when pasting
+
+**Symptom:** `zsh: command not found: #`
+
+**Cause:** zsh doesn't treat `#` as a comment in interactive mode by default.
+
+**Fix:** remove comment lines before pasting, or add this to your `~/.zshrc`:
+
+```bash
+setopt INTERACTIVE_COMMENTS
+```
+
+### 10.2 Supabase
+
+#### Table name: `episode_shownotes`, NOT `shownotes`
+
+**Gotcha:** The Lovable era had the episode table at
+`public.episode_shownotes`. The site's old code queried `shownotes`
+which would silently return errors. The site code was fixed in
+commit `2e1b3cf`, verify_supabase.py in `3d5a6f7`. If you add any new
+code that touches podcast episodes, use `episode_shownotes`.
+
+#### RLS policies must permit `anon` SELECT
+
+The site queries Supabase at build time using the anon key. If RLS is
+enabled on a table but no policy grants `SELECT` to the `anon` role,
+queries return empty arrays silently — the build succeeds but every
+page renders blank.
+
+Our migration `0002_site_bootstrap.sql` creates explicit `Anon read …`
+policies for all 5 content tables. If you add a new table, add an anon
+SELECT policy too.
+
+#### Supabase anon key is a JWT with expiration
+
+The anon key is a JWT. Check the `exp` claim:
+
+```bash
+python3 -c "import base64, json; jwt=open('.env').read().split('PUBLIC_SUPABASE_ANON_KEY=')[1].split()[0]; p=json.loads(base64.b64decode(jwt.split('.')[1] + '=='*2)); print('expires:', __import__('datetime').datetime.fromtimestamp(p['exp']))"
+```
+
+Ours expires in 2036 (10-year default). If a key rotation happens,
+update both:
+- `product-impact/.env` (local)
+- Cloudflare Pages → Settings → Variables (production)
+
+### 10.3 Astro build
+
+#### `getStaticPaths` runs in an isolated scope
+
+**Symptom:** build errors like `canonicalThemes is not defined` inside
+a `getStaticPaths()` function.
+
+**Cause:** Astro hoists `getStaticPaths` and runs it separately from
+the rest of the frontmatter. Module-level `const`s declared below the
+function are not in scope.
+
+**Fix:** either move the constant above the function (doesn't always
+work), or import it inside the function:
+
+```typescript
+export async function getStaticPaths() {
+  const { canonicalThemes } = await import("@lib/themes");
+  return canonicalThemes.map(...);
+}
+```
+
+This pattern is used in `src/pages/themes/[slug].astro` and
+`src/pages/topics/[slug].astro` in the site repo.
+
+#### `PUBLIC_SUPABASE_URL` required at build time
+
+The site's `supabase.ts` throws at startup if env vars are missing:
+
+```
+Error: PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY must be set.
+```
+
+**This is intentional** — silent wrong-project reads are worse than a
+loud failure. Set the env vars in:
+- Cloudflare Pages dashboard (production)
+- GitHub Actions CI workflow (already done in `.github/workflows/ci.yml`)
+- Local `.env` if you run `npm run build` locally
+
+### 10.4 Publishing pipeline
+
+#### Canonical URL must match the slug exactly
+
+The validator rejects articles where `canonical_url` doesn't equal
+`https://productimpactpod.com/news/{slug}`. Don't construct the URL
+manually — derive it:
+
+```python
+article["canonical_url"] = f"https://productimpactpod.com/news/{article['slug']}"
+```
+
+#### Themes must be from the canonical 8
+
+The validator rejects any theme slug outside the 8 in the canonical
+taxonomy (section 5.1). If you want to add a 9th, it's a two-sided change:
+update `src/lib/themes.ts` in the site repo, seed a new row in
+`public.themes`, and update `validate_article.py`'s `CANONICAL_THEMES`
+set. Don't fork taxonomy between vault and site.
+
+#### Formats must be from the canonical 10
+
+Same deal for article `format`. If you publish a format outside the
+canonical 10, the validator rejects it. The canonical set lives in three
+places that must stay in sync:
+
+- `scripts/publishing/validate_article.py` → `VALID_FORMATS`
+- `src/lib/supabase.ts` → `ArticleFormat` type
+- `src/pages/news/format/[format].astro` → `getStaticPaths` hardcoded list
+
+#### Hero image generation failures
+
+- **`"ANTHROPIC_API_KEY not set"`** — run the `set -a; source .env; set +a`
+  dance before invoking the script
+- **`"HTTP 403 Forbidden"` from Replicate** — token expired or billing
+  cap hit. Check https://replicate.com/account/billing
+- **`"Supabase upload HTTP 404"`** — Storage bucket `article-heroes`
+  doesn't exist. It does (migration 0002 created it); re-verify with
+  `verify_supabase.py`.
+- **Timeouts (~3 min wait then fail)** — Replicate queue is full.
+  Retry, or switch to flux-schnell temporarily (~$0.003 per image but
+  lower quality). Edit `REPLICATE_MODEL` in `generate_hero_image.py`.
+
+#### Entity linking — no automatic magic
+
+The starter `publish_articles.py` has a stub `link_entities()` function
+that does nothing until you implement it. Decide how your vault
+represents entity references:
+
+- Markdown `[[wiki links]]` → parse with a regex, look up `entities.slug`
+- Explicit frontmatter field `entity_slugs: [a, b, c]` → simpler, less
+  automatic
+- Classifier edge function (Lovable had `batch-classify`) → most automatic,
+  most fragile
+
+### 10.5 YouTube Data API
+
+#### `youtube.api.v3.V3DataPlaylistItemService.List blocked`
+
+**Symptom:** edge function returns:
+
+```json
+{"error":"YouTube API error","details":"Requests to this API youtube method youtube.api.v3.V3DataPlaylistItemService.List are blocked."}
+```
+
+**Cause:** API key has restrictions too tight — either HTTP referrer
+restriction (blocks server-side calls) or API restrictions that don't
+include `youtube.api.v3.V3DataPlaylistItemService`.
+
+**Fix:** in Google Cloud Console → APIs & Services → Credentials → your
+API key:
+- **Application restrictions:** None (server-side, not exposed to browsers)
+- **API restrictions:** either "Don't restrict" OR restrict to exactly
+  "YouTube Data API v3"
+- Save, wait 2–3 min for propagation
+
+#### Daily quota (10,000 units)
+
+The `get-latest-short` function uses ~4 units per call. Scheduled
+rebuild fires every 6h (4/day); each build calls the function once.
+~16 units/day. Well inside the free tier.
+
+### 10.6 Git / GitHub
+
+#### `supabase link` works but `supabase functions deploy` fails
+
+If you see `WARNING: Docker is not running`, that's a warning, not a
+failure — Supabase CLI's local dev needs Docker but `functions deploy`
+doesn't. Ignore it.
+
+#### Divergent branches after git submodule updates
+
+After a submodule bump commit, `git pull` may say "divergent branches".
+**Do not** do `pull --rebase` blindly — the submodule commit pointer
+matters. Instead:
+
+```bash
+git fetch origin
+git status                   # understand what diverged
+git reset --hard origin/main # safe if your local commits are in the submodule
+```
+
+#### Fresh clone missing submodule contents
+
+After `git clone` without `--recursive`, `product-impact/scripts/site/`
+will be empty. Fix:
+
+```bash
+git submodule update --init --recursive
+```
+
+---
+
+*Final: section 11 walks through the milestones for your first real
+publish, and section 12 covers the ongoing publishing rhythm.*
