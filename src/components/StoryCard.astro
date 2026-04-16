@@ -1,0 +1,164 @@
+---
+// StoryCard — Particle.news-style story card.
+// Image with gradient overlay, entity-highlighted headline, metadata badges.
+//
+// Variants:
+//   size="hero"    — full-width, tall, large headline (homepage lead)
+//   size="medium"  — 16:9 image with content below (secondary grid)
+//   size="compact" — small thumbnail + text row (sidebar list)
+
+import EntityHeadline from "./EntityHeadline.astro";
+import type { Article } from "@lib/supabase";
+import { formatLabel, authorDisplayName } from "@lib/supabase";
+
+export interface Props {
+  article: Article;
+  size?: "hero" | "medium" | "compact";
+  totalArticles?: number;
+}
+
+const { article, size = "medium", totalArticles } = Astro.props;
+
+const a = article;
+const entities = [
+  ...(a.people ?? []),
+  ...(a.organizations ?? []),
+  ...(a.products ?? []),
+];
+const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+
+function timeAgo(d: string): string {
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+const time = timeAgo(a.publish_date);
+const href = `/news/${a.slug}/`;
+---
+
+{/* ── HERO variant: full-bleed image, overlay headline ── */}
+{size === "hero" && (
+  <a href={href} class="group block relative rounded-2xl overflow-hidden" style="min-height: 520px;">
+    {/* Image */}
+    {a.hero_image_url ? (
+      <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="absolute inset-0 w-full h-full object-cover" />
+    ) : (
+      <div class="absolute inset-0 bg-[#111]"></div>
+    )}
+    {/* Gradient: only bottom 50%, Particle-style */}
+    <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent"></div>
+
+    {/* Content overlay — bottom-left */}
+    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+      {/* Metadata row with lightning bolt */}
+      <div class="flex items-center gap-1.5 mb-3 text-[11px]">
+        <span class="text-[#ff6b4a] font-bold uppercase tracking-wider">{formatLabel(a.format)}</span>
+        <span class="text-white/30">·</span>
+        <span class="text-white/40">⚡ {time}</span>
+        {totalArticles && (
+          <>
+            <span class="text-white/30">·</span>
+            <span class="text-white/40">{totalArticles} ARTICLES</span>
+          </>
+        )}
+      </div>
+
+      {/* Entity-highlighted headline */}
+      <EntityHeadline
+        title={a.title}
+        entities={entities}
+        tag="h1"
+        class="text-[28px] md:text-[42px] lg:text-[52px] font-extrabold text-white leading-[1.06] tracking-[-0.03em] mb-3 max-w-3xl group-hover:opacity-90 transition-opacity"
+      />
+
+      {/* Subtitle */}
+      {a.subtitle && (
+        <p class="text-[14px] md:text-[16px] text-white/50 leading-relaxed max-w-xl mb-3 line-clamp-2">
+          {a.subtitle}
+        </p>
+      )}
+
+      {/* Byline */}
+      <div class="text-[11px] text-white/35">
+        <span class="text-white/50">{author}</span>
+        {a.read_time_minutes && <span> · {a.read_time_minutes} min read</span>}
+      </div>
+    </div>
+  </a>
+)}
+
+
+{/* ── MEDIUM variant: image top, content below ── */}
+{size === "medium" && (
+  <a href={href} class="group block rounded-xl overflow-hidden bg-[#0c0c0c] border border-[#161616] hover:border-[#252525] transition-all">
+    {/* Image with overlay */}
+    <div class="relative aspect-video overflow-hidden">
+      {a.hero_image_url ? (
+        <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" loading="lazy" />
+      ) : (
+        <div class="w-full h-full bg-[#111]"></div>
+      )}
+      <div class="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-transparent"></div>
+      {/* Format badge overlaid */}
+      <div class="absolute top-3 left-3 flex items-center gap-1.5 text-[9px]">
+        <span class="font-bold uppercase tracking-wider text-[#ff6b4a] bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded">
+          {formatLabel(a.format)}
+        </span>
+        <span class="text-white/40 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded">{time}</span>
+      </div>
+    </div>
+
+    {/* Content */}
+    <div class="p-4 md:p-5">
+      <EntityHeadline
+        title={a.title}
+        entities={entities}
+        tag="h2"
+        class="text-[17px] md:text-[19px] font-bold text-[#e5e5e5] leading-[1.25] mb-2 group-hover:text-white transition-colors line-clamp-2"
+      />
+      {a.subtitle && (
+        <p class="text-[13px] text-[#777] line-clamp-2 leading-relaxed mb-3">{a.subtitle}</p>
+      )}
+      <div class="text-[11px] text-[#555]">
+        <span class="text-[#888]">{author}</span>
+        {a.read_time_minutes && <span> · {a.read_time_minutes} min</span>}
+      </div>
+    </div>
+  </a>
+)}
+
+
+{/* ── COMPACT variant: small thumbnail + text ── */}
+{size === "compact" && (
+  <a href={href} class="group flex gap-3 py-3 border-b border-[#141414] last:border-0">
+    {/* Thumbnail */}
+    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[#111] relative">
+      {a.hero_image_url ? (
+        <img src={a.hero_image_url} alt="" class="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <div class="w-full h-full bg-[#111]"></div>
+      )}
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-1.5 mb-0.5 text-[9px]">
+        <span class="font-bold uppercase tracking-wider text-[#ff6b4a]">{formatLabel(a.format)}</span>
+        <span class="text-[#444]">·</span>
+        <span class="text-[#555]">{time}</span>
+      </div>
+      <EntityHeadline
+        title={a.title}
+        entities={entities}
+        tag="h3"
+        class="text-[13px] font-semibold text-[#bbb] leading-snug group-hover:text-white transition-colors line-clamp-2"
+      />
+      <div class="text-[10px] text-[#555] mt-0.5">
+        {author}{a.read_time_minutes && ` · ${a.read_time_minutes} min`}
+      </div>
+    </div>
+  </a>
+)}

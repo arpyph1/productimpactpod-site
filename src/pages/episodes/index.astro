@@ -1,110 +1,77 @@
 ---
-// /episodes — full episode browser.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllEpisodes } from "@lib/supabase";
+import { fetchPodcastEpisodes } from "@lib/rss";
 
-const episodes = await getAllEpisodes();
+const episodes = await fetchPodcastEpisodes(50);
 const siteUrl = "https://productimpactpod.com";
-
-const collectionJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: "Episodes | Product Impact Podcast",
-  url: `${siteUrl}/episodes`,
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
-};
 ---
 
 <BaseLayout
   title="Episodes | Product Impact Podcast"
-  description="Browse all Product Impact Podcast episodes — conversations with product leaders, researchers, and practitioners about AI products."
+  description="Browse all episodes of the Product Impact Podcast — interviews with AI product leaders."
   canonicalUrl={`${siteUrl}/episodes`}
-  jsonLd={collectionJsonLd}
 >
   <Nav />
 
-  <main class="container-wide py-16">
-    <header class="mb-12">
-      <div class="mb-3">
-        <a href="/podcast" class="text-sm text-[#a0a0a0] hover:text-white">← Podcast</a>
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-8">
+      <div class="flex items-baseline gap-2 mb-1">
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">Episodes</h1>
+        <span class="text-[16px] font-bold text-[#ff6b4a]">{episodes.length}</span>
       </div>
-      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
-        Episodes
-      </h1>
-      <p class="text-lg text-[#d4d4d4] max-w-2xl">
-        All episodes of the Product Impact Podcast, newest first.
-      </p>
+      <p class="text-[14px] text-[#777]">All episodes of the Product Impact Podcast.</p>
     </header>
 
-    {episodes.length === 0 ? (
-      <div class="text-center py-24">
-        <p class="text-xl text-[#a0a0a0]">Episodes coming soon.</p>
-        <a href="/podcast" class="mt-4 inline-block text-accent hover:text-accent-hover">
-          About the podcast →
-        </a>
-      </div>
-    ) : (
-      <div class="space-y-4">
-        {episodes.map((ep, i) => {
-          const pubDate = ep.published_at
-            ? new Date(ep.published_at).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })
-            : null;
-          return (
-            <a
-              href={ep.slug ? `/episodes/${ep.slug}` : "#"}
-              class="group flex gap-5 bg-background-card rounded-xl p-6 hover:bg-background-hover transition-colors"
-            >
-              <div class="w-14 h-14 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/20 transition-colors">
-                <span class="text-accent font-bold">
-                  {ep.episode_number ?? episodes.length - i}
-                </span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <h2 class="font-bold text-lg text-white group-hover:text-accent transition-colors mb-1 line-clamp-1">
-                  {ep.title}
-                </h2>
-                {ep.meta_description && (
-                  <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
-                    {ep.meta_description}
-                  </p>
-                )}
-                <div class="flex flex-wrap items-center gap-2 text-xs text-[#707070] mt-2">
-                  {pubDate && <time>{pubDate}</time>}
-                  {ep.duration && (
-                    <>
-                      {pubDate && <span>·</span>}
-                      <span>{ep.duration}</span>
-                    </>
-                  )}
-                  {ep.guests && ep.guests.length > 0 && (
-                    <>
-                      <span>·</span>
-                      <span>with {ep.guests.map((g) => g.name).join(", ")}</span>
-                    </>
-                  )}
-                  {ep.themes && ep.themes.slice(0, 2).map((t) => (
-                    <span class="px-1.5 py-0.5 rounded bg-background-elevated text-[10px] uppercase tracking-wider">
-                      {t.replace(/-/g, " ")}
-                    </span>
-                  ))}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="episodes-grid">
+      {episodes.map((ep, i) => {
+        const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
+        const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+        return (
+          <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 20 ? 'hidden' : ''}`} data-ep-item>
+            <div class="relative aspect-square rounded-xl overflow-hidden mb-2 border border-[#1c1c1c]">
+              {ep.imageUrl ? (
+                <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 8 ? "eager" : "lazy"} />
+              ) : (
+                <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[36px]">🎙</span></div>
+              )}
+              <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                  <svg class="w-5 h-5 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 </div>
               </div>
-              <div class="text-[#707070] group-hover:text-accent transition-colors flex-shrink-0 self-center pl-4">
-                →
-              </div>
-            </a>
-          );
-        })}
+              {epLabel && <div class="absolute bottom-2 left-2 text-[10px] font-bold text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded">{epLabel}</div>}
+            </div>
+            <h3 class="text-[13px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
+            <div class="text-[11px] text-[#555]">{date}</div>
+          </a>
+        );
+      })}
+    </div>
+
+    {episodes.length > 20 && (
+      <div class="text-center mt-8">
+        <button id="episodes-load-more" class="text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2.5 transition-colors">
+          ↓ Load more episodes
+        </button>
       </div>
     )}
   </main>
 
   <Footer />
 </BaseLayout>
+
+<script is:inline>
+(function() {
+  var btn = document.getElementById('episodes-load-more');
+  var grid = document.getElementById('episodes-grid');
+  if (!btn || !grid) return;
+  btn.addEventListener('click', function() {
+    var hidden = grid.querySelectorAll('a.hidden');
+    var toShow = Math.min(20, hidden.length);
+    for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
+    if (grid.querySelectorAll('a.hidden').length === 0) { btn.style.display = 'none'; }
+  });
+})();
+</script>

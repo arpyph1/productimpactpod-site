@@ -1,0 +1,61 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+---
+
+<BaseLayout
+  title="Partnerships | Product Impact"
+  description="Partner with Product Impact — sponsorships, theme sponsorships, product spotlights, and newsletter placements."
+  canonicalUrl={`${siteUrl}/partnerships`}
+>
+  <Nav />
+
+  <main class="max-w-[800px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-10">
+      <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight mb-3">Partnerships</h1>
+      <p class="text-[16px] text-[#999] leading-relaxed">
+        Product Impact reaches AI product leaders, founders, and enterprise decision-makers through editorial coverage, the podcast, and a weekly newsletter. We partner with companies whose products deserve a credible, editorial-quality spotlight.
+      </p>
+    </header>
+
+    <section class="space-y-6 mb-12">
+      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+        <h2 class="text-[16px] font-bold text-white mb-2">Theme Sponsorship</h2>
+        <p class="text-[13px] text-[#888] leading-relaxed">
+          Own a canonical theme page — your brand associated with a strategic topic like "Agents & Agentic Systems" or "AI Product Strategy" across all articles, episodes, and entity pages in that theme.
+        </p>
+      </div>
+      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+        <h2 class="text-[16px] font-bold text-white mb-2">Episode Sponsorship</h2>
+        <p class="text-[13px] text-[#888] leading-relaxed">
+          Sponsor a podcast episode — pre-roll, mid-roll, and show notes placement alongside editorial interviews with AI product leaders.
+        </p>
+      </div>
+      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+        <h2 class="text-[16px] font-bold text-white mb-2">Product Spotlight</h2>
+        <p class="text-[13px] text-[#888] leading-relaxed">
+          A dedicated product review or release note — editorial-quality coverage of your product launch, written by Product Impact's editorial team with full disclosure.
+        </p>
+      </div>
+      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+        <h2 class="text-[16px] font-bold text-white mb-2">Newsletter Placement</h2>
+        <p class="text-[13px] text-[#888] leading-relaxed">
+          Feature placement in the Product Impact weekly newsletter — reaching subscribers who opted in for AI product news.
+        </p>
+      </div>
+    </section>
+
+    <section class="text-center py-8 border-t border-[#181818]">
+      <h2 class="text-[18px] font-bold text-white mb-2">Get in touch</h2>
+      <p class="text-[13px] text-[#888] mb-4">We'd love to hear from you.</p>
+      <a href="mailto:partner@productimpactpod.com" class="inline-flex px-5 py-2 rounded-lg bg-[#ff6b4a] hover:bg-[#ff8566] text-white text-[13px] font-semibold transition-colors">
+        partner@productimpactpod.com
+      </a>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

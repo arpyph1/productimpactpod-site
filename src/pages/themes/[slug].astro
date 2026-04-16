@@ -1,210 +1,102 @@
 ---
-// /themes/[slug] — theme hub page.
-// Long-form theme intro + all articles tagged with this theme.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllThemes, getArticlesByTheme, formatLabel } from "@lib/supabase";
-import { canonicalThemes, themeGradients } from "@lib/themes";
+import StoryCard from "@components/StoryCard.astro";
+import { getAllThemes, getAllArticles, themeLabel, type Theme, type Article } from "@lib/supabase";
 
 export async function getStaticPaths() {
-  const { canonicalThemes } = await import("@lib/themes");
-  return canonicalThemes.map((t) => ({
-    params: { slug: t.slug },
-    props: { themeConfig: t },
+  const themes = await getAllThemes();
+  const articles = await getAllArticles();
+  return themes.map((theme) => ({
+    params: { slug: theme.slug },
+    props: {
+      theme,
+      articles: articles.filter((a) => a.themes?.includes(theme.slug)),
+    },
   }));
 }
 
-interface Props {
-  themeConfig: (typeof canonicalThemes)[0];
-}
-
-const { themeConfig } = Astro.props;
+const { theme, articles } = Astro.props as { theme: Theme; articles: Article[] };
 const siteUrl = "https://productimpactpod.com";
+const canonicalUrl = `${siteUrl}/themes/${theme.slug}`;
 
-// Fetch articles and DB theme data in parallel
-const [articles, dbThemes] = await Promise.all([
-  getArticlesByTheme(themeConfig.slug),
-  getAllThemes(),
-]);
-
-const dbTheme = dbThemes.find((t) => t.slug === themeConfig.slug);
-const longForm = dbTheme?.long_form_intro ?? themeConfig.intro;
-const metaDescription = dbTheme?.meta_description ?? themeConfig.description;
-
-const hubJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: `${themeConfig.name} | Product Impact`,
-  description: metaDescription,
-  url: `${siteUrl}/themes/${themeConfig.slug}`,
-  isPartOf: { "@id": `${siteUrl}/#website` },
-  mainEntity: {
-    "@type": "ItemList",
-    itemListElement: articles.map((a, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
-      name: a.title,
-    })),
-  },
+const themeColors: Record<string, string> = {
+  "ai-product-strategy": "#ff6b4a",
+  "agents-agentic-systems": "#9b7bff",
+  "ux-experience-design-for-ai": "#4ab8c9",
+  "adoption-organizational-change": "#f5a623",
+  "evaluation-benchmarking": "#6bbf71",
+  "go-to-market-distribution": "#ff8566",
+  "data-semantics-knowledge-foundations": "#5ba3cc",
+  "governance-risk-trust": "#c96bff",
 };
-
-const breadcrumbJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "Themes", item: `${siteUrl}/themes` },
-    { "@type": "ListItem", position: 3, name: themeConfig.name, item: `${siteUrl}/themes/${themeConfig.slug}` },
-  ],
-};
+const color = themeColors[theme.slug] ?? "#ff6b4a";
 ---
 
 <BaseLayout
-  title={`${themeConfig.name} | Product Impact`}
-  description={metaDescription}
-  canonicalUrl={`${siteUrl}/themes/${themeConfig.slug}`}
-  jsonLd={[hubJsonLd, breadcrumbJsonLd]}
+  title={`${theme.name} | Product Impact`}
+  description={theme.meta_description ?? theme.description ?? `Articles about ${theme.name}`}
+  canonicalUrl={canonicalUrl}
 >
   <Nav />
 
-  <main>
-    {/* Hero */}
-    <section class={`bg-gradient-to-br ${themeConfig.gradient} relative`}>
-      <div class="absolute inset-0 bg-black/60"></div>
-      <div class="relative container-wide py-20">
-        <nav class="text-sm text-white/60 mb-6">
-          <a href="/themes" class="hover:text-white">Themes</a>
-          <span class="mx-2">/</span>
-          <span class="text-white">{themeConfig.name}</span>
-        </nav>
-        <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-[1.08] tracking-tight mb-4 max-w-3xl">
-          {themeConfig.name}
-        </h1>
-        <p class="text-lg text-white/80 max-w-2xl">{themeConfig.description}</p>
-        <div class="mt-6 flex items-center gap-2 text-sm text-white/60">
-          <span>{articles.length} article{articles.length !== 1 ? "s" : ""}</span>
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    {/* Breadcrumb */}
+    <nav class="text-[11px] text-[#555] mb-4 flex items-center gap-1.5">
+      <a href="/" class="hover:text-white">Home</a>
+      <span class="text-[#333]">›</span>
+      <a href="/themes/" class="hover:text-white">Themes</a>
+      <span class="text-[#333]">›</span>
+      <span class="text-[#777]">{theme.name}</span>
+    </nav>
+
+    {/* Header with accent bar */}
+    <header class="mb-8 pb-6 border-b border-[#181818]">
+      <div class="flex items-start gap-3">
+        <div class="w-1.5 h-16 rounded-full flex-shrink-0 mt-1" style={`background: ${color}`}></div>
+        <div>
+          <div class="flex items-baseline gap-2 mb-1">
+            <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">{theme.name}</h1>
+            <span class="text-[16px] font-bold" style={`color: ${color}`}>{articles.length}</span>
+          </div>
+          <p class="text-[15px] text-[#999] leading-relaxed max-w-2xl">
+            {theme.description ?? ""}
+          </p>
         </div>
       </div>
-    </section>
+    </header>
 
-    <div class="container-wide py-16">
-      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] gap-16">
-        <div>
-          {/* Long-form intro */}
-          {longForm && (
-            <div class="mb-16 p-8 rounded-2xl bg-background-card border-l-4" style={`border-left-color: ${themeConfig.color};`}>
-              <div class="text-[11px] font-bold uppercase tracking-[0.08em] mb-4" style={`color: ${themeConfig.color};`}>
-                About this theme
-              </div>
-              <p class="text-[17px] text-[#d4d4d4] leading-[1.75]">{longForm}</p>
-            </div>
-          )}
+    {/* Long-form intro (if exists) */}
+    {theme.long_form_intro && (
+      <div class="article-prose mb-12 max-w-[680px]" set:html={theme.long_form_intro}></div>
+    )}
 
-          {/* Articles */}
-          <h2 class="text-2xl font-bold text-white mb-8">
-            {articles.length > 0 ? `${articles.length} article${articles.length !== 1 ? "s" : ""}` : "No articles yet"}
-          </h2>
-
-          {articles.length === 0 ? (
-            <div class="text-center py-16">
-              <p class="text-[#a0a0a0]">No articles published in this theme yet.</p>
-              <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
-                Browse all news →
-              </a>
-            </div>
-          ) : (
-            <div class="space-y-6">
-              {articles.map((article) => {
-                const date = new Date(article.publish_date).toLocaleDateString("en-US", {
-                  month: "short", day: "numeric", year: "numeric",
-                });
-                const gradient = themeGradients[article.themes?.[0] ?? "ai-product-strategy"] ?? themeGradients["ai-product-strategy"];
-                return (
-                  <a
-                    href={`/news/${article.slug}`}
-                    class="group flex gap-5 bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
-                  >
-                    {article.hero_image_url ? (
-                      <img
-                        src={article.hero_image_url}
-                        alt={article.hero_image_alt ?? article.title}
-                        loading="lazy"
-                        class="w-32 md:w-48 object-cover flex-shrink-0 self-stretch"
-                      />
-                    ) : (
-                      <div
-                        class={`w-32 md:w-48 flex-shrink-0 bg-gradient-to-br ${gradient} flex items-center justify-center`}
-                      >
-                        <div class="text-[9px] uppercase tracking-widest text-white/60 font-semibold px-2 text-center">
-                          Product Impact
-                        </div>
-                      </div>
-                    )}
-                    <div class="flex-1 p-5 min-w-0">
-                      <div class="flex flex-wrap items-center gap-2 mb-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
-                          {formatLabel(article.format)}
-                        </span>
-                      </div>
-                      <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2 mb-1">
-                        {article.title}
-                      </h3>
-                      {article.subtitle && (
-                        <p class="text-sm text-[#a0a0a0] line-clamp-2 leading-relaxed">
-                          {article.subtitle}
-                        </p>
-                      )}
-                      <div class="text-xs text-[#707070] mt-3 flex items-center gap-2">
-                        <time datetime={article.publish_date}>{date}</time>
-                        {article.read_time_minutes && (
-                          <>
-                            <span>·</span>
-                            <span>{article.read_time_minutes} min read</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
-          )}
+    {/* Articles in this theme */}
+    {articles.length > 0 ? (
+      <section>
+        <div class="flex items-baseline gap-2 mb-4">
+          <span class="text-[14px] font-bold text-white">Articles</span>
+          <span class="text-[13px] font-bold" style={`color: ${color}`}>{articles.length}</span>
         </div>
-
-        {/* Sidebar — other themes */}
-        <aside class="hidden lg:block">
-          <div class="sticky top-24">
-            <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-4">
-              Other Themes
+        {articles.length >= 2 ? (
+          <div>
+            <div class="mb-4">
+              <StoryCard article={articles[0]} size="medium" />
             </div>
-            <div class="flex flex-col gap-2">
-              {canonicalThemes
-                .filter((t) => t.slug !== themeConfig.slug)
-                .map((t) => (
-                  <a
-                    href={`/themes/${t.slug}`}
-                    class="flex items-center gap-2 text-sm text-[#d4d4d4] hover:text-white transition-colors group py-1"
-                  >
-                    <span
-                      class="w-2 h-2 rounded-full flex-shrink-0"
-                      style={`background-color: ${t.color};`}
-                    ></span>
-                    <span class="group-hover:text-accent transition-colors">{t.name}</span>
-                  </a>
-                ))}
-            </div>
-            <div class="mt-6 pt-4 border-t border-[#2a2a2a]">
-              <a href="/themes" class="text-sm text-accent hover:text-accent-hover">
-                ← All themes
-              </a>
+            <div class="space-y-1">
+              {articles.slice(1).map((a) => (
+                <StoryCard article={a} size="compact" />
+              ))}
             </div>
           </div>
-        </aside>
-      </div>
-    </div>
+        ) : (
+          <StoryCard article={articles[0]} size="medium" />
+        )}
+      </section>
+    ) : (
+      <p class="text-[#666] py-12 text-center">No articles in this theme yet.</p>
+    )}
   </main>
 
   <Footer />

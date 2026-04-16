@@ -1,0 +1,111 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+
+const siteUrl = "https://productimpactpod.com";
+const supabaseUrl = "https://cyqkfkvsrdbbjuaqiglx.supabase.co";
+const lovableCmsUrl = "https://product-impact-podcast-web.lovable.app/podcast";
+---
+
+<BaseLayout
+  title="CMS | Product Impact"
+  description="Content management for Product Impact."
+  canonicalUrl={`${siteUrl}/admin`}
+  noindex={true}
+>
+  <Nav />
+
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-8">
+      <h1 class="text-[28px] font-extrabold text-white tracking-tight mb-2">Content Management</h1>
+      <p class="text-[14px] text-[#777]">Manage podcast content, articles, and site settings.</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+      {/* Lovable CMS — full visual editor */}
+      <a href={lovableCmsUrl} target="_blank" rel="noopener"
+        class="group block p-6 rounded-xl border border-[#ff6b4a]/20 bg-[#ff6b4a]/[0.03] hover:border-[#ff6b4a]/40 transition-all">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-8 h-8 rounded bg-[#ff6b4a] flex items-center justify-center">
+            <span class="text-white font-black text-[10px]">PI</span>
+          </div>
+          <h2 class="text-[16px] font-bold text-white">Podcast CMS</h2>
+        </div>
+        <p class="text-[13px] text-[#888] leading-relaxed mb-3">Visual editor for podcast page: hosts, sponsors, FAQ, stats, hero videos, testimonials.</p>
+        <span class="text-[12px] text-[#ff6b4a] font-semibold">Open Lovable Editor →</span>
+      </a>
+
+      {/* Supabase Dashboard */}
+      <a href={`${supabaseUrl}/project/cyqkfkvsrdbbjuaqiglx`} target="_blank" rel="noopener"
+        class="group block p-6 rounded-xl border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-8 h-8 rounded bg-[#3ECF8E] flex items-center justify-center">
+            <span class="text-white font-bold text-[10px]">SB</span>
+          </div>
+          <h2 class="text-[16px] font-bold text-white">Supabase</h2>
+        </div>
+        <p class="text-[13px] text-[#888] leading-relaxed mb-3">Database, edge functions, auth, storage. Manage articles, episodes, entities, themes.</p>
+        <span class="text-[12px] text-[#3ECF8E] font-semibold">Open Dashboard →</span>
+      </a>
+
+      {/* Cloudflare Pages */}
+      <a href="https://dash.cloudflare.com" target="_blank" rel="noopener"
+        class="group block p-6 rounded-xl border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-8 h-8 rounded bg-[#F6821F] flex items-center justify-center">
+            <span class="text-white font-bold text-[10px]">CF</span>
+          </div>
+          <h2 class="text-[16px] font-bold text-white">Cloudflare</h2>
+        </div>
+        <p class="text-[13px] text-[#888] leading-relaxed mb-3">Hosting, CDN, DNS, analytics. Deploy and manage the Astro site.</p>
+        <span class="text-[12px] text-[#F6821F] font-semibold">Open Dashboard →</span>
+      </a>
+    </div>
+
+    {/* Quick actions */}
+    <h2 class="text-[18px] font-bold text-white mb-4">Content Tables</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
+      {[
+        { name: "Articles", table: "articles", desc: "News, features, analysis" },
+        { name: "Episodes", table: "episode_shownotes", desc: "Show notes & metadata" },
+        { name: "Entities", table: "entities", desc: "People, orgs, products, concepts" },
+        { name: "Themes", table: "themes", desc: "8 canonical theme hubs" },
+        { name: "Sponsors", table: "sponsors", desc: "Partner sponsors" },
+        { name: "Episode Tags", table: "episode_tags", desc: "Auto-classified themes" },
+        { name: "CMS Content", table: "cms_content", desc: "Podcast page CMS" },
+        { name: "User Roles", table: "user_roles", desc: "Admin/editor access" },
+      ].map((t) => (
+        <a href={`${supabaseUrl}/project/cyqkfkvsrdbbjuaqiglx/editor/${t.table}`} target="_blank" rel="noopener"
+          class="block p-4 rounded-lg border border-[#161616] hover:border-[#282828] bg-[#0a0a0a] transition-all">
+          <div class="text-[14px] font-bold text-[#ccc] mb-1">{t.name}</div>
+          <div class="text-[11px] text-[#555]">{t.desc}</div>
+        </a>
+      ))}
+    </div>
+
+    {/* CMS JSON dump */}
+    <h2 class="text-[18px] font-bold text-white mb-4">CMS State</h2>
+    <div class="rounded-xl border border-[#161616] bg-[#0a0a0a] p-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[13px] text-[#888]">Current CMS content from Supabase</span>
+        <button id="load-cms" class="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold transition-colors">Load CMS Data</button>
+      </div>
+      <pre id="cms-output" class="text-[12px] text-[#666] max-h-[400px] overflow-auto font-mono bg-[#080808] rounded-lg p-4">Click "Load CMS Data" to fetch current state.</pre>
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<script is:inline>
+document.getElementById('load-cms')?.addEventListener('click', function() {
+  var out = document.getElementById('cms-output');
+  if (!out) return;
+  out.textContent = 'Loading...';
+  fetch('https://cyqkfkvsrdbbjuaqiglx.supabase.co/functions/v1/cms')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { out.textContent = JSON.stringify(d, null, 2); })
+    .catch(function(e) { out.textContent = 'Error: ' + e.message; });
+});
+</script>
