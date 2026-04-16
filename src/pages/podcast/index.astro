@@ -183,33 +183,33 @@ const jsonLd = [
           <span class="text-[12px] text-[#ff6b4a] font-semibold">{rssEpisodes.length} Live RSS</span>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="podcast-episode-grid">
+        <div class="grid grid-cols-3 md:grid-cols-5 gap-2.5" id="podcast-episode-grid">
           {rssEpisodes.map((ep, i) => {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
-              <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 8 ? 'hidden' : ''}`} data-ep-card>
-                <div class="relative aspect-square rounded-xl overflow-hidden mb-1.5 border border-[#1c1c1c]">
+              <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 10 ? 'hidden' : ''}`} data-ep-card>
+                <div class="relative aspect-square rounded-lg overflow-hidden mb-1 border border-[#1c1c1c]">
                   {ep.imageUrl ? (
-                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 8 ? "eager" : "lazy"} />
+                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 10 ? "eager" : "lazy"} />
                   ) : (
-                    <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[28px]">🎙</span></div>
+                    <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[22px]">🎙</span></div>
                   )}
                   <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-                      <svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                      <svg class="w-3.5 h-3.5 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </div>
                   </div>
-                  {epLabel && <div class="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
+                  {epLabel && <div class="absolute bottom-1 left-1 text-[8px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
                 </div>
-                <h3 class="text-[11px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-0.5 transition-colors">{ep.title}</h3>
-                <div class="text-[9px] text-[#555]">{date}</div>
+                <h3 class="text-[10px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-0.5 transition-colors">{ep.title}</h3>
+                <div class="text-[8px] text-[#555]">{date}</div>
               </a>
             );
           })}
         </div>
 
-        {rssEpisodes.length > 8 && (
+        {rssEpisodes.length > 10 && (
           <div class="text-center mt-8">
             <button id="podcast-load-more" class="text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2 transition-colors">
               ↓ Load more episodes
@@ -441,7 +441,7 @@ const jsonLd = [
   if (loadBtn && grid) {
     loadBtn.addEventListener('click', function() {
       var hidden = grid.querySelectorAll('a.hidden');
-      var toShow = Math.min(8, hidden.length);
+      var toShow = Math.min(10, hidden.length);
       for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
       if (grid.querySelectorAll('a.hidden').length === 0) { loadBtn.style.display = 'none'; }
     });

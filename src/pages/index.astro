@@ -252,7 +252,7 @@ const jsonLd = {
         </div>
 
         {/* Last 4 episodes — smaller cards with play */}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-[900px] mx-auto">
           {rssEpisodes.slice(0, 4).map((ep) => {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
@@ -484,6 +484,14 @@ const jsonLd = {
   }
 
   // Substack editions are now fetched at build time — no client-side fetch needed
+
+  var track = document.getElementById('hero-track');
+  var dots = document.getElementById('hero-dots');
+  var slides = document.querySelectorAll('.hero-slide');
+  var prevBtn = document.getElementById('hero-prev');
+  var nextBtn = document.getElementById('hero-next');
+  if (!track || !dots || slides.length === 0) return;
+
   const dotBtns = dots.querySelectorAll('button');
   let current = 0;
   let autoTimer;

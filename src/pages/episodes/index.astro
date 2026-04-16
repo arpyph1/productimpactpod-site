@@ -4,8 +4,62 @@ import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { fetchPodcastEpisodes } from "@lib/rss";
 
-const episodes = await fetchPodcastEpisodes(50);
+const episodes = await fetchPodcastEpisodes(100);
 const siteUrl = "https://productimpactpod.com";
+
+const themes = [
+  { slug: "ai-product-strategy", label: "AI Product Strategy", color: "#ff6b4a",
+    keywords: ["product strategy", "roadmap", "prioriti", "product-market", "product leader", "product manag", "pm ", "product vision", "product thinking", "strategic", "ship"] },
+  { slug: "adoption-organizational-change", label: "Adoption & Organizational Change", color: "#f5a623",
+    keywords: ["adoption", "organizational", "change management", "transformation", "enterprise", "scale", "scaling", "resistance", "stakeholder", "champion", "pilot", "rollout", "workforce"] },
+  { slug: "agents-agentic-systems", label: "Agents & Agentic Systems", color: "#9b7bff",
+    keywords: ["agent", "agentic", "autonomous", "multi-agent", "orchestrat", "tool use", "function call", "reasoning", "chain of thought", "copilot"] },
+  { slug: "data-semantics-knowledge-foundations", label: "Data, Semantics & Knowledge Foundations", color: "#5ba3cc",
+    keywords: ["data", "knowledge", "semantic", "ontolog", "taxonomy", "graph", "rag", "retrieval", "embedding", "vector", "fine-tun", "training data", "annotation", "label"] },
+  { slug: "evaluation-benchmarking", label: "Evaluation & Benchmarking", color: "#6bbf71",
+    keywords: ["evaluat", "benchmark", "metric", "measur", "kpi", "roi", "impact measur", "testing", "a/b test", "experiment", "performance", "accuracy", "quality"] },
+  { slug: "go-to-market-distribution", label: "Go-to-Market & Distribution", color: "#ff8566",
+    keywords: ["go-to-market", "gtm", "distribution", "pricing", "monetiz", "freemium", "growth", "acquisition", "retention", "churn", "market", "competitive", "positioning", "launch"] },
+  { slug: "governance-risk-trust", label: "Governance, Risk & Trust", color: "#c96bff",
+    keywords: ["governance", "risk", "trust", "safety", "ethic", "bias", "fairness", "regulat", "compliance", "transparen", "accountab", "responsible", "guardrail", "alignment", "privacy"] },
+  { slug: "ux-experience-design-for-ai", label: "UX & Experience Design for AI", color: "#4ab8c9",
+    keywords: ["ux", "user experience", "design", "interface", "interaction", "usability", "accessibility", "human-centered", "human-computer", "hci", "conversational", "prompt", "persona", "prototype", "wireframe"] },
+];
+
+const focusLenses = [
+  { slug: "business", label: "Business Lens",
+    keywords: ["business", "revenue", "cost", "profit", "roi", "enterprise", "b2b", "saas", "startup", "founder", "ceo", "cto", "exec", "leader", "strateg", "invest", "funding", "market", "competitive"] },
+  { slug: "product", label: "Product Lens",
+    keywords: ["product", "feature", "roadmap", "backlog", "sprint", "agile", "user story", "pm ", "ship", "build", "iteration", "mvp", "prototype", "release", "deploy"] },
+  { slug: "societal", label: "Societal Lens",
+    keywords: ["societal", "society", "community", "human", "people", "workforce", "job", "employment", "education", "health", "wellbeing", "environment", "sustainab", "equity", "inclusion", "impact"] },
+  { slug: "technical", label: "Technical Lens",
+    keywords: ["technical", "engineer", "architect", "infrastructure", "api", "model", "algorithm", "neural", "transformer", "llm", "gpt", "machine learning", "deep learning", "nlp", "computer vision", "code", "system"] },
+];
+
+function categorize(title: string, desc: string) {
+  const text = `${title} ${desc}`.toLowerCase();
+  const matchedThemes: string[] = [];
+  const matchedFocus: string[] = [];
+
+  for (const t of themes) {
+    if (t.keywords.some(k => text.includes(k))) {
+      matchedThemes.push(t.slug);
+    }
+  }
+  for (const f of focusLenses) {
+    const matchCount = f.keywords.filter(k => text.includes(k)).length;
+    if (matchCount >= 2) matchedFocus.push(f.slug);
+  }
+  if (matchedThemes.length === 0) matchedThemes.push("ai-product-strategy");
+
+  return { themes: matchedThemes, focus: matchedFocus };
+}
+
+const categorizedEpisodes = episodes.map(ep => ({
+  ...ep,
+  ...categorize(ep.title, ep.description),
+}));
 ---
 
 <BaseLayout
@@ -16,20 +70,69 @@ const siteUrl = "https://productimpactpod.com";
   <Nav />
 
   <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
-    <header class="mb-8">
+    <header class="mb-6">
       <div class="flex items-baseline gap-2 mb-1">
         <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">Episodes</h1>
-        <span class="text-[16px] font-bold text-[#ff6b4a]">{episodes.length}</span>
+        <span class="text-[16px] font-bold text-[#ff6b4a]" id="ep-count">{episodes.length}</span>
       </div>
       <p class="text-[14px] text-[#777]">All episodes of the Product Impact Podcast.</p>
     </header>
 
+    {/* Search */}
+    <div class="relative mb-6">
+      <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#555]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="ep-search" placeholder="Search episodes by title or description..."
+        class="w-full pl-11 pr-4 py-3 bg-[#111] border border-[#222] rounded-xl text-[14px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a]/50 transition-colors" />
+    </div>
+
+    {/* Theme filters */}
+    <div class="mb-4">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-[#555] mb-2">Themes</div>
+      <div class="flex flex-wrap gap-2" id="theme-filters">
+        {themes.map(t => (
+          <button data-theme={t.slug}
+            class="theme-pill px-3 py-1.5 rounded-full text-[12px] font-medium border border-[#222] text-[#888] hover:text-white hover:border-[#444] transition-all"
+            style={`--pill-color: ${t.color}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Focus filters */}
+    <div class="mb-6">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-[#555] mb-2">Focus</div>
+      <div class="flex flex-wrap gap-2" id="focus-filters">
+        {focusLenses.map(f => (
+          <button data-focus={f.slug}
+            class="focus-pill px-3 py-1.5 rounded-full text-[12px] font-medium border border-[#222] text-[#888] hover:text-white hover:border-[#444] transition-all">
+            {f.label}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Active filters status */}
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-[13px] text-[#888]"><span id="ep-visible-count">{episodes.length}</span> episodes</div>
+      <button id="clear-filters" class="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-medium hidden transition-colors">
+        &times; Clear all filters
+      </button>
+    </div>
+
+    {/* Episodes grid */}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="episodes-grid">
-      {episodes.map((ep, i) => {
+      {categorizedEpisodes.map((ep, i) => {
         const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
-        const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+        const date = ep.pubDate || "";
         return (
-          <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 20 ? 'hidden' : ''}`} data-ep-item>
+          <a href={ep.link || "#"} target="_blank" rel="noopener"
+            class="group block ep-item"
+            data-ep-item
+            data-title={ep.title.toLowerCase()}
+            data-desc={ep.description.toLowerCase()}
+            data-themes={ep.themes.join(",")}
+            data-focus={ep.focus.join(",")}>
             <div class="relative aspect-square rounded-xl overflow-hidden mb-2 border border-[#1c1c1c]">
               {ep.imageUrl ? (
                 <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 8 ? "eager" : "lazy"} />
@@ -50,12 +153,8 @@ const siteUrl = "https://productimpactpod.com";
       })}
     </div>
 
-    {episodes.length > 20 && (
-      <div class="text-center mt-8">
-        <button id="episodes-load-more" class="text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2.5 transition-colors">
-          ↓ Load more episodes
-        </button>
-      </div>
+    {categorizedEpisodes.length === 0 && (
+      <p class="text-[#666] text-center py-16">No episodes found.</p>
     )}
   </main>
 
@@ -64,14 +163,102 @@ const siteUrl = "https://productimpactpod.com";
 
 <script is:inline>
 (function() {
-  var btn = document.getElementById('episodes-load-more');
   var grid = document.getElementById('episodes-grid');
-  if (!btn || !grid) return;
-  btn.addEventListener('click', function() {
-    var hidden = grid.querySelectorAll('a.hidden');
-    var toShow = Math.min(20, hidden.length);
-    for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
-    if (grid.querySelectorAll('a.hidden').length === 0) { btn.style.display = 'none'; }
+  var search = document.getElementById('ep-search');
+  var clearBtn = document.getElementById('clear-filters');
+  var countEl = document.getElementById('ep-visible-count');
+  if (!grid || !search) return;
+
+  var items = Array.from(grid.querySelectorAll('[data-ep-item]'));
+  var activeThemes = new Set();
+  var activeFocus = new Set();
+
+  function applyFilters() {
+    var query = search.value.trim().toLowerCase();
+    var visible = 0;
+
+    items.forEach(function(item) {
+      var title = item.getAttribute('data-title') || '';
+      var desc = item.getAttribute('data-desc') || '';
+      var epThemes = (item.getAttribute('data-themes') || '').split(',').filter(Boolean);
+      var epFocus = (item.getAttribute('data-focus') || '').split(',').filter(Boolean);
+
+      var matchSearch = !query || title.includes(query) || desc.includes(query);
+
+      var matchTheme = activeThemes.size === 0;
+      if (!matchTheme) {
+        activeThemes.forEach(function(t) { if (epThemes.indexOf(t) !== -1) matchTheme = true; });
+      }
+
+      var matchFocus = activeFocus.size === 0;
+      if (!matchFocus) {
+        activeFocus.forEach(function(f) { if (epFocus.indexOf(f) !== -1) matchFocus = true; });
+      }
+
+      if (matchSearch && matchTheme && matchFocus) {
+        item.style.display = '';
+        visible++;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    if (countEl) countEl.textContent = visible;
+    var hasFilters = activeThemes.size > 0 || activeFocus.size > 0 || query;
+    if (clearBtn) clearBtn.style.display = hasFilters ? '' : 'none';
+  }
+
+  search.addEventListener('input', applyFilters);
+
+  document.querySelectorAll('.theme-pill').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var slug = btn.getAttribute('data-theme');
+      if (activeThemes.has(slug)) {
+        activeThemes.delete(slug);
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.background = '';
+      } else {
+        activeThemes.add(slug);
+        var c = getComputedStyle(btn).getPropertyValue('--pill-color').trim();
+        btn.style.borderColor = c;
+        btn.style.color = '#fff';
+        btn.style.background = c + '15';
+      }
+      applyFilters();
+    });
   });
+
+  document.querySelectorAll('.focus-pill').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var slug = btn.getAttribute('data-focus');
+      if (activeFocus.has(slug)) {
+        activeFocus.delete(slug);
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.background = '';
+      } else {
+        activeFocus.add(slug);
+        btn.style.borderColor = '#ff6b4a';
+        btn.style.color = '#fff';
+        btn.style.background = '#ff6b4a15';
+      }
+      applyFilters();
+    });
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      activeThemes.clear();
+      activeFocus.clear();
+      search.value = '';
+      document.querySelectorAll('.theme-pill, .focus-pill').forEach(function(btn) {
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.background = '';
+      });
+      applyFilters();
+    });
+  }
 })();
 </script>
