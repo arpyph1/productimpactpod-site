@@ -391,7 +391,314 @@ extensions). Both fields are stored:
 
 ---
 
-*Next: Section 6 covers the three publishing scripts (validate_article.py,
-generate_hero_image.py, dispatch_rebuild.py) — what each does, how to
-invoke, and what they return. Section 7 covers the verify_supabase.py
-environment-check tool.*
+## 6. Publishing scripts reference
+
+All four scripts live in the site repo at `scripts/publishing/`. Once
+the site repo is added as a submodule at `product-impact/scripts/site/`
+in vault-system, they are importable from:
+
+```python
+sys.path.insert(
+    0,
+    str(Path(__file__).resolve().parent / "site" / "scripts" / "publishing"),
+)
+from validate_article import validate, has_errors, Issue
+from generate_hero_image import generate as generate_hero, GenerateResult
+from dispatch_rebuild import dispatch
+```
+
+Each script is also runnable as a CLI (reads JSON on stdin, writes to
+stdout/stderr, exits 0 on success).
+
+Live source on GitHub:
+- [validate_article.py](https://github.com/arpyph1/productimpactpod-site/blob/main/scripts/publishing/validate_article.py)
+- [generate_hero_image.py](https://github.com/arpyph1/productimpactpod-site/blob/main/scripts/publishing/generate_hero_image.py)
+- [dispatch_rebuild.py](https://github.com/arpyph1/productimpactpod-site/blob/main/scripts/publishing/dispatch_rebuild.py)
+- [verify_supabase.py](https://github.com/arpyph1/productimpactpod-site/blob/main/scripts/publishing/verify_supabase.py)
+- [README.md (integration patterns)](https://github.com/arpyph1/productimpactpod-site/blob/main/scripts/publishing/README.md)
+
+### 6.1 `validate_article.py`
+
+Blocks publishes that would break SEO or break the Astro build.
+
+#### Interface — as Python module
+
+```python
+from validate_article import validate, has_errors, Issue
+
+article: dict = {
+    "slug": "example-slug",
+    "title": "Example Article",
+    "meta_description": "...",
+    "format": "news-brief",
+    "themes": ["ai-product-strategy"],
+    "author_slugs": ["arpy-dragffy"],
+    "publish_date": "2026-04-16",
+    "canonical_url": "https://productimpactpod.com/news/example-slug",
+    "content_markdown": "Lead paragraph...\n\n## First H2...",
+    "content_html": "<p>Lead paragraph...</p>\n<h2>First H2</h2>...",
+    # ... plus all other frontmatter fields
+}
+
+issues: list[Issue] = validate(article)
+if has_errors(issues):
+    for issue in issues:
+        print(issue)   # e.g. ✗ [meta_description] 94 chars — below recommended 120 minimum
+    raise ValueError(f"{article['slug']!r} blocked by validation")
+```
+
+Each `Issue` has `severity` (`"error"` | `"warn"`), `field`, and `message`.
+Only `error` severity blocks — warnings print but don't fail.
+
+#### Interface — as CLI
+
+```bash
+# Read article JSON from stdin
+python3 validate_article.py < article.json
+
+# Or from a file
+python3 validate_article.py --file article.json
+
+# Exit code 0 = passing, 1 = errors present, 2 = usage / JSON parse failure
+```
+
+#### What it checks (12 rules)
+
+| Check | Failure mode |
+|---|---|
+| `slug` | Error if missing, malformed (spaces, uppercase, underscores), or >100 chars |
+| `title` | Error if <10 chars; warn if >100 |
+| `meta_description` | Error if >170 chars or missing; warn if <120 |
+| `format` | Error if not in canonical 10 |
+| `themes` | Error if empty or any value outside canonical 8; warn if >3 |
+| `canonical_url` | Error if missing, doesn't start with `https://productimpactpod.com`, or doesn't match `/news/{slug}` |
+| `author_slugs` | Error if empty; errors per invalid slug format |
+| `publish_date` | Error if missing or not `YYYY-MM-DD` |
+| `content` | Error if both `content_markdown` and `content_html` are empty; warn if `content_html` starts with `<h1>` |
+| `hero_image_url` | Warn if missing; error if non-absolute |
+| `overview_bullets` | Warn if <3 or >5 items |
+| `topics` | Error per invalid slug format |
+
+### 6.2 `generate_hero_image.py`
+
+Generates a photographic, text-free hero image from article context
+using Claude for prompt distillation and Flux 1.1 Pro for rendering.
+Uploads to Supabase Storage and returns the public URL.
+
+#### Editorial style constraints (baked into the system prompt)
+
+- **Documentary photojournalism aesthetic** — natural light, 35mm prime,
+  shallow DoF, muted colour grade, fine grain
+- **No text, logos, signage, watermarks** in the image
+- **Zero or one person max** — system prompt instructs Claude to prefer
+  scenes with NO people; if the article is about a person, photograph
+  their workspace or tool instead (avoids uncanny-face artefacts)
+- **No futuristic/sci-fi/cyberpunk/neon/robotic tells**
+- **No CGI/illustration/cartoon aesthetics**
+- Negative prompt blocks extra fingers, warped anatomy, floating objects
+
+#### Interface — as Python module
+
+```python
+from generate_hero_image import generate as generate_hero
+
+result = generate_hero(
+    article,                    # the full article dict (needs slug, title,
+                                # subtitle, meta_description, themes[0])
+    out_path=None,              # if set, saves locally and skips upload
+                                # (useful for human review before publish)
+)
+
+# result: GenerateResult(
+#     prompt="A photograph of...  [editorial style locked on]",
+#     image_url="https://pgsljoqwfhufubodlqjk.supabase.co/storage/v1/object/public/article-heroes/<slug>.png",
+#     model="black-forest-labs/flux-1.1-pro",
+#     elapsed_s=28.4,
+# )
+
+article["hero_image_url"] = result.image_url
+article["hero_image_alt"] = f"Editorial photograph: {article['title']}"
+article["hero_image_credit"] = "Generated via Flux 1.1 Pro"
+```
+
+#### Interface — as CLI
+
+```bash
+# Upload to Supabase and print URL
+python3 generate_hero_image.py < article.json
+# Prints URL on stdout, metadata on stderr
+
+# Save locally (skips upload — for review)
+python3 generate_hero_image.py --file article.json --out /tmp/hero.png
+```
+
+#### Required env vars
+
+```
+ANTHROPIC_API_KEY        — prompt distillation (Claude Opus 4.6)
+REPLICATE_API_TOKEN      — image rendering (Flux 1.1 Pro)
+PUBLIC_SUPABASE_URL      — Storage endpoint
+SUPABASE_SERVICE_ROLE_KEY — Storage upload (bypasses RLS)
+```
+
+#### Cost
+
+- Flux 1.1 Pro: ~$0.04/image, renders in 15–30s
+- Claude distillation: ~100 output tokens, fractions of a cent
+- **Total per article: ~$0.05, ~30s wall-clock**
+
+#### Common failure modes
+
+| Failure | Cause |
+|---|---|
+| `"ANTHROPIC_API_KEY not set"` | Env var missing |
+| `"REPLICATE_API_TOKEN not set"` | Env var missing |
+| `"Image generation timed out"` | Replicate took >3min (rare) — retry |
+| `"Supabase upload HTTP 404"` | `article-heroes` bucket doesn't exist (it does, just check) |
+| `"Supabase upload HTTP 401"` | Service role key wrong or expired |
+| `"article.slug required"` | Called without a slug in the dict |
+
+### 6.3 `dispatch_rebuild.py`
+
+Fires a GitHub `repository_dispatch` event of type `content-published`
+that triggers the site's `.github/workflows/publish-trigger.yml`, which
+in turn pings the Cloudflare Pages deploy hook.
+
+#### Interface — as Python module
+
+```python
+from dispatch_rebuild import dispatch
+
+ok, message = dispatch({
+    "articleSlug": article["slug"],        # optional client_payload — shows up
+    "batchCount": 1,                        # in the GitHub Actions run log
+})
+if not ok:
+    log.warning(f"dispatch failed (non-fatal): {message}")
+    # The site won't auto-rebuild. Trigger manually from:
+    # https://github.com/arpyph1/productimpactpod-site/actions
+```
+
+#### Interface — as CLI
+
+```bash
+# Fire with no payload
+python3 dispatch_rebuild.py
+
+# Fire with custom payload (shows in GitHub Actions run context)
+python3 dispatch_rebuild.py --payload '{"articleSlug":"foo","count":1}'
+```
+
+#### Required env var
+
+```
+GITHUB_TOKEN       — PAT with `repo` scope on arpyph1/productimpactpod-site
+                     (or GH_TOKEN as fallback)
+```
+
+Create one at https://github.com/settings/tokens → **Generate new token
+(classic)** → tick `repo` scope → set expiration to 1 year.
+
+#### Batching
+
+**Call dispatch ONCE at the end of a batch**, not once per article. CF
+Pages queues one build regardless of concurrent triggers; extra dispatches
+just clutter the Actions log.
+
+```python
+def publish_batch(md_paths: list[Path]):
+    successes = []
+    for path in md_paths:
+        if publish_one(path):
+            successes.append(path)
+
+    if successes:
+        dispatch({"count": len(successes)})    # one call for the whole batch
+```
+
+#### Verification
+
+```bash
+# Check the workflow actually fired
+open https://github.com/arpyph1/productimpactpod-site/actions
+# → "Cloudflare Pages rebuild" workflow → should show a recent run
+```
+
+---
+
+## 7. `verify_supabase.py` — environment diagnostic
+
+Not part of the publish flow. Run it **once** before first publish and
+**after any schema change or credential rotation** to catch configuration
+drift.
+
+#### Interface
+
+```bash
+# Requires PUBLIC_SUPABASE_URL + PUBLIC_SUPABASE_ANON_KEY at minimum
+export PUBLIC_SUPABASE_URL="https://pgsljoqwfhufubodlqjk.supabase.co"
+export PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOi..."
+export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOi..."   # optional — enables Storage check
+
+python3 verify_supabase.py --verbose
+```
+
+#### What it checks (all read-only, makes no writes)
+
+1. **Environment variables** — 7 required + optional vars with expected formats
+2. **REST table access** — anon SELECT on articles, entities, article_entities, themes, episode_shownotes (distinguishes 404 from RLS-blocked 403)
+3. **Theme seed** — all 8 canonical slugs present
+4. **Host entity rows** — arpy-dragffy and brittany-hobbs exist
+5. **Storage bucket** — `article-heroes` exists and is public (requires service role key)
+6. **Edge function** — `get-latest-short` deployed and YOUTUBE_API_KEY secret set
+
+#### Expected output when green
+
+```
+Verifying https://pgsljoqwfhufubodlqjk.supabase.co…
+
+Environment variables
+  ✓ PUBLIC_SUPABASE_URL: https://pgsljoqwfhufubodlqjk.supabase.co
+  ✓ PUBLIC_SUPABASE_ANON_KEY: set (208 chars)
+  ...
+Supabase tables (REST / RLS anon reads)
+  ✓ articles: table exists (no rows or RLS-filtered empty)
+  ✓ entities: 1 row accessible
+  ...
+Host entity rows
+  ✓ /people/arpy-dragffy: found: Arpy Dragffy
+  ✓ /people/brittany-hobbs: found: Brittany Hobbs
+
+Supabase Storage (article-heroes bucket)
+  ✓ article-heroes bucket: exists and is public
+
+Supabase Edge Functions
+  ✓ get-latest-short: deployed, returned 1 shorts + mostWatched
+
+✓ All checks passed — site is ready to publish.
+```
+
+#### macOS SSL certificate gotcha
+
+Python on macOS often ships without root certs installed. If you see:
+
+```
+[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate
+```
+
+Fix with:
+
+```bash
+pip3 install certifi
+export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
+```
+
+Add that export to `~/.zshrc` / `~/.bashrc` for persistence. This affects
+`verify_supabase.py` and any other stdlib `urllib` code — `curl` is
+unaffected because it uses the system cert store.
+
+---
+
+*Next: Section 8 covers the setup workflow (submodule, scaffold, env vars),
+section 9 covers known gotchas, and section 10 walks through the first-publish
+milestones in order.*
