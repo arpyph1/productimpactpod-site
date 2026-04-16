@@ -61,6 +61,10 @@ export interface Article {
   themes: string[];
   lenses: string[];
   topics: string[];
+  // Entity slug arrays — populated by join in publish_articles.py
+  people?: string[];
+  organizations?: string[];
+  products?: string[];
   primary_podcast_episode_guid: string | null;
   schema_jsonld: Record<string, unknown> | null;
   canonical_url: string;
