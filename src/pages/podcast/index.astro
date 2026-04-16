@@ -7,12 +7,6 @@ import { getLatestShorts } from "@lib/supabase";
 
 const rssEpisodes = await fetchPodcastEpisodes(50);
 const substackEditions = await fetchSubstackEditions(8);
-const shortsData = await getLatestShorts(show.channelId, 2);
-const shortSlots = [
-  { short: shortsData.shorts[0] ?? null,   label: "Latest Short" },
-  { short: shortsData.shorts[1] ?? null,   label: "2nd Latest"  },
-  { short: shortsData.mostWatched ?? null, label: "Most Watched" },
-];
 const siteUrl = "https://productimpactpod.com";
 
 const show = {
@@ -23,6 +17,13 @@ const show = {
   channelId: "UCb1nY02YcJYZZ_XtvcIBcrw",
   heroVideo3Url: "https://www.youtube.com/shorts/-AIs2p6agMw",
 };
+
+const shortsData = await getLatestShorts(show.channelId, 2);
+const shortSlots = [
+  { short: shortsData.shorts[0] ?? null,   label: "Latest Short" },
+  { short: shortsData.shorts[1] ?? null,   label: "2nd Latest"  },
+  { short: shortsData.mostWatched ?? null, label: "Most Watched" },
+];
 
 const hosts = [
   {
