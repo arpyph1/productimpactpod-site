@@ -868,5 +868,155 @@ git submodule update --init --recursive
 
 ---
 
-*Next: Section 9 covers every environment variable the publish pipeline
-uses — where each comes from, where to store them, and how to source them.*
+## 9. Environment variables — the complete reference
+
+The publishing pipeline needs 6 credentials to function. Plus 1 optional
+for the verifier. All go in a gitignored `.env` file under
+`product-impact/`.
+
+### 9.1 The six publisher credentials
+
+| Variable | What for | Where to get it | Sensitivity |
+|---|---|---|---|
+| `PUBLIC_SUPABASE_URL` | Supabase project endpoint | Supabase Dashboard → Settings → API → **Project URL** | Public (in site code) |
+| `PUBLIC_SUPABASE_ANON_KEY` | Read-only Supabase client (verifier uses it) | Supabase Dashboard → Settings → API → **anon / public** key | Public (RLS-gated) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Writes to DB + Storage uploads | Supabase Dashboard → Settings → API → **service_role** key (click Reveal) | **Secret — treat as password, bypasses RLS** |
+| `ANTHROPIC_API_KEY` | Hero image prompt distillation (Claude) | https://console.anthropic.com/settings/keys → **Create Key** | Secret |
+| `REPLICATE_API_TOKEN` | Flux 1.1 Pro image generation | https://replicate.com/account/api-tokens | Secret |
+| `GITHUB_TOKEN` | Fires CF Pages rebuild via repository dispatch | https://github.com/settings/tokens → **Generate new token (classic)** → scope: `repo` → expiration: 1 year | Secret |
+
+### 9.2 Where each credential comes from — step-by-step
+
+#### Supabase project URL + anon key + service role key
+
+1. Open https://supabase.com/dashboard/project/pgsljoqwfhufubodlqjk/settings/api
+2. You'll see:
+   - **Project URL** — copy. This is `PUBLIC_SUPABASE_URL`.
+   - **anon / public** key — copy. This is `PUBLIC_SUPABASE_ANON_KEY`. (Starts `eyJhbGciOi...`, ~200 chars.)
+   - **service_role / secret** key — click **Reveal**, then copy. This is `SUPABASE_SERVICE_ROLE_KEY`. (Same format, different role claim.)
+
+#### Anthropic API key
+
+1. Sign in at https://console.anthropic.com with the account you want to bill
+2. **Settings** → **API Keys** → **Create Key**
+3. Name it `productimpactpod-publisher`
+4. Copy the key (starts `sk-ant-api03-`, ~110 chars) — shown once, can't be retrieved later
+5. Go to **Settings** → **Plans & Billing** and add a payment method if not already. Rate for publishing: negligible (~$0.01 per article for prompt distillation)
+
+#### Replicate API token
+
+1. Sign up / sign in at https://replicate.com
+2. **Account** → **API tokens** → **Create token**
+3. Name it `productimpactpod-publisher`
+4. Copy (starts `r8_`)
+5. **Billing** — add payment method. Set a spend cap to protect against
+   runaway costs. Flux 1.1 Pro is ~$0.04 per 1200×628 image.
+
+#### GitHub personal access token
+
+1. Go to https://github.com/settings/tokens — **Tokens (classic)**
+2. **Generate new token → Generate new token (classic)**
+3. Settings:
+   - **Note:** `productimpactpod dispatch_rebuild`
+   - **Expiration:** 1 year (or 90 days if you prefer shorter rotation)
+   - **Scopes:** tick `repo` (just the parent checkbox — grants read/write/dispatch on your repos)
+4. **Generate token**
+5. Copy (starts `ghp_`) — shown once
+
+### 9.3 Store them in `product-impact/.env`
+
+```bash
+cd ~/code/vault-system
+
+cat > product-impact/.env <<'EOF'
+# Supabase
+PUBLIC_SUPABASE_URL=https://pgsljoqwfhufubodlqjk.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...REPLACE...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...REPLACE...
+
+# AI models
+ANTHROPIC_API_KEY=sk-ant-api03-...REPLACE...
+REPLICATE_API_TOKEN=r8_...REPLACE...
+
+# GitHub dispatch
+GITHUB_TOKEN=ghp_...REPLACE...
+EOF
+
+# Restrict perms — contains secrets
+chmod 600 product-impact/.env
+```
+
+Open in your editor, replace each `...REPLACE...` placeholder with the
+real value.
+
+**Verify `.env` is gitignored** — `scaffold-vault.sh` already added this
+to `product-impact/.gitignore`, but double-check:
+
+```bash
+git check-ignore product-impact/.env
+# Should print: product-impact/.env
+# (non-zero exit or no output = NOT gitignored — DO NOT PROCEED)
+```
+
+### 9.4 Source before running the pipeline
+
+The shell you run `publish_articles.py` from needs these vars exported.
+Do this **once per terminal session**:
+
+```bash
+set -a; source product-impact/.env; set +a
+```
+
+Or add a helper to your shell config so you don't have to remember:
+
+```bash
+# ~/.zshrc or ~/.bashrc
+pip() {    # or name it whatever — this is a vault-root-relative source helper
+  if [ -f "$HOME/code/vault-system/product-impact/.env" ]; then
+    set -a
+    source "$HOME/code/vault-system/product-impact/.env"
+    set +a
+    echo "✓ Product Impact env loaded (6 vars)"
+  fi
+}
+```
+
+Then just run `pip` before publishing.
+
+### 9.5 Verifier-only optional extras
+
+`verify_supabase.py` checks for these too, but only warns if unset
+(they're informational):
+
+| Variable | Purpose |
+|---|---|
+| `CF_DEPLOY_HOOK_URL` | Already in GitHub Actions secrets — not needed locally |
+
+### 9.6 Which env vars each script uses
+
+Quick cross-reference:
+
+| Script | Required | Optional |
+|---|---|---|
+| `validate_article.py` | *(none)* | — |
+| `generate_hero_image.py` | `ANTHROPIC_API_KEY`, `REPLICATE_API_TOKEN`, `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | — |
+| `dispatch_rebuild.py` | `GITHUB_TOKEN` (or `GH_TOKEN`) | — |
+| `verify_supabase.py` | `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_SERVICE_ROLE_KEY` (for Storage check) |
+| Your `publish_articles.py` | All of the above | — |
+
+### 9.7 Site-side env vars — already configured, reference only
+
+These live in the Cloudflare Pages dashboard, **not** in vault-system.
+Listed here so you know the full surface area:
+
+| Where set | Variable | Value |
+|---|---|---|
+| CF Pages Settings → Variables | `PUBLIC_SUPABASE_URL` | `https://pgsljoqwfhufubodlqjk.supabase.co` |
+| CF Pages Settings → Variables | `PUBLIC_SUPABASE_ANON_KEY` | (same as yours above) |
+| GitHub → Repo secrets | `CF_DEPLOY_HOOK_URL` | Cloudflare deploy hook URL |
+| Supabase Edge Functions → Secrets | `YOUTUBE_API_KEY` | For `get-latest-short` function |
+
+---
+
+*Next: Section 10 covers every gotcha the site-building session ran into
+— the reproducible issues so you don't waste time rediscovering them.*
