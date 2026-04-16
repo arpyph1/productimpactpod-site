@@ -699,6 +699,174 @@ unaffected because it uses the system cert store.
 
 ---
 
-*Next: Section 8 covers the setup workflow (submodule, scaffold, env vars),
-section 9 covers known gotchas, and section 10 walks through the first-publish
-milestones in order.*
+## 8. Setup workflow — connecting vault-system to the site
+
+Four discrete operations, each committed separately. Total time ~15 min.
+
+### 8.1 Prerequisites
+
+On the machine running this session:
+
+- **Git** — any recent version
+- **Python 3.9+** — `python3 --version`
+- **macOS only:** `pip3 install certifi` — the stdlib urllib in macOS
+  Python installs often can't verify Supabase's SSL cert without this
+  (see section 9 for the `SSL_CERT_FILE` env var)
+- You are inside the `vault-system` repo root (not a subdirectory)
+- Running `git status` shows a clean working tree
+
+Verify:
+
+```bash
+cd ~/code/vault-system      # adjust to your actual path
+git status                  # should say "nothing to commit, working tree clean"
+python3 --version           # should print 3.9 or higher
+```
+
+### 8.2 Add the site repo as a submodule
+
+```bash
+git submodule add https://github.com/arpyph1/productimpactpod-site \
+  product-impact/scripts/site
+```
+
+This creates:
+
+```
+vault-system/
+├── .gitmodules                          (new — submodule registry)
+└── product-impact/
+    └── scripts/
+        └── site/                        (full checkout of productimpactpod-site)
+            ├── scripts/publishing/
+            │   ├── validate_article.py
+            │   ├── generate_hero_image.py
+            │   ├── dispatch_rebuild.py
+            │   ├── verify_supabase.py
+            │   └── README.md
+            ├── vault-integration/
+            │   ├── scaffold-vault.sh
+            │   ├── article-template.md
+            │   ├── brief-template.md
+            │   ├── publish_articles.py.template
+            │   ├── vault-folder-structure.md
+            │   └── README.md
+            └── (rest of the site repo)
+```
+
+Verify the submodule contents are present:
+
+```bash
+ls product-impact/scripts/site/scripts/publishing/
+# Should list: validate_article.py  generate_hero_image.py
+#              dispatch_rebuild.py  verify_supabase.py  README.md
+
+ls product-impact/scripts/site/vault-integration/
+# Should list: scaffold-vault.sh  article-template.md  brief-template.md
+#              publish_articles.py.template  README.md  vault-folder-structure.md
+```
+
+### 8.3 Run the scaffold script
+
+```bash
+bash product-impact/scripts/site/vault-integration/scaffold-vault.sh
+```
+
+Expected output:
+
+```
+Scaffolding .../product-impact…
+  + .../product-impact/pre-production/sources/2026-04
+  + .../product-impact/pre-production/sources/by-topic
+  + .../product-impact/pre-production/episodes
+  + .../product-impact/pre-production/briefs
+  + .../product-impact/drafts
+  + .../product-impact/published/2026/04
+  + .../product-impact/taxonomy
+  + .../product-impact/scripts/utils
+  + .../product-impact/drafts/_TEMPLATE.md
+  + .../product-impact/pre-production/briefs/_TEMPLATE.md
+  + .../product-impact/scripts/publish_articles.py
+  + .../product-impact/README.md
+  + .../product-impact/.gitignore
+
+✓ Done — 13 created, 0 already existed
+
+Next steps:
+  1. cd <vault root>
+  2. Review product-impact/scripts/publish_articles.py and customise for your vault parser
+  3. Copy the env vars you need to product-impact/.env (gitignored)
+  4. Run: python3 product-impact/scripts/site/scripts/publishing/verify_supabase.py
+  5. git add product-impact/ && git commit -m 'scaffold: product-impact folder structure'
+```
+
+The script is **idempotent** — safe to re-run. It only creates missing
+files, never overwrites existing ones. If it reports `0 created, 13
+already existed` you've already run it.
+
+### 8.4 Commit the submodule + scaffold
+
+```bash
+git add .gitmodules product-impact/
+git commit -m "chore: wire product-impact publishing pipeline
+
+- Add productimpactpod-site as submodule at product-impact/scripts/site
+- Scaffold pre-production/drafts/published folder structure
+- Drop in starter templates: _TEMPLATE.md, publish_articles.py, README"
+
+git push
+```
+
+At this point, `vault-system/product-impact/` has the full structure
+needed to author and publish articles. The `publish_articles.py` file
+is a starter template with one `NotImplementedError` you'll replace in
+the next section.
+
+### 8.5 What got created
+
+| Path | Purpose |
+|---|---|
+| `.gitmodules` | Tells git where the submodule lives and what commit to pin |
+| `product-impact/scripts/site/` | The checked-out submodule (site repo) |
+| `product-impact/pre-production/sources/YYYY-MM/` | Current-month folder for press releases, scraped research |
+| `product-impact/pre-production/sources/by-topic/` | Long-term topic research folders |
+| `product-impact/pre-production/episodes/` | Podcast recording artefacts |
+| `product-impact/pre-production/briefs/` | One-paragraph editorial plans |
+| `product-impact/pre-production/briefs/_TEMPLATE.md` | Brief starter |
+| `product-impact/drafts/` | Articles in progress |
+| `product-impact/drafts/_TEMPLATE.md` | Full YAML frontmatter template (copy this to start a new article) |
+| `product-impact/published/YYYY/MM/` | Archive folder for articles that have gone live |
+| `product-impact/taxonomy/` | Cached canonical lists (themes.json, formats.json) — optional |
+| `product-impact/scripts/publish_articles.py` | Main orchestrator (starter — customise in section 10) |
+| `product-impact/scripts/utils/` | For your vault-specific helpers |
+| `product-impact/.gitignore` | Excludes `.env`, `*.wav`, `__pycache__/`, etc. |
+| `product-impact/README.md` | Workflow overview (brief version — this doc is the full one) |
+
+### 8.6 Updating the submodule later
+
+When the site repo gets new features (new validator check, new image
+model, taxonomy change, etc.) — update the pin:
+
+```bash
+cd product-impact/scripts/site
+git pull origin main
+cd -
+
+git add product-impact/scripts/site
+git commit -m "chore: bump site submodule to $(cd product-impact/scripts/site && git rev-parse --short HEAD)"
+git push
+```
+
+Anyone cloning vault-system fresh needs `--recursive`:
+
+```bash
+git clone --recursive https://github.com/arpyph1/vault-system.git
+# or, if they already cloned without --recursive:
+cd vault-system
+git submodule update --init --recursive
+```
+
+---
+
+*Next: Section 9 covers every environment variable the publish pipeline
+uses — where each comes from, where to store them, and how to source them.*
