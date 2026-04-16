@@ -35,7 +35,10 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
 
-DEFAULT_SUPABASE_URL = "https://cyqkfkvsrdbbjuaqiglx.supabase.co"
+# Set PUBLIC_SUPABASE_URL before running this script.
+# No hardcoded default — we want a loud failure rather than silently
+# verifying the wrong project.
+DEFAULT_SUPABASE_URL: str | None = None
 
 CANONICAL_THEMES = {
     "ai-product-strategy",
@@ -110,14 +113,14 @@ def _rest_get(base: str, path: str, anon_key: str, params: dict | None = None) -
 
 def check_env() -> Section:
     s = Section("Environment variables")
-    url = os.environ.get("PUBLIC_SUPABASE_URL", DEFAULT_SUPABASE_URL)
+    url = os.environ.get("PUBLIC_SUPABASE_URL", "")
     anon = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
 
     s.add(Check(
         "PUBLIC_SUPABASE_URL",
         bool(url),
         url or "(missing)",
-        hint="export PUBLIC_SUPABASE_URL=…",
+        hint="export PUBLIC_SUPABASE_URL=https://<your-ref>.supabase.co",
     ))
     s.add(Check(
         "PUBLIC_SUPABASE_ANON_KEY",
@@ -345,9 +348,14 @@ def check_edge_functions(base: str, anon: str) -> Section:
 def _main(argv: list[str]) -> int:
     verbose = "--verbose" in argv or "-v" in argv
 
-    base = os.environ.get("PUBLIC_SUPABASE_URL", DEFAULT_SUPABASE_URL).rstrip("/")
+    base = (os.environ.get("PUBLIC_SUPABASE_URL") or "").rstrip("/")
     anon = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
     service = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not base:
+        print("✗ PUBLIC_SUPABASE_URL not set. Export it before running:", file=sys.stderr)
+        print('  export PUBLIC_SUPABASE_URL="https://<your-ref>.supabase.co"', file=sys.stderr)
+        return 2
 
     print(f"Verifying {base}…\n")
 
