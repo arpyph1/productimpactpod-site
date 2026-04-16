@@ -1,33 +1,78 @@
 ---
-// Homepage — Podcast.tsx-style layout ported from Lovable.
-// Section order (matches DEFAULT_ORDER in Lovable/Podcast.tsx):
-//   1. Hero (Shorts staircase + platform pills + headline)
-//   2. Episodes (live podcast RSS, cover-art grid)
-//   3. Hosts (large 9:16 vertical portraits)
-//   4. Newsletter (Substack RSS — latest editions)
-//   5. Subscribe (listen-on-X CTAs)
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import Hero from "@components/Hero.astro";
-import Episodes from "@components/Episodes.astro";
-import Hosts from "@components/Hosts.astro";
-import Newsletter from "@components/Newsletter.astro";
+import EntityHeadline from "@components/EntityHeadline.astro";
+import {
+  getAllArticles, getAllThemes,
+  formatLabel, authorDisplayName,
+} from "@lib/supabase";
+import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
 
+const articles = await getAllArticles();
+const themes = await getAllThemes();
+const rssEpisodes = await fetchPodcastEpisodes(12);
+const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-const homepageJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebPage",
-  "@id": `${siteUrl}/#webpage`,
-  url: `${siteUrl}/`,
-  name: "Product Impact — AI product news, releases, and case studies",
-  description:
-    "AI product impact — news, releases, and case studies about the products transforming how we work and industries.",
-  isPartOf: { "@id": `${siteUrl}/#website` },
-  about: { "@id": `${siteUrl}/#organization` },
-  inLanguage: "en-US",
+const carouselArticles = articles.slice(0, 6);
+
+// Article counts per theme
+const tc: Record<string, number> = {};
+articles.forEach((a) => a.themes?.forEach((t) => { tc[t] = (tc[t] ?? 0) + 1; }));
+
+// Theme colors
+const themeColors: Record<string, string> = {
+  "ai-product-strategy": "#ff6b4a",
+  "agents-agentic-systems": "#9b7bff",
+  "ux-experience-design-for-ai": "#4ab8c9",
+  "adoption-organizational-change": "#f5a623",
+  "evaluation-benchmarking": "#6bbf71",
+  "go-to-market-distribution": "#ff8566",
+  "data-semantics-knowledge-foundations": "#5ba3cc",
+  "governance-risk-trust": "#c96bff",
+};
+
+// Partners — real data from Lovable CMS
+const partners = [
+  {
+    name: "PH1",
+    tagline: "Ship products that are proven to deliver impact in the AI era",
+    cta: "",
+    url: "https://ph1.ca",
+    logoUrl: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
+    color: "#ff6b4a",
+  },
+  {
+    name: "AI Value Acceleration",
+    tagline: "We find exactly where value stalls, why, and whose job it is to fix",
+    cta: "",
+    url: "https://aivalueacceleration.com/",
+    logoUrl: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png",
+    color: "#9b7bff",
+  },
+  {
+    name: "Become a Partner",
+    tagline: "Reach thousands of product leaders and organizational product adoption leaders",
+    cta: "",
+    url: "/partnerships/",
+    logoUrl: "",
+    color: "#4ab8c9",
+  },
+];
+
+function timeAgo(d: string): string {
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+const jsonLd = {
+  "@context": "https://schema.org", "@type": "WebSite", name: "Product Impact",
+  url: siteUrl, description: "AI product impact — news, releases, and case studies.",
 };
 ---
 
@@ -35,60 +80,453 @@ const homepageJsonLd = {
   title="Product Impact — AI product news, releases, and case studies"
   description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
   canonicalUrl={`${siteUrl}/`}
-  jsonLd={homepageJsonLd}
+  jsonLd={jsonLd}
 >
   <Nav />
 
-  <main class="min-h-screen bg-background">
-    {/* ── 1. HERO ────────────────────────────────────────────────── */}
-    <Hero />
+  <main>
 
-    {/* ── 2. EPISODES (live podcast RSS) ───────────────────────── */}
-    <Episodes title="Latest Episodes" limit={8} />
+    {/* ══════════════════════════════════════════════════════════════
+        HERO CAROUSEL — full-bleed cards with Particle warm gradients
+        ══════════════════════════════════════════════════════════════ */}
+    {carouselArticles.length > 0 && (
+      <section class="relative pt-4 pb-6">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div class="relative overflow-hidden rounded-2xl" id="hero-carousel">
+            <div class="flex transition-transform duration-500 ease-out" id="hero-track">
+              {carouselArticles.map((a, i) => {
+                const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+                const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+                const time = timeAgo(a.publish_date);
+                return (
+                  <a href={`/news/${a.slug}/`} class="hero-slide group block relative flex-shrink-0 w-full" style="min-height: 500px;" data-slide={i}>
+                    {a.hero_image_url ? (
+                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+                    ) : (
+                      <div class="absolute inset-0 bg-gradient-to-br from-[#2a1008] via-[#140808] to-[#080808]"></div>
+                    )}
+                    {/* Particle-style warm gradient: deep red/brown bottom, translucent top */}
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0000] via-[#1a0505]/80 to-transparent"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#0a0000]/50 to-transparent"></div>
+                    {/* Warm color wash */}
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#2a0a00]/40 via-transparent to-transparent"></div>
 
-    {/* ── 3. HOSTS (large vertical portraits) ──────────────────── */}
-    <Hosts />
+                    {/* Badge */}
+                    <div class="absolute top-5 left-5 flex items-center gap-2 z-10">
+                      <span class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white bg-[#1a0a05]/70 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#ff6b4a]/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#ff6b4a]"></span>
+                        {formatLabel(a.format)}
+                      </span>
+                    </div>
 
-    {/* ── 4. NEWSLETTER (Substack RSS) ─────────────────────────── */}
-    <Newsletter title="From the Newsletter" />
-
-    {/* ── 5. SUBSCRIBE CTA ─────────────────────────────────────── */}
-    <section id="subscribe" class="bg-background" aria-label="Subscribe">
-      <div class="container-wide py-16">
-        <div class="studio-card p-8 md:p-14 text-center bg-gradient-to-br from-primary/5 via-card to-card">
-          <h2
-            class="font-display font-extrabold uppercase leading-none tracking-tight text-foreground mb-4"
-            style="font-size: clamp(1.5rem, 3.5vw, 2.8rem); letter-spacing: -0.02em;"
-          >
-            Listen on your platform
-          </h2>
-          <p class="text-muted-foreground mb-8 max-w-lg mx-auto">
-            New episodes weekly. Subscribe wherever you listen to podcasts.
-          </p>
-          <div class="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { label: "Spotify",         url: "https://open.spotify.com/show/productimpactpod",   color: "#1DB954" },
-              { label: "Apple Podcasts",  url: "https://podcasts.apple.com/productimpactpod",      color: "#B150E2" },
-              { label: "YouTube",         url: "https://youtube.com/@productimpactpod",            color: "#FF0000" },
-              { label: "Substack",        url: "https://productimpactpod.substack.com",            color: "#FF6719" },
-            ].map((p) => (
-              <a
-                href={p.url}
-                target="_blank"
-                rel="noopener"
-                class="flex items-center gap-3 px-6 py-3 rounded-full border border-border bg-card text-foreground font-medium hover:border-foreground transition-all"
-              >
-                <span class="w-3 h-3 rounded-full flex-shrink-0" style={`background: ${p.color};`}></span>
-                {p.label}
-              </a>
-            ))}
+                    {/* Content — bottom */}
+                    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-10">
+                      <div class="flex items-center gap-2 mb-3">
+                        <span class="text-[11px] font-semibold text-[#ff8566]">&#9889; {time}</span>
+                        <span class="text-white/20">·</span>
+                        <span class="text-[11px] text-white/40 uppercase tracking-wider">{a.read_time_minutes} min read</span>
+                      </div>
+                      <EntityHeadline
+                        title={a.title}
+                        entities={entities}
+                        tag="h2"
+                        class="text-[26px] md:text-[38px] lg:text-[48px] font-extrabold text-white leading-[1.06] tracking-[-0.03em] mb-3 max-w-2xl"
+                      />
+                      {a.subtitle && (
+                        <p class="text-[14px] md:text-[16px] text-white/50 leading-relaxed max-w-xl mb-3 line-clamp-2">{a.subtitle}</p>
+                      )}
+                      <div class="text-[12px] text-white/40">
+                        <span class="text-white/60 font-medium">{author}</span>
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+            {/* Dots */}
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20" id="hero-dots">
+              {carouselArticles.map((_, i) => (
+                <button class={`h-2 rounded-full transition-all ${i === 0 ? 'bg-white w-6' : 'bg-white/30 w-2 hover:bg-white/50'}`} data-dot={i} aria-label={`Slide ${i + 1}`}></button>
+              ))}
+            </div>
+            {/* Arrows */}
+            <button class="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 items-center justify-center text-white/60 hover:text-white hover:bg-black/60 transition-all hidden md:flex" id="hero-prev" aria-label="Previous">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button class="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 items-center justify-center text-white/60 hover:text-white hover:bg-black/60 transition-all hidden md:flex" id="hero-next" aria-label="Next">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
           </div>
+        </div>
+      </section>
+    )}
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        LATEST ARTICLES — left column with ad slot on right
+        ══════════════════════════════════════════════════════════════ */}
+    {articles.length > 1 && (
+      <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
+          {/* Left: article list */}
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
+                Latest <span class="text-[#ff6b4a]">&#8250;</span>
+              </h2>
+              <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
+            </div>
+            <div class="divide-y divide-[#161616]">
+              {articles.slice(0, 5).map((a) => {
+                const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+                const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+                const time = timeAgo(a.publish_date);
+                return (
+                  <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
+                    <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
+                      {a.hero_image_url ? (
+                        <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                      ) : (
+                        <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
+                      )}
+                    </div>
+                    <div class="flex-1 min-w-0 pt-0.5">
+                      <EntityHeadline title={a.title} entities={entities} tag="h3"
+                        class="text-[15px] md:text-[17px] font-bold text-[#e5e5e5] leading-[1.3] group-hover:text-white transition-colors inline" />
+                      {a.subtitle && <span class="text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
+                      <div class="flex items-center gap-2 mt-1.5 text-[11px]">
+                        <span class="font-semibold text-[#ff6b4a] uppercase tracking-wide">{author}</span>
+                        <span class="text-[#333]">|</span>
+                        <span class="text-[#555]">{time}</span>
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right: ad slot (CMS-controlled placeholder) */}
+          <div class="hidden lg:block">
+            <div class="sticky top-20">
+              <div class="rounded-xl border border-[#161616] bg-[#0a0a0a] p-4 min-h-[400px] flex flex-col items-center justify-center text-center" id="home-ad-slot">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-[#333] mb-2">Advertisement</span>
+                <p class="text-[12px] text-[#444] leading-relaxed mb-3">Reach AI product leaders</p>
+                <a href="/partnerships/" class="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold transition-colors">Partner with us →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )}
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        PODCAST — last 3 episodes prominently
+        ══════════════════════════════════════════════════════════════ */}
+    <section class="py-12 border-t border-[#141414] relative">
+      <div class="absolute inset-0 bg-gradient-to-b from-[#0c0808] via-[#080808] to-[#080810]"></div>
+      <div class="relative max-w-[1200px] mx-auto px-4 md:px-6">
+
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <img src="/logo.png" alt="PI" class="w-10 h-10 object-contain" />
+            <div>
+              <h2 class="text-[24px] md:text-[28px] font-extrabold text-white tracking-tight">
+                Product Impact Podcast <span class="text-[#ff6b4a]">&#8250;</span>
+              </h2>
+              <p class="text-[13px] text-[#666]">Prove impact. Improve impact. Scale impact.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center hover:brightness-110 transition-all" title="Spotify">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.371-.721.49-1.101.241-3.021-1.858-6.832-2.278-11.322-1.237-.43.101-.851-.17-.952-.6-.1-.43.17-.851.6-.952 4.91-1.12 9.122-.64 12.521 1.41.38.24.5.72.254 1.138zm1.44-3.3c-.301.42-.841.6-1.262.3-3.461-2.122-8.731-2.74-12.832-1.5-.511.16-1.051-.12-1.211-.63-.16-.511.12-1.051.63-1.211 4.671-1.42 10.47-.741 14.461 1.71.42.301.539.84.214 1.331zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.24-.161-1.42-.74-.18-.6.16-1.24.74-1.42 4.26-1.3 11.34-1.05 15.84 1.62.54.3.72 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            </a>
+            <a href="https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-[#B150E2] flex items-center justify-center hover:brightness-110 transition-all" title="Apple Podcasts">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 3.6c2.8 0 5.4 1.2 7.2 3.2v2.4c-1.6-2-4.1-3.2-6.8-3.2-4.8 0-8.8 3.9-8.8 8.8 0 2.2.8 4.2 2.1 5.7l-1.4 1.4C2.5 19.7 1.2 16.9 1.2 13.8c0-6 4.8-10.8 10.8-10.8zm0 4.8c3.3 0 6 2.7 6 6 0 1.6-.6 3-1.6 4.1l-1.4-1.4c.7-.8 1.2-1.8 1.2-2.9 0-2.3-1.9-4.2-4.2-4.2-1.3 0-2.4.6-3.2 1.5L7.4 10c1.2-1.4 2.8-2.2 4.6-2.2zm0 3.6a2.4 2.4 0 110 4.8 2.4 2.4 0 010-4.8z"/></svg>
+            </a>
+            <a href="https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-[#FF0000] flex items-center justify-center hover:brightness-110 transition-all" title="YouTube">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-white"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        {/* Last 4 episodes — smaller cards with play */}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {rssEpisodes.slice(0, 4).map((ep) => {
+            const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
+            const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+            return (
+              <div class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] cursor-pointer ep-card" data-link={ep.link} data-audio={ep.audioUrl} data-title={ep.title} data-desc={ep.description} data-date={date}>
+                <div class="relative aspect-square overflow-hidden">
+                  {ep.imageUrl ? (
+                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+                  ) : (
+                    <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[28px]">🎙</span></div>
+                  )}
+                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  {/* Play button */}
+                  <button class="ep-play absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10" data-audio={ep.audioUrl} aria-label="Play">
+                    <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                      <svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </button>
+                  {epLabel && <div class="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
+                </div>
+                <div class="p-2.5">
+                  <h3 class="text-[12px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
+                  <div class="text-[10px] text-[#555]">{date}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div class="mt-5 text-center">
+          <a href="/podcast/" class="inline-flex items-center gap-1.5 text-[13px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold transition-colors">
+            All episodes & show notes
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
         </div>
       </div>
     </section>
 
-    <div class="py-6"></div>
+
+    {/* ══════════════════════════════════════════════════════════════
+        FEATURED / EVERGREEN ARTICLES — 4 cards (CMS-selected in future)
+        ══════════════════════════════════════════════════════════════ */}
+    {articles.length > 2 && (
+      <section class="py-10 border-t border-[#141414]">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
+              Featured Reading <span class="text-[#ff6b4a]">&#8250;</span>
+            </h2>
+            <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">All articles</a>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {articles.slice(0, 4).map((a) => {
+              const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+              const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+              return (
+                <a href={`/news/${a.slug}/`} class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+                  <div class="relative aspect-[16/10] overflow-hidden">
+                    {a.hero_image_url ? (
+                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+                    ) : (
+                      <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#0c0c0c]"></div>
+                    )}
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-transparent"></div>
+                    <div class="absolute top-2 left-2">
+                      <span class="text-[9px] font-bold uppercase tracking-wider text-[#ff6b4a] bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded">{formatLabel(a.format)}</span>
+                    </div>
+                  </div>
+                  <div class="p-3.5">
+                    <EntityHeadline title={a.title} entities={entities} tag="h3"
+                      class="text-[14px] font-bold text-[#e5e5e5] leading-[1.3] mb-1.5 group-hover:text-white transition-colors line-clamp-2" />
+                    <div class="text-[11px] text-[#555]"><span class="text-[#888]">{author}</span></div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    )}
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        AI STRATEGY RESOURCES — CMS-managed reports and long-form docs
+        PDF previews in large format carousel. Placeholder until CMS populated.
+        ══════════════════════════════════════════════════════════════ */}
+    <section class="py-10 border-t border-[#141414]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
+            AI Strategy Resources <span class="text-[#ff6b4a]">&#8250;</span>
+          </h2>
+        </div>
+
+        {/* Horizontal scroll carousel of resource cards */}
+        <div class="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0" id="resources-carousel">
+
+          {/* Placeholder resources — replace with CMS data */}
+          {[
+            { title: "AI Product Impact Measurement Framework", desc: "How to measure the real-world impact of AI products across adoption, value, and organizational change.", type: "Framework", color: "#ff6b4a" },
+            { title: "Enterprise AI Adoption Barriers Report 2026", desc: "Research into why 80%+ of enterprise AI deployments fail to deliver measurable value at the behavioral layer.", type: "Report", color: "#9b7bff" },
+            { title: "The Physical AI Product Design Playbook", desc: "Design principles for AI hardware products — from Robert Brunner's insights on trust, simplicity, and human-object relationships.", type: "Playbook", color: "#4ab8c9" },
+            { title: "Agentic AI Product Strategy Guide", desc: "How product teams should think about autonomous agents, multi-agent orchestration, and the shift from tools to teammates.", type: "Guide", color: "#f5a623" },
+          ].map((r) => (
+            <div class="flex-shrink-0 w-[280px] md:w-[300px] snap-start rounded-xl border border-[#161616] hover:border-[#282828] bg-[#0c0c0c] overflow-hidden transition-all group cursor-pointer">
+              {/* PDF preview area */}
+              <div class="aspect-[3/4] bg-[#111] flex items-center justify-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-[#0c0c0c]/80"></div>
+                <div class="relative text-center px-6">
+                  <div class="w-12 h-12 rounded-lg mx-auto mb-3 flex items-center justify-center" style={`background: ${r.color}15; border: 1px solid ${r.color}20`}>
+                    <svg class="w-6 h-6" style={`color: ${r.color}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 18h10M7 14h10M7 10h4M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><path d="M13 2v7h7"/></svg>
+                  </div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider" style={`color: ${r.color}`}>{r.type}</span>
+                </div>
+              </div>
+              {/* Content */}
+              <div class="p-4">
+                <h3 class="text-[14px] font-bold text-[#ddd] group-hover:text-white leading-snug mb-2 transition-colors line-clamp-2">{r.title}</h3>
+                <p class="text-[12px] text-[#666] line-clamp-2 leading-relaxed">{r.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        SUBSTACK — newsletter subscribe + 3 latest editions
+        ══════════════════════════════════════════════════════════════ */}
+    <section class="py-12 border-t border-[#141414]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+
+          {/* Left: subscribe CTA */}
+          <div class="relative rounded-2xl overflow-hidden p-8 md:p-10" style="background: linear-gradient(135deg, #1a0a05 0%, #120808 30%, #0a0812 100%);">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,107,74,0.1),transparent_50%)]"></div>
+            <div class="relative">
+              <span class="inline-block text-[11px] font-bold uppercase tracking-[0.15em] text-[#ff6b4a] mb-4">Never miss our AI Strategy Resources</span>
+              <h2 class="text-[26px] md:text-[30px] font-extrabold text-white mb-3 tracking-tight">Subscribe to the Newsletter</h2>
+              <p class="text-[15px] text-[#888] mb-6 leading-relaxed">AI product impact news, frameworks, and original analysis delivered weekly.</p>
+              <form id="substack-form" class="flex items-stretch gap-0 max-w-md mb-4">
+                <input type="email" id="substack-email" placeholder="Type your email..." required
+                  class="flex-1 px-4 py-3.5 bg-[#111] border border-[#222] rounded-l-lg text-[14px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a] transition-colors" />
+                <button type="submit" class="px-6 py-3.5 bg-[#ff6b4a] text-white text-[14px] font-bold rounded-r-lg hover:bg-[#ff8566] transition-colors shrink-0 shadow-lg shadow-[#ff6b4a]/15">Subscribe</button>
+              </form>
+              <p class="text-[12px] text-[#555]">Free on <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener" class="text-[#ff6b4a] hover:text-[#ff8566]">Substack</a>. Unsubscribe anytime.</p>
+            </div>
+          </div>
+
+          {/* Right: 3 latest Substack editions */}
+          <div class="rounded-2xl border border-[#161616] p-5 bg-[#0a0a0a]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-[14px] font-bold text-white">Recent Editions</h3>
+              <a href="https://productimpactpod.substack.com/archive" target="_blank" rel="noopener" class="text-[11px] text-[#666] hover:text-white transition-colors">View all →</a>
+            </div>
+            <div class="divide-y divide-[#161616]">
+              {substackEditions.length > 0 ? substackEditions.map((ed) => {
+                const date = ed.pubDate ? new Date(ed.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+                return (
+                  <a href={ed.link} target="_blank" rel="noopener" class="block py-3 group">
+                    <div class="text-[14px] font-semibold text-[#ccc] group-hover:text-white transition-colors leading-snug mb-1 line-clamp-2">{ed.title}</div>
+                    <div class="text-[11px] text-[#555]">{date}</div>
+                  </a>
+                );
+              }) : (
+                <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener" class="block py-3 text-[13px] text-[#ff6b4a] hover:text-[#ff8566]">Browse editions on Substack →</a>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        PARTNERS
+        ══════════════════════════════════════════════════════════════ */}
+    <section class="py-10 border-t border-[#141414]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-[22px] font-extrabold text-white tracking-tight">Our Partners</h2>
+          <a href="/partnerships/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">Sponsorship info</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {partners.map((p) => (
+            <a href={p.url} target={p.url.startsWith('http') ? '_blank' : undefined} rel={p.url.startsWith('http') ? 'noopener' : undefined}
+              class="group block p-6 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden" style={`background: linear-gradient(160deg, ${p.color}08, #0c0c0c 50%)`}>
+              {p.logoUrl ? (
+                <div class="h-[48px] flex items-center mb-3">
+                  <img src={p.logoUrl} alt={`${p.name} logo`} class="max-h-full max-w-[200px] object-contain opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                </div>
+              ) : (
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-2.5 h-2.5 rounded-full" style={`background: ${p.color}; box-shadow: 0 0 8px ${p.color}30`}></div>
+                  <h3 class="text-[16px] font-bold text-white group-hover:text-[#ff6b4a] transition-colors">{p.name}</h3>
+                </div>
+              )}
+              <p class="text-[14px] text-[#888] leading-relaxed">{p.tagline}</p>
+              <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
   </main>
 
   <Footer />
 </BaseLayout>
+
+{/* ── Carousel + Substack JS ── */}
+<script is:inline>
+(function() {
+  // Substack email form
+  var form = document.getElementById('substack-form');
+  var emailInput = document.getElementById('substack-email');
+  if (form && emailInput) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = emailInput.value.trim();
+      if (email) {
+        window.open('https://productimpactpod.substack.com/subscribe?email=' + encodeURIComponent(email), '_blank');
+        emailInput.value = '';
+      }
+    });
+  }
+
+  // Substack editions are now fetched at build time — no client-side fetch needed
+  const dotBtns = dots.querySelectorAll('button');
+  let current = 0;
+  let autoTimer;
+
+  function goTo(i) {
+    current = ((i % slides.length) + slides.length) % slides.length;
+    track.style.transform = 'translateX(-' + (current * 100) + '%)';
+    dotBtns.forEach(function(d, j) {
+      d.className = j === current
+        ? 'h-2 rounded-full bg-white w-6 transition-all'
+        : 'h-2 rounded-full bg-white/30 w-2 hover:bg-white/50 transition-all';
+    });
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+  function startAuto() { stopAuto(); autoTimer = setInterval(next, 6000); }
+  function stopAuto() { clearInterval(autoTimer); }
+
+  dotBtns.forEach(function(btn, i) {
+    btn.addEventListener('click', function() { goTo(i); startAuto(); });
+  });
+  if (prevBtn) prevBtn.addEventListener('click', function() { prev(); startAuto(); });
+  if (nextBtn) nextBtn.addEventListener('click', function() { next(); startAuto(); });
+
+  var touchStartX = 0;
+  track.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; stopAuto(); }, { passive: true });
+  track.addEventListener('touchend', function(e) {
+    var diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+    startAuto();
+  }, { passive: true });
+
+  startAuto();
+})();
+</script>
+
+<style is:global>
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+</style>

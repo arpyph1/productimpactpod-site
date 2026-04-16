@@ -1,204 +1,97 @@
 ---
-// /news/format/[format] — filtered news index by article format.
-// getStaticPaths enumerates all 10 formats at build time.
-// Active tab highlight and per-format title/description for SEO.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllArticles, formatLabel, themeLabel, type ArticleFormat } from "@lib/supabase";
+import EntityHeadline from "@components/EntityHeadline.astro";
+import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
 
-export async function getStaticPaths() {
-  const formats: ArticleFormat[] = [
-    "news-brief",
-    "news-analysis",
-    "release-note",
-    "feature",
-    "interview",
-    "case-study",
-    "opinion",
-    "explainer",
-    "product-review",
-    "research-brief",
-  ];
-
-  const allArticles = await getAllArticles();
-
-  return formats.map((fmt) => ({
-    params: { format: fmt },
-    props: {
-      format: fmt,
-      articles: allArticles.filter((a) => a.format === fmt),
-    },
-  }));
-}
-
-interface Props {
-  format: ArticleFormat;
-  articles: Awaited<ReturnType<typeof getAllArticles>>;
-}
-
-const { format, articles } = Astro.props;
-const siteUrl = "https://productimpactpod.com";
-
-const formatDescriptions: Record<ArticleFormat, string> = {
-  "news-brief":     "Quick dispatches on AI product developments, releases, and market moves.",
-  "news-analysis":  "In-depth analysis of AI product trends, decisions, and their industry implications.",
-  "release-note":   "Coverage of new AI product releases, feature launches, and platform updates.",
-  feature:          "Long-form feature stories exploring the AI products reshaping industries.",
-  interview:        "Conversations with product leaders, researchers, and practitioners in AI.",
-  "case-study":     "Real-world case studies of AI product adoption, outcomes, and lessons learned.",
-  opinion:          "Perspective and commentary on the forces shaping AI product development.",
-  explainer:        "Clear explainers on AI product concepts, frameworks, and how things work.",
-  "product-review": "Hands-on reviews of AI products, tools, and platforms.",
-  "research-brief": "Summaries of research relevant to AI product practitioners.",
-};
-
-const label = formatLabel(format);
-const description = formatDescriptions[format];
-
-const themeGradients: Record<string, string> = {
-  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
-  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
-  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
-  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
-  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
-  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
-  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
-  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
-};
-
-const allFormats: ArticleFormat[] = [
-  "news-brief", "news-analysis", "release-note", "feature",
-  "interview", "case-study", "opinion", "explainer",
-  "product-review", "research-brief",
+const validFormats: ArticleFormat[] = [
+  "news-brief", "news-analysis", "release-note", "feature", "interview",
+  "case-study", "opinion", "explainer", "product-review", "research-brief",
 ];
 
-const collectionPageJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: `${label} | Product Impact`,
-  description,
-  url: `${siteUrl}/news/format/${format}`,
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
-  mainEntity: {
-    "@type": "ItemList",
-    itemListElement: articles.map((a, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
-      name: a.title,
-    })),
-  },
-};
+export async function getStaticPaths() {
+  return [
+    "news-brief", "news-analysis", "release-note", "feature", "interview",
+    "case-study", "opinion", "explainer", "product-review", "research-brief",
+  ].map((f) => ({ params: { format: f } }));
+}
+
+const { format } = Astro.params;
+const allArticles = await getAllArticles();
+const articles = allArticles.filter((a) => a.format === format);
+const siteUrl = "https://productimpactpod.com";
+const label = formatLabel(format as ArticleFormat);
+
+const formats: ArticleFormat[] = ["news-analysis", "feature", "interview", "case-study", "release-note", "opinion", "explainer"];
+
+function timeAgo(d: string): string {
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
 ---
 
 <BaseLayout
-  title={`${label} | Product Impact`}
-  description={description}
+  title={`${label} | Product Impact News`}
+  description={`${label} articles — AI product impact news, releases, and case studies.`}
   canonicalUrl={`${siteUrl}/news/format/${format}`}
-  jsonLd={collectionPageJsonLd}
 >
   <Nav />
 
-  <main class="container-wide py-16">
-    <header class="mb-12">
-      <div class="mb-3">
-        <a href="/news" class="text-sm text-[#a0a0a0] hover:text-white">← All News</a>
+  <main class="max-w-[900px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-6">
+      <nav class="text-[11px] text-[#555] mb-3 flex items-center gap-1.5">
+        <a href="/" class="hover:text-white">Home</a>
+        <span class="text-[#333]">›</span>
+        <a href="/news/" class="hover:text-white">News</a>
+        <span class="text-[#333]">›</span>
+        <span class="text-[#888]">{label}</span>
+      </nav>
+      <div class="flex items-baseline gap-2 mb-1">
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">{label}</h1>
+        <span class="text-[16px] font-bold text-[#ff6b4a]">{articles.length}</span>
       </div>
-      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
-        {label}
-      </h1>
-      <p class="text-lg text-[#d4d4d4] max-w-2xl">{description}</p>
     </header>
 
-    {/* Format tabs — active tab highlighted */}
-    <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
-      <a
-        href="/news"
-        class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
-      >
-        All
-      </a>
-      {allFormats.map((fmt) => (
-        <a
-          href={`/news/format/${fmt}`}
-          class={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-            fmt === format
-              ? "bg-background-card text-white border border-accent"
-              : "text-[#d4d4d4] hover:text-white hover:bg-background-card"
-          }`}
-        >
+    {/* Filter tabs */}
+    <div class="flex flex-wrap gap-1.5 mb-8 pb-5 border-b border-[#141414]">
+      <a href="/news/" class="px-3 py-1.5 rounded-md text-[11px] font-medium text-[#777] hover:text-white hover:bg-[#1a1a1a] transition-colors">All</a>
+      {formats.map((fmt) => (
+        <a href={`/news/format/${fmt}/`} class={`px-3 py-1.5 rounded-md text-[11px] font-semibold ${fmt === format ? 'bg-[#ff6b4a] text-white' : 'text-[#777] hover:text-white hover:bg-[#1a1a1a] transition-colors'}`}>
           {formatLabel(fmt)}
         </a>
       ))}
     </div>
 
     {articles.length === 0 ? (
-      <div class="text-center py-24">
-        <p class="text-xl text-[#a0a0a0]">No {label} articles published yet.</p>
-        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
-          Browse all news →
-        </a>
-      </div>
+      <p class="text-[#666] text-center py-16">No {label.toLowerCase()} articles published yet.</p>
     ) : (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {articles.map((article) => {
-          const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
-          const gradient = themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
-          const date = new Date(article.publish_date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
+      <div class="divide-y divide-[#161616]">
+        {articles.map((a) => {
+          const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+          const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+          const time = timeAgo(a.publish_date);
           return (
-            <a
-              href={`/news/${article.slug}`}
-              class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
-            >
-              {article.hero_image_url ? (
-                <img
-                  src={article.hero_image_url}
-                  alt={article.hero_image_alt ?? article.title}
-                  loading="lazy"
-                  class="w-full aspect-video object-cover"
-                />
-              ) : (
-                <div
-                  class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}
-                >
-                  <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
-                    Product Impact
-                  </div>
-                </div>
-              )}
-              <div class="p-6">
-                <div class="flex flex-wrap items-center gap-2 mb-3">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
-                    {formatLabel(article.format)}
-                  </span>
-                  {article.themes?.slice(0, 2).map((t) => (
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#a0a0a0]">
-                      {themeLabel(t)}
-                    </span>
-                  ))}
-                </div>
-                <h2 class="text-xl font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors line-clamp-2">
-                  {article.title}
-                </h2>
-                {article.subtitle && (
-                  <p class="text-sm text-[#d4d4d4] line-clamp-3 leading-relaxed">
-                    {article.subtitle}
-                  </p>
+            <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
+              <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
+                {a.hero_image_url ? (
+                  <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                ) : (
+                  <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
                 )}
-                <div class="text-xs text-[#707070] mt-4 flex items-center gap-2">
-                  <time datetime={article.publish_date}>{date}</time>
-                  {article.read_time_minutes && (
-                    <>
-                      <span>·</span>
-                      <span>{article.read_time_minutes} min read</span>
-                    </>
-                  )}
+              </div>
+              <div class="flex-1 min-w-0 pt-0.5">
+                <EntityHeadline title={a.title} entities={entities} tag="h3"
+                  class="text-[15px] md:text-[17px] font-bold text-[#e5e5e5] leading-[1.3] group-hover:text-white transition-colors inline" />
+                {a.subtitle && <span class="text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
+                <div class="flex items-center gap-2 mt-1.5 text-[11px]">
+                  <span class="font-semibold text-[#ff6b4a] uppercase tracking-wide">{author}</span>
+                  <span class="text-[#333]">|</span>
+                  <span class="text-[#555]">{time}</span>
                 </div>
               </div>
             </a>

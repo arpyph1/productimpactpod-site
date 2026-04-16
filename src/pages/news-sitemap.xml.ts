@@ -1,89 +1,48 @@
-// Google News sitemap — 48-hour rolling window.
-// Google News only indexes articles published within the last 2 days.
-// This endpoint is called at build time (static output) — Cloudflare Pages
-// rebuilds trigger on every content publish so the window stays fresh.
-// Spec: https://developers.google.com/search/docs/crawling-indexing/sitemaps/news-sitemap
-
-import type { APIRoute } from "astro";
 import { getAllArticles } from "@lib/supabase";
 
-const SITE_URL = "https://productimpactpod.com";
-const PUBLICATION_NAME = "Product Impact";
-const PUBLICATION_LANGUAGE = "en";
+export async function GET() {
+  const articles = await getAllArticles();
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-export const GET: APIRoute = async () => {
-  const allArticles = await getAllArticles();
-
-  // Google News sitemap: only articles from the last 48 hours
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-  const recentArticles = allArticles.filter(
-    (a) => new Date(a.publish_date) >= cutoff,
-  );
-
-  const items = recentArticles
-    .map((article) => {
-      const canonicalUrl =
-        article.canonical_url?.startsWith(SITE_URL)
-          ? article.canonical_url
-          : `${SITE_URL}/news/${article.slug}`;
-
-      const pubDate = new Date(article.publish_date).toISOString();
-
-      // Keywords: themes + topics, comma-separated, max ~10 terms per Google spec
-      const keywords = [
-        ...(article.themes ?? []),
-        ...(article.topics ?? []),
-      ]
-        .slice(0, 10)
-        .map((k) =>
-          k
-            .replace(/-/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase()),
-        )
-        .join(", ");
-
+  // Google News sitemap: 48-hour rolling window ideally, but since we're
+  // static-generated, include all recent articles. Google will ignore
+  // articles older than 48 hours from the news sitemap automatically.
+  const items = articles
+    .filter((a) => {
+      const age = Date.now() - new Date(a.publish_date).getTime();
+      return age < 30 * 24 * 60 * 60 * 1000; // include last 30 days for safety
+    })
+    .map((a) => {
+      const pubDate = new Date(a.publish_date).toISOString();
+      const title = a.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const keywords = [...(a.themes ?? []), ...(a.topics ?? [])]
+        .map((k) => k.replace(/-/g, " "))
+        .join(", ")
+        .replace(/&/g, "&amp;");
       return `  <url>
-    <loc>${escapeXml(canonicalUrl)}</loc>
+    <loc>https://productimpactpod.com/news/${a.slug}/</loc>
     <news:news>
       <news:publication>
-        <news:name>${escapeXml(PUBLICATION_NAME)}</news:name>
-        <news:language>${PUBLICATION_LANGUAGE}</news:language>
+        <news:name>Product Impact</news:name>
+        <news:language>en</news:language>
       </news:publication>
       <news:publication_date>${pubDate}</news:publication_date>
-      <news:title>${escapeXml(article.title)}</news:title>
-      ${keywords ? `<news:keywords>${escapeXml(keywords)}</news:keywords>` : ""}
+      <news:title>${title}</news:title>${keywords ? `\n      <news:keywords>${keywords}</news:keywords>` : ""}
     </news:news>
-    ${article.hero_image_url ? `<image:image>
-      <image:loc>${escapeXml(article.hero_image_url)}</image:loc>
-      <image:title>${escapeXml(article.title)}</image:title>
-    </image:image>` : ""}
+    <lastmod>${pubDate}</lastmod>
   </url>`;
     })
     .join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset
-  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-  xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
-  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 ${items}
 </urlset>`;
 
   return new Response(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      // Cache for 30 minutes — CF Pages will serve this from edge
-      "Cache-Control": "public, max-age=1800, s-maxage=1800",
+      "Cache-Control": "public, max-age=300",
     },
   });
-};
+}

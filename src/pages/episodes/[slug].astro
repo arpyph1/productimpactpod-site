@@ -1,265 +1,283 @@
 ---
-// /episodes/[slug] — individual episode page.
-// Static generation: one HTML file per episode at build time.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllEpisodes, getRelatedArticles, type Episode } from "@lib/supabase";
+import { getAllEpisodes, getEpisodeBySlug, getAllArticles, themeLabel } from "@lib/supabase";
 
 export async function getStaticPaths() {
   const episodes = await getAllEpisodes();
-  // Only generate pages for episodes that have a slug
   return episodes
     .filter((ep) => ep.slug)
-    .map((ep) => ({
-      params: { slug: ep.slug! },
-      props: { episode: ep },
-    }));
+    .map((ep) => ({ params: { slug: ep.slug! } }));
 }
 
-interface Props {
-  episode: Episode;
-}
+const { slug } = Astro.params;
+const episode = await getEpisodeBySlug(slug!);
+if (!episode) return Astro.redirect("/episodes/");
 
-const { episode } = Astro.props;
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/episodes/${episode.slug}`;
+const epNum = episode.episode_number
+  ? `S${String(episode.season_number ?? 2).padStart(2, "0")}E${String(episode.episode_number).padStart(2, "0")}`
+  : "";
 
-const publishDate = episode.published_at ? new Date(episode.published_at) : null;
-const publishDateFormatted = publishDate?.toLocaleDateString("en-US", {
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-const publishDateISO = publishDate?.toISOString() ?? null;
+// Theme colors
+const themeColors: Record<string, string> = {
+  "ai-product-strategy": "#ff6b4a",
+  "agents-agentic-systems": "#9b7bff",
+  "ux-experience-design-for-ai": "#4ab8c9",
+  "adoption-organizational-change": "#f5a623",
+  "evaluation-benchmarking": "#6bbf71",
+  "go-to-market-distribution": "#ff8566",
+  "data-semantics-knowledge-foundations": "#5ba3cc",
+  "governance-risk-trust": "#c96bff",
+};
 
-// JSON-LD PodcastEpisode
-const episodeJsonLd = episode.schema_jsonld ?? {
-  "@context": "https://schema.org",
-  "@type": "PodcastEpisode",
-  name: episode.title,
-  description: episode.meta_description ?? undefined,
-  url: canonicalUrl,
-  datePublished: publishDateISO ?? undefined,
-  duration: episode.duration ?? undefined,
-  episodeNumber: episode.episode_number ?? undefined,
-  partOfSeries: {
-    "@type": "PodcastSeries",
-    name: "Product Impact Podcast",
-    url: `${siteUrl}/podcast`,
+// Related articles that reference this episode
+const allArticles = await getAllArticles();
+const relatedArticles = allArticles.filter(
+  (a) => a.primary_podcast_episode_guid === episode.episode_guid
+).slice(0, 3);
+
+// Platform links
+const show = {
+  spotify: "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf",
+  apple: "https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859",
+  youtube: "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
+};
+
+// JSON-LD
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "PodcastEpisode",
+    name: episode.title,
+    description: episode.meta_description ?? "",
+    url: `${siteUrl}/episodes/${slug}`,
+    datePublished: episode.published_at,
+    duration: episode.duration ? `PT${episode.duration.replace(/:/g, "H").replace(/H(\d+)H/, "H$1M")}S` : undefined,
+    episodeNumber: episode.episode_number,
+    partOfSeason: episode.season_number ? {
+      "@type": "CreativeWorkSeason",
+      seasonNumber: episode.season_number,
+    } : undefined,
+    partOfSeries: {
+      "@type": "PodcastSeries",
+      name: "Product Impact Podcast",
+      url: `${siteUrl}/podcast`,
+    },
+    ...(episode.hosts?.length ? {
+      author: episode.hosts.map((h) => ({
+        "@type": "Person",
+        name: h.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      })),
+    } : {}),
   },
-  author: [
-    { "@type": "Person", name: "Arpy Dragffy", url: `${siteUrl}/people/arpy-dragffy` },
-    { "@type": "Person", name: "Brittany Hobbs", url: `${siteUrl}/people/brittany-hobbs` },
-  ],
-  ...(episode.guests?.length > 0
-    ? {
-        actor: episode.guests.map((g) => ({
-          "@type": "Person",
-          name: g.name,
-          ...(g.website ? { url: g.website } : {}),
-        })),
-      }
-    : {}),
-};
-
-const breadcrumbJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "Podcast", item: `${siteUrl}/podcast` },
-    { "@type": "ListItem", position: 3, name: "Episodes", item: `${siteUrl}/episodes` },
-    { "@type": "ListItem", position: 4, name: episode.title, item: canonicalUrl },
-  ],
-};
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Episodes", item: `${siteUrl}/episodes` },
+      { "@type": "ListItem", position: 3, name: episode.title },
+    ],
+  },
+];
 ---
 
 <BaseLayout
   title={`${episode.title} | Product Impact Podcast`}
-  description={episode.meta_description ?? episode.title}
-  canonicalUrl={canonicalUrl}
-  ogType="article"
-  publishedTime={publishDateISO}
-  jsonLd={[episodeJsonLd, breadcrumbJsonLd]}
+  description={episode.meta_description ?? `Listen to ${episode.title} on the Product Impact Podcast.`}
+  canonicalUrl={`${siteUrl}/episodes/${slug}`}
+  jsonLd={jsonLd}
 >
   <Nav />
 
-  <main class="container-wide py-12">
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+
     {/* Breadcrumb */}
-    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
-      <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/" class="hover:text-white">Home</a></li>
-        <li class="text-[#707070]">/</li>
-        <li><a href="/podcast" class="hover:text-white">Podcast</a></li>
-        <li class="text-[#707070]">/</li>
-        <li><a href="/episodes" class="hover:text-white">Episodes</a></li>
-        <li class="text-[#707070]">/</li>
-        <li class="text-[#d4d4d4] truncate max-w-xs">{episode.title}</li>
-      </ol>
+    <nav class="flex items-center gap-1.5 text-[12px] text-[#555] mb-6">
+      <a href="/" class="hover:text-white transition-colors">Home</a>
+      <span>›</span>
+      <a href="/episodes/" class="hover:text-white transition-colors">Episodes</a>
+      <span>›</span>
+      <span class="text-[#888] truncate max-w-[300px]">{episode.title}</span>
     </nav>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_280px] gap-16 justify-center">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+
+      {/* Main column */}
       <div>
-        {/* Episode badge */}
-        <div class="flex flex-wrap items-center gap-2 mb-5">
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-accent text-black">
-            Episode {episode.episode_number ?? ""}
-          </span>
-          {episode.themes?.slice(0, 2).map((t) => (
-            <a
-              href={`/themes/${t}`}
-              class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border border-[#3a3a3a] text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
-            >
-              {t.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-            </a>
-          ))}
-        </div>
 
-        {/* Title */}
-        <h1 class="font-display font-extrabold text-[clamp(2rem,5vw,3.5rem)] leading-[1.1] tracking-tight text-white mb-6 max-w-4xl">
-          {episode.title}
-        </h1>
-
-        {/* Meta */}
-        <div class="flex flex-wrap items-center gap-3 py-5 border-y border-[#2a2a2a] mb-10">
-          <div class="flex-1 min-w-0">
-            <div class="text-sm text-[#a0a0a0]">
-              Hosted by{" "}
-              <a href="/people/arpy-dragffy" class="text-white hover:text-accent">Arpy Dragffy</a>
-              {" "}and{" "}
-              <a href="/people/brittany-hobbs" class="text-white hover:text-accent">Brittany Hobbs</a>
-            </div>
-            {episode.guests && episode.guests.length > 0 && (
-              <div class="text-sm text-[#d4d4d4] mt-1">
-                With{" "}
-                {episode.guests.map((g, i) => (
-                  <>
-                    {g.website ? (
-                      <a href={g.website} target="_blank" rel="noopener" class="text-accent hover:text-accent-hover">
-                        {g.name}
-                      </a>
-                    ) : (
-                      <span class="text-white">{g.name}</span>
-                    )}
-                    {g.role && <span class="text-[#707070]"> ({g.role})</span>}
-                    {i < episode.guests.length - 1 && <span>, </span>}
-                  </>
-                ))}
-              </div>
-            )}
-          </div>
-          <div class="flex items-center gap-2 text-[14px] text-[#a0a0a0]">
-            {publishDateFormatted && (
-              <time datetime={publishDateISO ?? ""}>{publishDateFormatted}</time>
+        {/* Episode header */}
+        <div class="mb-8">
+          {/* Episode number + duration */}
+          <div class="flex items-center gap-3 mb-4">
+            {epNum && (
+              <span class="text-[12px] font-bold text-[#ff6b4a] uppercase tracking-wider">{epNum}</span>
             )}
             {episode.duration && (
+              <span class="text-[12px] text-[#555]">{episode.duration}</span>
+            )}
+            {episode.published_at && (
+              <span class="text-[12px] text-[#555]">
+                {new Date(episode.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              </span>
+            )}
+          </div>
+
+          <h1 class="text-[28px] md:text-[36px] font-extrabold text-white leading-[1.15] tracking-tight mb-4">
+            {episode.title}
+          </h1>
+
+          {/* Theme badges */}
+          {episode.themes?.length > 0 && (
+            <div class="flex flex-wrap gap-2 mb-5">
+              {episode.themes.map((t) => {
+                const c = themeColors[t] ?? "#ff6b4a";
+                return (
+                  <a href={`/themes/${t}/`} class="text-[11px] font-semibold uppercase tracking-wider px-2 py-1 rounded" style={`color: ${c}; background: ${c}10; border: 1px solid ${c}20`}>
+                    {themeLabel(t)}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Meta description */}
+          {episode.meta_description && (
+            <p class="text-[16px] text-[#999] leading-relaxed mb-5">{episode.meta_description}</p>
+          )}
+
+          {/* Listen links */}
+          <div class="flex flex-wrap gap-3 mb-6">
+            {episode.links?.map((l) => (
+              <a href={l.url} target="_blank" rel="noopener"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#161616] border border-[#222] text-[12px] font-semibold text-[#ccc] hover:text-white hover:border-[#333] transition-colors">
+                {l.label}
+              </a>
+            ))}
+            {(!episode.links || episode.links.length === 0) && (
               <>
-                <span class="text-[#707070]">·</span>
-                <span>{episode.duration}</span>
+                <a href={show.spotify} target="_blank" rel="noopener"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20 text-[12px] font-semibold text-[#1DB954] hover:bg-[#1DB954]/20 transition-colors">
+                  Listen on Spotify
+                </a>
+                <a href={show.apple} target="_blank" rel="noopener"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#BC5FE8]/10 border border-[#BC5FE8]/20 text-[12px] font-semibold text-[#BC5FE8] hover:bg-[#BC5FE8]/20 transition-colors">
+                  Apple Podcasts
+                </a>
+                <a href={show.youtube} target="_blank" rel="noopener"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#FF0000]/10 border border-[#FF0000]/20 text-[12px] font-semibold text-[#FF4444] hover:bg-[#FF0000]/20 transition-colors">
+                  YouTube
+                </a>
               </>
             )}
           </div>
         </div>
 
-        {/* Listen links */}
-        {episode.links && episode.links.length > 0 && (
-          <div class="mb-10 flex flex-wrap gap-3">
-            {episode.links.map((link) => (
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener"
-                class="flex items-center gap-2 px-4 py-2 bg-background-card rounded-full text-sm font-semibold text-white hover:bg-background-hover transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+        {/* Guests */}
+        {episode.guests?.length > 0 && (
+          <div class="mb-8 p-5 rounded-xl bg-[#0c0c0c] border border-[#1c1c1c]">
+            <h2 class="text-[14px] font-bold uppercase tracking-wider text-[#ff6b4a] mb-4">
+              {episode.guests.length === 1 ? "Guest" : "Guests"}
+            </h2>
+            <div class="space-y-4">
+              {episode.guests.map((g) => (
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#222] flex items-center justify-center flex-shrink-0">
+                    <span class="text-[14px] font-bold text-[#666]">{g.name.split(' ').map((n: string) => n[0]).join('')}</span>
+                  </div>
+                  <div>
+                    <div class="text-[15px] font-semibold text-white">{g.name}</div>
+                    {g.role && <div class="text-[13px] text-[#888]">{g.role}</div>}
+                    <div class="flex gap-3 mt-1">
+                      {g.linkedin && (
+                        <a href={g.linkedin} target="_blank" rel="noopener" class="text-[11px] text-[#666] hover:text-[#0077B5] transition-colors">LinkedIn</a>
+                      )}
+                      {g.website && (
+                        <a href={g.website} target="_blank" rel="noopener" class="text-[11px] text-[#666] hover:text-[#ff6b4a] transition-colors">Website</a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Show notes / content */}
+        {/* Show notes body */}
         {episode.content_html && (
-          <div class="article-prose" set:html={episode.content_html}></div>
+          <div class="article-prose" set:html={episode.content_html} />
         )}
 
-        {/* Transcript (collapsible) */}
+        {/* Transcript */}
         {episode.transcript_markdown && (
-          <details class="mt-16 group">
-            <summary class="flex items-center gap-3 cursor-pointer list-none py-4 border-y border-[#2a2a2a]">
-              <span class="text-sm font-bold uppercase tracking-wider text-[#707070] group-open:text-white transition-colors">
-                Full Transcript
-              </span>
-              <span class="text-accent text-xs group-open:rotate-180 transition-transform inline-block">▼</span>
+          <details class="mt-10 border-t border-[#1c1c1c] pt-6">
+            <summary class="flex items-center justify-between cursor-pointer list-none group">
+              <span class="text-[16px] font-bold text-[#ddd] group-hover:text-white transition-colors">Full Transcript</span>
+              <svg class="w-4 h-4 text-[#555] group-open:rotate-180 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </summary>
-            <div class="mt-6 p-6 bg-background-card rounded-xl">
-              <pre class="text-sm text-[#d4d4d4] leading-relaxed whitespace-pre-wrap font-body">
-                {episode.transcript_markdown}
-              </pre>
+            <div class="mt-4 text-[14px] text-[#999] leading-relaxed whitespace-pre-wrap">
+              {episode.transcript_markdown}
             </div>
           </details>
         )}
+
       </div>
 
       {/* Sidebar */}
       <aside class="hidden lg:block">
-        <div class="sticky top-24 space-y-8">
-          {episode.themes && episode.themes.length > 0 && (
-            <div>
-              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
-                Themes
-              </div>
-              <div class="flex flex-col gap-2">
-                {episode.themes.map((t) => (
-                  <a
-                    href={`/themes/${t}`}
-                    class="text-sm text-[#d4d4d4] hover:text-accent transition-colors"
-                  >
-                    {t.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+        <div class="sticky top-16 space-y-6">
+
+          {/* Hosts */}
+          <div class="p-4 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-[#555] mb-3">Hosts</h3>
+            <div class="space-y-3">
+              {[
+                { name: "Arpy Dragffy", role: "Founder, PH1 Research", slug: "arpy-dragffy" },
+                { name: "Brittany Hobbs", role: "Co-host", slug: "brittany-hobbs" },
+              ].map((host) => (
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[#222] flex items-center justify-center flex-shrink-0">
+                    <span class="text-[10px] font-bold text-[#666]">{host.name.split(' ').map((n) => n[0]).join('')}</span>
+                  </div>
+                  <div>
+                    <a href={`/people/${host.slug}/`} class="text-[13px] font-semibold text-[#ccc] hover:text-white transition-colors">{host.name}</a>
+                    <div class="text-[11px] text-[#555]">{host.role}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Related articles */}
+          {relatedArticles.length > 0 && (
+            <div class="p-4 rounded-xl bg-[#0c0c0c] border border-[#161616]">
+              <h3 class="text-[11px] font-bold uppercase tracking-wider text-[#555] mb-3">Related Articles</h3>
+              <div class="space-y-3">
+                {relatedArticles.map((a) => (
+                  <a href={`/news/${a.slug}/`} class="block group">
+                    <div class="text-[13px] font-semibold text-[#ccc] group-hover:text-white transition-colors leading-snug line-clamp-2 mb-1">{a.title}</div>
+                    <div class="text-[11px] text-[#555]">{a.publish_date}</div>
                   </a>
                 ))}
               </div>
             </div>
           )}
 
-          {episode.guests && episode.guests.length > 0 && (
-            <div>
-              <div class="text-xs font-bold uppercase tracking-wider text-[#707070] mb-3">
-                Guests
-              </div>
-              <div class="flex flex-col gap-3">
-                {episode.guests.map((g) => (
-                  <div>
-                    <div class="text-sm font-semibold text-white">
-                      {g.website ? (
-                        <a href={g.website} target="_blank" rel="noopener" class="hover:text-accent transition-colors">
-                          {g.name}
-                        </a>
-                      ) : g.name}
-                    </div>
-                    {g.role && (
-                      <div class="text-xs text-[#707070]">{g.role}</div>
-                    )}
-                    {g.linkedin && (
-                      <a href={g.linkedin} target="_blank" rel="noopener" class="text-xs text-accent hover:text-accent-hover">
-                        LinkedIn →
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Subscribe CTA */}
+          <div class="p-4 rounded-xl bg-[#ff6b4a]/5 border border-[#ff6b4a]/10">
+            <h3 class="text-[13px] font-bold text-white mb-1.5">Never miss an episode</h3>
+            <p class="text-[12px] text-[#888] mb-3 leading-relaxed">AI product impact news delivered weekly.</p>
+            <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener"
+              class="block text-center px-4 py-2 rounded-lg bg-[#ff6b4a] hover:bg-[#ff8566] text-white text-[12px] font-semibold transition-colors">
+              Subscribe
+            </a>
+          </div>
 
-          <a
-            href="/episodes"
-            class="block text-[14px] text-accent hover:text-accent-hover pt-2 border-t border-[#2a2a2a]"
-          >
-            ← All episodes
-          </a>
         </div>
       </aside>
+
     </div>
   </main>
 

@@ -1,231 +1,174 @@
 ---
-// Primary navigation with mega-menu dropdowns — matches Lovable's Navbar.tsx.
-// News + Themes open panels with icon-labelled links; Podcast/Episodes/
-// Partnerships are flat links. Contact button on the right.
-//
-// Scroll-aware: header shrinks from 80px to 64px once past 60px scroll.
-// Logo also shrinks. Pure vanilla JS (no React hydration needed).
+// Nav — centered logo, mega menu dropdowns for News/Themes, scroll-aware.
 ---
 
-<header
-  id="site-nav"
-  class="fixed top-0 left-0 right-0 z-50 border-b border-transparent bg-card/80 backdrop-blur-sm transition-all duration-300"
->
-  <div
-    id="nav-inner"
-    class="container-wide flex items-center justify-between"
-    style="height: 80px; transition: height 0.3s ease;"
-  >
-    {/* Left nav (News + Themes with mega-menus) */}
-    <nav class="hidden md:flex items-center gap-6 flex-1">
-      {/* NEWS — mega menu */}
-      <div class="relative nav-dropdown" data-dropdown="news">
-        <a
-          href="/news"
-          class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          News
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </a>
-        <div
-          class="nav-panel absolute top-full left-0 mt-3 w-[520px] bg-card border border-border rounded-xl shadow-xl p-5 z-50 opacity-0 invisible transition-all duration-200"
-          data-panel="news"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Browse by format</span>
-            <a href="/news" class="text-xs text-primary hover:underline">View all →</a>
+<header>
+  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-transparent transition-all duration-300" id="main-nav">
+    <div class="container-wide flex items-center justify-between transition-all duration-300" style="height: 96px;" id="nav-inner">
+
+      {/* Left nav items — with mega menu dropdowns */}
+      <div class="hidden md:flex items-center gap-6 flex-1">
+        {/* News dropdown */}
+        <div class="relative" id="news-dropdown-wrap">
+          <button class="text-[13px] font-medium text-white/60 hover:text-white transition-colors flex items-center gap-1" id="news-trigger">
+            News
+            <svg class="w-3 h-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="absolute top-full left-0 mt-3 w-[520px] rounded-xl shadow-2xl p-6 z-50 hidden border border-[#2a2a2a]" id="news-dropdown" style="background: linear-gradient(165deg, #1a1a1a 0%, #111 100%);">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-[11px] font-semibold text-[#777] uppercase tracking-wider">Browse by format</span>
+              <a href="/news/" class="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold">View all →</a>
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+              {[
+                { label: "All News", href: "/news/", desc: "Everything published" },
+                { label: "Features", href: "/news/format/feature/", desc: "In-depth reporting" },
+                { label: "News Analysis", href: "/news/format/news-analysis/", desc: "What it means" },
+                { label: "Case Studies", href: "/news/format/case-study/", desc: "Real-world impact" },
+                { label: "Releases", href: "/news/format/release-note/", desc: "Product launches" },
+                { label: "Interviews", href: "/news/format/interview/", desc: "Conversations with leaders" },
+              ].map((item) => (
+                <a href={item.href} class="flex flex-col px-4 py-3 rounded-lg hover:bg-white/[0.06] transition-colors">
+                  <span class="text-[15px] font-semibold text-[#e0e0e0] hover:text-white">{item.label}</span>
+                  <span class="text-[12px] text-[#666] mt-0.5">{item.desc}</span>
+                </a>
+              ))}
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-1">
-            {[
-              { label: "All News",      format: "",              desc: "Everything published" },
-              { label: "Features",      format: "feature",       desc: "In-depth reporting" },
-              { label: "News Analysis", format: "news-analysis", desc: "What it means" },
-              { label: "Case Studies",  format: "case-study",    desc: "Real-world impact" },
-              { label: "Releases",      format: "release-note",  desc: "Product launches" },
-              { label: "Interviews",    format: "interview",     desc: "Conversations with leaders" },
-              { label: "Explainers",    format: "explainer",     desc: "How it works" },
-              { label: "Opinion",       format: "opinion",       desc: "Editorial takes" },
-            ].map((n) => (
-              <a
-                href={n.format ? `/news/format/${n.format}` : "/news"}
-                class="flex items-start gap-3 px-3 py-3 rounded-lg hover:bg-muted transition-colors group"
-              >
-                <span class="w-4 h-4 rounded-full mt-0.5 flex-shrink-0 bg-primary/20 border border-primary/40"></span>
-                <div>
-                  <span class="text-sm font-medium group-hover:text-primary transition-colors block">{n.label}</span>
-                  <span class="text-xs text-muted-foreground">{n.desc}</span>
-                </div>
-              </a>
-            ))}
+        </div>
+
+        {/* Themes dropdown */}
+        <div class="relative" id="themes-dropdown-wrap">
+          <button class="text-[13px] font-medium text-white/60 hover:text-white transition-colors flex items-center gap-1" id="themes-trigger">
+            Themes
+            <svg class="w-3 h-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="absolute top-full left-0 mt-3 w-[560px] rounded-xl shadow-2xl p-6 z-50 hidden border border-[#2a2a2a]" id="themes-dropdown" style="background: linear-gradient(165deg, #1a1a1a 0%, #111 100%);">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-[11px] font-semibold text-[#777] uppercase tracking-wider">Explore themes</span>
+              <a href="/themes/" class="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold">View all →</a>
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+              {[
+                { label: "AI Product Strategy", slug: "ai-product-strategy", color: "#ff6b4a" },
+                { label: "Agents & Agentic Systems", slug: "agents-agentic-systems", color: "#9b7bff" },
+                { label: "UX & Design for AI", slug: "ux-experience-design-for-ai", color: "#4ab8c9" },
+                { label: "Adoption & Org Change", slug: "adoption-organizational-change", color: "#f5a623" },
+                { label: "Evaluation & Benchmarking", slug: "evaluation-benchmarking", color: "#6bbf71" },
+                { label: "Go-to-Market", slug: "go-to-market-distribution", color: "#ff8566" },
+                { label: "Data & Knowledge", slug: "data-semantics-knowledge-foundations", color: "#5ba3cc" },
+                { label: "Governance & Trust", slug: "governance-risk-trust", color: "#c96bff" },
+              ].map((t) => (
+                <a href={`/themes/${t.slug}/`} class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/[0.06] transition-colors">
+                  <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={`background: ${t.color}; box-shadow: 0 0 8px ${t.color}40`}></div>
+                  <span class="text-[15px] font-semibold text-[#e0e0e0] hover:text-white">{t.label}</span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* THEMES — mega menu */}
-      <div class="relative nav-dropdown" data-dropdown="themes">
-        <a
-          href="/themes"
-          class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          Themes
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </a>
-        <div
-          class="nav-panel absolute top-full left-0 mt-3 w-[560px] bg-card border border-border rounded-xl shadow-xl p-5 z-50 opacity-0 invisible transition-all duration-200"
-          data-panel="themes"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Explore themes</span>
-            <a href="/themes" class="text-xs text-primary hover:underline">View all →</a>
-          </div>
-          <div class="grid grid-cols-2 gap-1">
-            {[
-              { label: "AI Product Strategy",           slug: "ai-product-strategy",                  color: "hsl(var(--coral))" },
-              { label: "Agents & Agentic Systems",      slug: "agents-agentic-systems",               color: "hsl(var(--lavender))" },
-              { label: "UX & Experience Design for AI", slug: "ux-experience-design-for-ai",          color: "hsl(var(--teal))" },
-              { label: "Adoption & Org Change",         slug: "adoption-organizational-change",       color: "hsl(var(--sage))" },
-              { label: "Evaluation & Benchmarking",     slug: "evaluation-benchmarking",              color: "hsl(var(--teal))" },
-              { label: "Go-to-Market & Distribution",   slug: "go-to-market-distribution",            color: "hsl(var(--orange))" },
-              { label: "Data, Semantics & Knowledge",   slug: "data-semantics-knowledge-foundations", color: "hsl(var(--lavender))" },
-              { label: "Governance, Risk & Trust",      slug: "governance-risk-trust",                color: "hsl(var(--amber))" },
-            ].map((t) => (
-              <a
-                href={`/themes/${t.slug}`}
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors group"
-              >
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={`background: ${t.color};`}></span>
-                <span class="text-sm font-medium group-hover:text-primary transition-colors">{t.label}</span>
-              </a>
-            ))}
-          </div>
-        </div>
+      {/* Center logo */}
+      <a href="/" class="flex items-center justify-center flex-shrink-0">
+        <img src="/logo.png" alt="Product Impact Podcast" class="object-contain transition-all duration-300" style="width: 90px; height: 90px;" id="nav-logo" />
+      </a>
+
+      {/* Right nav items */}
+      <div class="hidden md:flex items-center justify-end gap-6 flex-1">
+        <a href="/podcast/" class="text-[13px] font-medium text-white/60 hover:text-white transition-colors">Podcast</a>
+        <a href="/episodes/" class="text-[13px] font-medium text-white/60 hover:text-white transition-colors">Episodes</a>
+        <a href="/partnerships/" class="text-[13px] font-medium text-white/60 hover:text-white transition-colors">Partner</a>
       </div>
-    </nav>
 
-    {/* Center logo */}
-    <div class="flex items-center justify-center flex-shrink-0">
-      <a href="/" class="flex items-center justify-center" aria-label="Product Impact home">
-        <img
-          id="nav-logo"
-          src="/logo.png"
-          alt="Product Impact Podcast"
-          width="72"
-          height="72"
-          style="width: 72px; height: 72px; transition: width 0.3s ease, height 0.3s ease;"
-          class="object-contain"
-        />
-      </a>
-    </div>
-
-    {/* Right nav (Podcast, Episodes, Partnerships) + Contact CTA */}
-    <div class="hidden md:flex items-center justify-end gap-6 flex-1">
-      <a href="/podcast" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Podcast</a>
-      <a href="/episodes" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Episodes</a>
-      <a href="/partnerships" class="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Partnerships</a>
-      <a
-        href="/contact"
-        class="flex items-center gap-1.5 px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all shadow-sm"
-      >
-        Contact
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
-        </svg>
-      </a>
-    </div>
-
-    {/* Mobile hamburger */}
-    <div class="md:hidden flex justify-end">
-      <button
-        type="button"
-        id="mobile-menu-btn"
-        aria-label="Open menu"
-        class="p-2 text-foreground/70"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
+      {/* Mobile hamburger */}
+      <button type="button" aria-label="Menu" class="md:hidden p-1.5 text-white/60 hover:text-white" id="nav-toggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
         </svg>
       </button>
     </div>
-  </div>
 
-  {/* Mobile menu */}
-  <div id="mobile-menu" class="md:hidden hidden border-t border-border bg-card px-6 py-5 flex-col gap-4 shadow-lg">
-    <a href="/news" class="text-sm font-medium text-foreground hover:text-primary transition-colors">News</a>
-    <a href="/themes" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Themes</a>
-    <a href="/podcast" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Podcast</a>
-    <a href="/episodes" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Episodes</a>
-    <a href="/partnerships" class="text-sm font-medium text-foreground hover:text-primary transition-colors">Partnerships</a>
-    <a href="/contact" class="w-full px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold text-center">Contact</a>
-  </div>
+    {/* Mobile menu */}
+    <div id="nav-menu" class="md:hidden hidden border-t border-white/5 bg-[#0a0a0a]/95 backdrop-blur-md">
+      <div class="py-3 px-6">
+        <a href="/news/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">News</a>
+        <a href="/themes/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Themes</a>
+        <a href="/podcast/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Podcast</a>
+        <a href="/episodes/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Episodes</a>
+        <a href="/partnerships/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Partner</a>
+      </div>
+    </div>
+  </nav>
+  {/* Spacer */}
+  <div style="height: 96px;"></div>
 </header>
 
-{/* Spacer so page content doesn't hide under fixed nav */}
-<div aria-hidden="true" style="height: 80px;"></div>
+<script is:inline>
+(function() {
+  var nav = document.getElementById('main-nav');
+  var inner = document.getElementById('nav-inner');
+  var logo = document.getElementById('nav-logo');
+  var toggle = document.getElementById('nav-toggle');
+  var menu = document.getElementById('nav-menu');
 
-<script>
-  // ── Scroll-shrink: header shrinks from 80→64px past 60px scroll ──
-  const nav = document.getElementById("site-nav");
-  const navInner = document.getElementById("nav-inner");
-  const logo = document.getElementById("nav-logo");
-
-  const onScroll = () => {
-    const scrolled = window.scrollY > 60;
-    if (!nav || !navInner || !logo) return;
-    if (scrolled) {
-      nav.classList.add("border-border", "bg-card/95", "shadow-sm");
-      nav.classList.remove("border-transparent", "bg-card/80");
-      navInner.style.height = "64px";
-      logo.style.width = "56px";
-      logo.style.height = "56px";
-    } else {
-      nav.classList.remove("border-border", "bg-card/95", "shadow-sm");
-      nav.classList.add("border-transparent", "bg-card/80");
-      navInner.style.height = "80px";
-      logo.style.width = "72px";
-      logo.style.height = "72px";
+  // Scroll: compact nav
+  var scrolled = false;
+  window.addEventListener('scroll', function() {
+    var now = window.scrollY > 40;
+    if (now !== scrolled) {
+      scrolled = now;
+      if (scrolled) {
+        nav.style.background = 'rgba(8,8,8,0.95)';
+        nav.style.backdropFilter = 'blur(12px)';
+        nav.style.borderColor = 'rgba(255,255,255,0.06)';
+        inner.style.height = '64px';
+        logo.style.width = '67px';
+        logo.style.height = '67px';
+      } else {
+        nav.style.background = 'rgba(8,8,8,0.6)';
+        nav.style.backdropFilter = 'blur(8px)';
+        nav.style.borderColor = 'transparent';
+        inner.style.height = '96px';
+        logo.style.width = '90px';
+        logo.style.height = '90px';
+      }
     }
-  };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  }, { passive: true });
 
-  // ── Mega-menu hover open/close with 150ms close delay ──
-  let closeTimeout: ReturnType<typeof setTimeout> | null = null;
+  // Mobile toggle
+  if (toggle && menu) {
+    toggle.addEventListener('click', function() {
+      menu.classList.toggle('hidden');
+    });
+  }
 
-  document.querySelectorAll<HTMLElement>(".nav-dropdown").forEach((wrap) => {
-    const id = wrap.dataset.dropdown;
-    if (!id) return;
-    const panel = wrap.querySelector<HTMLElement>(`[data-panel="${id}"]`);
-    if (!panel) return;
+  // Mega menu dropdowns
+  function setupDropdown(triggerId, dropdownId, wrapId) {
+    var trigger = document.getElementById(triggerId);
+    var dropdown = document.getElementById(dropdownId);
+    var wrap = document.getElementById(wrapId);
+    if (!trigger || !dropdown || !wrap) return;
+    var timeout;
 
-    const open = () => {
-      if (closeTimeout) { clearTimeout(closeTimeout); closeTimeout = null; }
-      panel.classList.remove("opacity-0", "invisible");
-      panel.classList.add("opacity-100", "visible");
-    };
-    const close = () => {
-      closeTimeout = setTimeout(() => {
-        panel.classList.add("opacity-0", "invisible");
-        panel.classList.remove("opacity-100", "visible");
-      }, 150);
-    };
+    function show() { clearTimeout(timeout); dropdown.classList.remove('hidden'); }
+    function hide() { timeout = setTimeout(function() { dropdown.classList.add('hidden'); }, 150); }
 
-    wrap.addEventListener("mouseenter", open);
-    wrap.addEventListener("mouseleave", close);
-    panel.addEventListener("mouseenter", open);
-    panel.addEventListener("mouseleave", close);
-  });
+    wrap.addEventListener('mouseenter', show);
+    wrap.addEventListener('mouseleave', hide);
+    trigger.addEventListener('click', function(e) {
+      e.preventDefault();
+      dropdown.classList.toggle('hidden');
+    });
+    // Close on click outside
+    document.addEventListener('click', function(e) {
+      if (!wrap.contains(e.target)) dropdown.classList.add('hidden');
+    });
+  }
 
-  // ── Mobile menu toggle ──
-  const btn = document.getElementById("mobile-menu-btn");
-  const menu = document.getElementById("mobile-menu");
-  btn?.addEventListener("click", () => {
-    menu?.classList.toggle("hidden");
-    menu?.classList.toggle("flex");
-  });
+  setupDropdown('news-trigger', 'news-dropdown', 'news-dropdown-wrap');
+  setupDropdown('themes-trigger', 'themes-dropdown', 'themes-dropdown-wrap');
+})();
 </script>

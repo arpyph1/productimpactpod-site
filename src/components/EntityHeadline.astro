@@ -1,0 +1,99 @@
+---
+// EntityHeadline — renders a headline with entity names highlighted in coral.
+// Uses a built-in keyword dictionary of known entities (companies, people, products).
+// Any matching name in the headline gets wrapped in a coral <span>.
+//
+// This approach doesn't depend on per-article entity metadata — it matches
+// against a global dictionary, similar to how Particle.news highlights
+// "OpenAI", "ChatGPT", "Palantir" etc in every headline.
+
+export interface Props {
+  title: string;
+  entities?: string[]; // Optional additional slugs to highlight
+  class?: string;
+  tag?: "h1" | "h2" | "h3" | "span";
+}
+
+const {
+  title,
+  entities = [],
+  class: className = "",
+  tag = "h2",
+} = Astro.props;
+
+// Global entity dictionary — names that get highlighted in any headline.
+// Add new entities as coverage expands.
+const KNOWN_ENTITIES: string[] = [
+  // Companies
+  "Anthropic", "OpenAI", "Google", "Meta", "Apple", "Microsoft", "NVIDIA",
+  "Amazon", "Tesla", "Samsung", "Hugging Face", "Cohere", "Mistral",
+  "LangChain", "CrewAI", "Dust", "Figure AI", "Apptronik",
+  "AWS", "Bedrock", "Vertex AI",
+  // Products
+  "ChatGPT", "Claude", "Claude Managed Agents", "Copilot", "Gemini",
+  "GPT-4", "GPT-5", "Sora", "DALL-E", "Midjourney",
+  "Ray-Ban Display", "Apple Glass", "Vision Pro",
+  "Humane AI Pin", "Rabbit R1", "Limitless Pin",
+  "Cosmos", "Rubin",
+  // People
+  "Jensen Huang", "Sam Altman", "Mark Zuckerberg", "Tim Cook",
+  "Satya Nadella", "Sundar Pichai", "Elon Musk",
+  "Robert Brunner", "Jony Ive", "Jessica Yan",
+  "Dario Amodei", "Daniela Amodei",
+  // Concepts that deserve highlighting
+  "Physical AI", "Agentic AI",
+];
+
+// Convert slugs to display names and add to the list
+function slugToName(slug: string): string {
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const allEntities = [
+  ...KNOWN_ENTITIES,
+  ...entities.map(slugToName),
+];
+
+// Deduplicate and sort by length (longest first so "Claude Managed Agents" matches before "Claude")
+const uniqueNames = [...new Set(allEntities)].sort((a, b) => b.length - a.length);
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Build highlighted HTML
+function highlightEntities(text: string, names: string[]): string {
+  if (!names.length) return escapeHtml(text);
+
+  let result = text;
+  const replacements: Array<{ placeholder: string; html: string }> = [];
+
+  names.forEach((name, i) => {
+    const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, "gi");
+    if (!regex.test(result)) return; // skip if not in title
+    regex.lastIndex = 0;
+    const placeholder = `\x00ENT${i}\x00`;
+    result = result.replace(regex, placeholder);
+    replacements.push({
+      placeholder,
+      html: `<span style="color:#ff6b4a">${escapeHtml(name)}</span>`,
+    });
+  });
+
+  let escaped = escapeHtml(result);
+  replacements.forEach(({ placeholder, html }) => {
+    escaped = escaped.replaceAll(escapeHtml(placeholder), html);
+  });
+
+  return escaped;
+}
+
+const html = highlightEntities(title, uniqueNames);
+const Tag = tag;
+---
+
+<Tag class={className} set:html={html} />

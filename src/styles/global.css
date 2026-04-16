@@ -2,429 +2,275 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@700;800;900&display=swap');
+/* ─────────────────────────────────────────────────────────────
+ * Product Impact — Global Design Tokens
+ * Modeled after Particle.news visual language:
+ *   - Near-black backgrounds with barely-visible elevation layers
+ *   - High-contrast near-white body text
+ *   - Coral (#ff6b4a) as the single accent for links, badges, entity names
+ *   - Tight spacing, high information density
+ *   - Professional editorial feel, not a dev prototype
+ * ───────────────────────────────────────────────────────────── */
 
-/* =====================================================
-   PRODUCT IMPACT — Particle.news-inspired Dark Theme
-   Editorial, dense, news-publication aesthetic.
-   All colours HSL — see tailwind.config.js for token map.
-   Ported from Lovable's Home design (April 2026).
-   ===================================================== */
+:root {
+  color-scheme: dark;
 
-@layer base {
-  :root {
-    /* Dark foundation */
-    --background:       0 0% 4%;
-    --foreground:       0 0% 95%;
+  /* Backgrounds — barely distinguishable layers */
+  --bg-base: #080808;
+  --bg-surface: #0c0c0c;
+  --bg-card: #111111;
+  --bg-card-hover: #161616;
+  --bg-elevated: #1a1a1a;
 
-    --card:             0 0% 7%;
-    --card-foreground:  0 0% 95%;
+  /* Borders — subtle dividers */
+  --border: #181818;
+  --border-strong: #222222;
 
-    --popover:          0 0% 7%;
-    --popover-foreground: 0 0% 95%;
+  /* Text — high contrast, no gray-on-gray */
+  --text-primary: #f0f0f0;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #777777;
+  --text-faint: #4a4a4a;
 
-    /* Brand — coral/terracotta primary */
-    --primary:          4 75% 55%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary:        0 0% 12%;
-    --secondary-foreground: 0 0% 90%;
-
-    --muted:            0 0% 12%;
-    --muted-foreground: 0 0% 65%;
-
-    /* Accent — warm amber/gold */
-    --accent:           4 75% 55%;          /* alias of primary for legacy code */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive:      0 70% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border:           0 0% 14%;
-    --input:            0 0% 14%;
-    --ring:             4 75% 55%;
-
-    --radius: 0.75rem;
-
-    /* Named brand palette */
-    --coral:    4 75% 55%;
-    --teal:     182 55% 42%;
-    --amber:    38 90% 50%;
-    --lavender: 260 50% 58%;
-    --sage:     140 35% 45%;
-    --orange:   20 90% 55%;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  html {
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    overflow-x: hidden;
-    margin: 0;
-    min-height: 100vh;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.02em;
-    font-weight: 800;
-  }
+  /* Accent — coral, used sparingly */
+  --accent: #ff6b4a;
+  --accent-hover: #ff8566;
+  --accent-muted: rgba(255, 107, 74, 0.15);
+  --accent-text: #ff8566;
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- * Containers — match Lovable's `container mx-auto px-6` pattern
- * ──────────────────────────────────────────────────────────────────────────── */
+/* ── Base ── */
 
-.container-prose {
-  max-width: 720px;
+html {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  margin: 0;
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+  /* Particle-style subtle ambient gradient on body */
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(255,107,74,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(155,123,255,0.02) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--accent-muted);
+  color: var(--text-primary);
+}
+
+/* ── Layout containers ── */
+
+.container-narrow {
+  max-width: 680px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 .container-wide {
-  max-width: 1400px;
+  max-width: 1140px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Section divider — subtle horizontal rule between major sections
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.section-divider {
-  height: 1px;
-  background: hsl(var(--border));
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Studio card — the Particle-style card used for articles, episodes, etc.
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.studio-card {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
-  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04), 0 1px 2px hsl(0 0% 0% / 0.06);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.studio-card:hover {
-  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08), 0 2px 4px hsl(0 0% 0% / 0.06);
-  border-color: hsl(var(--primary) / 0.3);
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Agency-style underline-on-hover link
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.agency-link {
-  position: relative;
-  display: inline-block;
-}
-.agency-link::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background: currentColor;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.agency-link:hover::after { width: 100%; }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Episode card hover
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.episode-card {
-  transition: transform 0.2s ease;
-}
-.episode-card:hover {
-  transform: translateY(-2px);
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Animated waveform bars (under "Listen" indicators)
- * ──────────────────────────────────────────────────────────────────────────── */
-
-@keyframes wave {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
-}
-.wave-bar {
-  display: inline-block;
-  width: 2px;
-  background: hsl(var(--primary));
-  border-radius: 1px;
-  animation: wave 1.4s ease-in-out infinite;
-}
-.wave-bar:nth-child(2) { animation-delay: 0.1s; background: hsl(var(--teal)); }
-.wave-bar:nth-child(3) { animation-delay: 0.2s; }
-.wave-bar:nth-child(4) { animation-delay: 0.3s; background: hsl(var(--amber)); }
-.wave-bar:nth-child(5) { animation-delay: 0.4s; background: hsl(var(--lavender)); }
-.wave-bar:nth-child(6) { animation-delay: 0.5s; background: hsl(var(--sage)); }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Marquee (sponsor logos, listen-on platforms)
- * ──────────────────────────────────────────────────────────────────────────── */
-
-@keyframes marquee {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee 24s linear infinite;
-}
-.marquee-track:hover { animation-play-state: paused; }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Fade-in animation
- * ──────────────────────────────────────────────────────────────────────────── */
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.fade-up { animation: fadeUp 0.5s ease forwards; }
-.fade-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
-.fade-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
-.fade-up-delay-3 { animation-delay: 0.35s; opacity: 0; }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Gradient text — used for splash headlines
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.gradient-text {
-  background: linear-gradient(135deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--coral)) 40%,
-    hsl(var(--amber)) 70%,
-    hsl(var(--teal)) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Particle-style hero overlay (article hero image gradient)
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.particle-hero-overlay {
-  background: linear-gradient(to top,
-    hsl(0 0% 0% / 0.85) 0%,
-    hsl(0 0% 0% / 0.5) 40%,
-    hsl(0 0% 0% / 0.1) 70%,
-    transparent 100%
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Overview card — for TL;DR bullet boxes on article pages
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.overview-card {
-  background: hsl(var(--muted));
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Glow effects — subtle accents on primary CTAs
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.glow-orange { box-shadow: 0 0 30px hsl(var(--coral) / 0.15); }
-.glow-purple { box-shadow: 0 0 30px hsl(var(--lavender) / 0.15); }
-.glow-teal   { box-shadow: 0 0 20px hsl(var(--teal) / 0.15); }
-.glow-amber  { box-shadow: 0 0 20px hsl(var(--amber) / 0.15); }
-
-.neon-border       { border: 1px solid hsl(var(--primary) / 0.2); }
-.neon-border-teal  { border: 1px solid hsl(var(--teal) / 0.2); }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Article body typography (Anthropic-article style)
- * Apply .article-body to the article's content container.
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.article-body,
-.article-prose {
-  font-size: 19px;
-  line-height: 1.75;
-  color: hsl(var(--foreground));
-  font-weight: 400;
-  font-family: 'Inter', system-ui, sans-serif;
-  max-width: 720px;
-  margin-left: auto;
-  margin-right: auto;
-}
-@media (max-width: 639px) {
-  .article-body,
-  .article-prose { font-size: 17px; padding-left: 1.25rem; padding-right: 1.25rem; }
-}
-
-.article-body p,
-.article-prose p {
-  margin-top: 0;
-  margin-bottom: 1.5em;
-}
-
-.article-body h1,
-.article-prose h1 {
-  font-family: 'Montserrat', 'Inter', sans-serif;
-  font-size: 56px;
-  font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  margin-top: 64px;
-  margin-bottom: 20px;
-}
-
-.article-body h2,
-.article-prose h2 {
-  font-family: 'Montserrat', 'Inter', sans-serif;
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin-top: 64px;
-  margin-bottom: 20px;
   padding-left: 16px;
-  border-left: 4px solid hsl(var(--primary));
-  color: hsl(var(--foreground));
+  padding-right: 16px;
 }
 
-.article-body h3,
-.article-prose h3 {
-  font-family: 'Montserrat', 'Inter', sans-serif;
-  font-size: 26px;
+@media (min-width: 640px) {
+  .container-narrow,
+  .container-wide {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* ── Section dividers ── */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  border: none;
+  margin: 0;
+}
+
+/* ── Article prose — the typography fix ── */
+
+.article-prose {
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.78;
+  max-width: 680px;
+}
+
+@media (max-width: 639px) {
+  .article-prose {
+    font-size: 16.5px;
+    line-height: 1.72;
+  }
+}
+
+.article-prose p {
+  margin: 0 0 1.4em;
+  color: var(--text-primary);
+}
+
+.article-prose strong,
+.article-prose b {
+  color: #ffffff;
   font-weight: 700;
-  line-height: 1.3;
-  margin-top: 40px;
-  margin-bottom: 12px;
-  color: hsl(var(--foreground));
 }
 
-@media (max-width: 639px) {
-  .article-body h1, .article-prose h1 { font-size: 36px; }
-  .article-body h2, .article-prose h2 { font-size: 28px; margin-top: 48px; }
-  .article-body h3, .article-prose h3 { font-size: 22px; }
+.article-prose em {
+  color: var(--text-primary);
 }
 
-.article-body blockquote,
-.article-prose blockquote {
-  font-size: 22px;
-  font-style: italic;
-  line-height: 1.5;
-  color: hsl(var(--foreground));
-  border-left: 4px solid hsl(var(--primary));
-  padding-left: 24px;
-  margin: 48px 0;
-}
-@media (max-width: 639px) {
-  .article-body blockquote, .article-prose blockquote { font-size: 18px; margin: 32px 0; }
-}
-
-.article-body a,
 .article-prose a {
-  color: hsl(var(--primary));
+  color: var(--accent);
   text-decoration: underline;
+  text-decoration-color: rgba(255, 107, 74, 0.35);
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
-  transition: color 0.15s;
+  transition: text-decoration-color 0.15s;
 }
-.article-body a:hover,
+
 .article-prose a:hover {
-  color: hsl(var(--coral) / 0.85);
+  text-decoration-color: var(--accent);
 }
 
-.article-body strong,
-.article-prose strong {
-  color: hsl(var(--foreground));
+/* Headings in article body */
+.article-prose h2 {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+  margin: 56px 0 16px;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 639px) {
+  .article-prose h2 {
+    font-size: 23px;
+    margin-top: 40px;
+  }
+}
+
+.article-prose h3 {
+  font-size: 22px;
   font-weight: 700;
+  line-height: 1.3;
+  color: #ffffff;
+  margin: 40px 0 12px;
+  letter-spacing: -0.01em;
 }
 
-.article-body ul, .article-body ol,
-.article-prose ul, .article-prose ol {
-  margin-bottom: 1.5em;
-  padding-left: 1.5em;
+@media (max-width: 639px) {
+  .article-prose h3 {
+    font-size: 19px;
+    margin-top: 32px;
+  }
 }
-.article-body li,
+
+/* Blockquotes — the Brunner and Yan quotes */
+.article-prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 0 2px 20px;
+  margin: 36px 0;
+}
+
+.article-prose blockquote p {
+  font-size: 17px;
+  font-style: italic;
+  line-height: 1.7;
+  color: #ffffff;
+  margin-bottom: 0.6em;
+}
+
+.article-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 639px) {
+  .article-prose blockquote {
+    padding-left: 16px;
+    margin: 28px 0;
+  }
+  .article-prose blockquote p {
+    font-size: 15.5px;
+  }
+}
+
+/* Lists */
+.article-prose ul,
+.article-prose ol {
+  margin: 1em 0 1.4em;
+  padding-left: 1.25em;
+}
+
 .article-prose li {
-  margin-bottom: 0.5em;
-  color: hsl(var(--foreground));
+  margin-bottom: 0.4em;
+  color: var(--text-primary);
+  line-height: 1.7;
 }
-.article-body ul li::marker,
+
 .article-prose ul li::marker {
-  color: hsl(var(--primary));
+  color: var(--accent);
 }
 
-.article-body img,
+/* Horizontal rules */
+.article-prose hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 48px 0;
+}
+
+/* Images in body */
 .article-prose img {
-  width: 100%;
+  max-width: 100%;
+  height: auto;
   border-radius: 8px;
-  margin: 2em 0;
+  margin: 28px 0;
 }
 
-.article-body code,
+/* Code */
 .article-prose code {
-  background: hsl(var(--muted));
-  padding: 0.15em 0.4em;
-  border-radius: 4px;
-  font-size: 0.92em;
-  color: hsl(var(--primary));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  background: var(--bg-card);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.88em;
+  color: var(--accent-text);
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
 }
 
-.article-body pre,
 .article-prose pre {
-  background: hsl(var(--muted));
-  padding: 20px;
+  background: var(--bg-card);
+  padding: 16px 20px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 24px 0;
+  border: 1px solid var(--border);
 }
-.article-body pre code,
+
 .article-prose pre code {
   background: none;
   padding: 0;
-  color: hsl(var(--foreground));
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- * Hide horizontal scrollbars (used on episode strips, marquees)
- * ──────────────────────────────────────────────────────────────────────────── */
-
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Custom scrollbar (page-level)
- * ──────────────────────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 2px; }
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Accessibility helpers
- * ──────────────────────────────────────────────────────────────────────────── */
+/* ── Utility ── */
 
 .sr-only {
   position: absolute;
@@ -439,7 +285,21 @@
 }
 
 *:focus-visible {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 2px;
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
 }

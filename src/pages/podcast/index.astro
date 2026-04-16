@@ -1,0 +1,432 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
+
+const rssEpisodes = await fetchPodcastEpisodes(50);
+const substackEditions = await fetchSubstackEditions(8);
+const siteUrl = "https://productimpactpod.com";
+
+const show = {
+  spotify: "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf?si=HdJqXcIhQ1qBH0ltXkz3zA",
+  apple: "https://podcasts.apple.com/us/podcast/design-of-ai-build-products-that-customers/id1734499859",
+  youtube: "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
+  substack: "https://productimpactpod.substack.com",
+  channelId: "UCb1nY02YcJYZZ_XtvcIBcrw",
+  heroVideo3Url: "https://www.youtube.com/shorts/-AIs2p6agMw",
+};
+
+const hosts = [
+  {
+    name: "Arpy Dragffy",
+    role: "Host",
+    bio: "Strategist with 20 years of experience leading digital experience innovations across tech, healthcare, education, entertainment. and commerce. He\u2019s trusted by leaders to prioritize AI roadmaps, sharpen positioning, and reignite growth through business strategy, competitive analysis, ideation, feature definition.",
+    linkedin: "https://www.linkedin.com/in/adragffy/",
+    photo: "https://github.com/arpyph1/my-assets/blob/main/arpy%20headshot%20600.png?raw=true",
+  },
+  {
+    name: "Brittany Hobbs",
+    role: "Host",
+    bio: "Career researcher working at the forefront of behavioural science, UX, and AI. Over the past two decades she has led digital transformation and UX strategy projects for Spotify, BBVA, Google, Mozilla, Government of Canada, and many more. Her focus is measuring AI\u2019s impact and identifying barriers to adoption in enterprise orgs.",
+    linkedin: "https://www.linkedin.com/in/brittanyhobbs/",
+    photo: "https://github.com/arpyph1/my-assets/blob/main/brittany%20headshot%20600.JPG?raw=true",
+  },
+];
+
+const sponsors = [
+  { name: "PH1", tagline: "Ship products that are proven to deliver impact in the AI era", url: "https://ph1.ca", logoUrl: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true" },
+  { name: "AI Value Acceleration", tagline: "We find exactly where value stalls, why, and whose job it is to fix", url: "https://aivalueacceleration.com/", logoUrl: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png" },
+];
+
+const stats = [
+  { value: "Top 2%", label: "MOST SHARED PODCASTS" },
+  { value: "#1", label: "AI STRATEGY PODCAST" },
+  { value: "10,000+", label: "FOLLOWERS" },
+];
+
+const faqs = [
+  { q: "What is the focus of the Product Impact Podcast?", a: "Started in 2023, this podcast focuses on three core areas: (1) Measuring the impact of AI-powered products \u2014 providing frameworks and strategies for measuring impact. (2) Scaling the impact of AI-powered products \u2014 optimizing leverage to deliver more impact. (3) Overcoming adoption barriers \u2014 highlighting strategies used by the world\u2019s leading orgs to scale value and impact." },
+  { q: "What types of guests is the Product Impact Podcast looking for?", a: "Our focus is highly strategic and pragmatic. We want business, product, design, and research leaders who can unpack the uncomfortable truths about delivering impact at scale. We are seeking dedicated academics and thought leaders who challenge the status quo on how to measure and improve impact delivery." },
+  { q: "Why did Design of AI podcast rebrand to Product Impact Podcast?", a: "We started the Design of AI podcast at the end of 2023 at a time when GenAI was a black box of possibilities. Our focus was to help people working in tech navigate a great time of change. We\u2019ve now moved into the next era of AI \u2014 scaling value. Where season one was focused on explaining AI and how roles will change, season 2 focuses on how to measure impact and how to scale impact." },
+];
+
+const testimonials = [
+  "Great episode! Thoroughly enjoyed it! Learned a lot and very inspirational! Thank you",
+  "Thank you for the sanity. I am a data scientist and the hype is completely out of control in my field. I have been pushing hard in my professional communities that we need to be more honest about the capabilities and limitations of LLMs",
+  "Great episode. I love the show and always have great takeaways that help me. Big thank you to the team that makes this happen",
+];
+
+// Get video ID from YouTube Shorts URL
+function getVideoId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+const heroVideo3Id = getVideoId(show.heroVideo3Url);
+
+const jsonLd = [
+  { "@context": "https://schema.org", "@type": "PodcastSeries", name: "Product Impact Podcast", url: `${siteUrl}/podcast`, webFeed: "https://anchor.fm/s/f32cce5c/podcast/rss" },
+  { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
+];
+---
+
+<BaseLayout
+  title="Product Impact Podcast — Prove impact. Improve impact. Scale impact."
+  description="The podcast for product leaders navigating AI. Interviews with the people building, shipping, and measuring AI products."
+  canonicalUrl={`${siteUrl}/podcast`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main>
+
+    {/* ═══ HERO — Title + platforms + 3 staircase vertical videos ═══ */}
+    <section class="relative bg-[#080808] pt-8 pb-6 text-center">
+      <div class="max-w-[900px] mx-auto px-6">
+        <h1 class="font-extrabold uppercase leading-[0.92] tracking-tight text-white mb-6" style="font-size: clamp(2.4rem, 6vw, 5rem); letter-spacing: -0.03em;">
+          Product Impact<br />Podcast
+        </h1>
+
+        <div class="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <a href={show.spotify} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
+            <span class="w-3 h-3 rounded-full bg-[#1DB954]"></span> Spotify
+          </a>
+          <a href={show.apple} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
+            <span class="w-3 h-3 rounded-full bg-[#B150E2]"></span> Apple Podcasts
+          </a>
+          <a href={show.youtube} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
+            <span class="w-3 h-3 rounded-full bg-[#FF0000]"></span> YouTube
+          </a>
+        </div>
+      </div>
+
+      {/* 3 staircase vertical video cards */}
+      <div class="max-w-[700px] mx-auto px-6 mb-8">
+        <div class="hidden md:grid md:grid-cols-3 gap-5 items-start">
+          {rssEpisodes.slice(0, 3).map((ep, i) => (
+            <div style={`margin-top: ${i * 2.5}rem;`}>
+              <div class="relative rounded-xl overflow-hidden border border-[#1c1c1c] shadow-xl group" style="aspect-ratio: 9/16;">
+                {ep.imageUrl ? (
+                  <img src={ep.imageUrl} alt={ep.title} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+                ) : (
+                  <div class="absolute inset-0 bg-[#111]"></div>
+                )}
+                <div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-500"></div>
+                {/* Play button */}
+                <a href={ep.link || show.youtube} target="_blank" rel="noopener" class="absolute inset-0 flex items-center justify-center">
+                  <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-xl hover:scale-110 transition-transform">
+                    <svg class="w-5 h-5 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </a>
+                {/* Title overlay at bottom */}
+                <div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                  <span class="text-[11px] font-medium text-white/90 line-clamp-2">{ep.title}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Mobile: horizontal scroll */}
+        <div class="md:hidden flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6">
+          {rssEpisodes.slice(0, 3).map((ep) => (
+            <div class="snap-center shrink-0" style="width: 55vw; max-width: 220px;">
+              <div class="relative rounded-xl overflow-hidden border border-[#1c1c1c] group" style="aspect-ratio: 9/16;">
+                {ep.imageUrl ? (
+                  <img src={ep.imageUrl} alt={ep.title} class="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div class="absolute inset-0 bg-[#111]"></div>
+                )}
+                <div class="absolute inset-0 bg-black/50"></div>
+                <a href={ep.link || "#"} target="_blank" rel="noopener" class="absolute inset-0 flex items-center justify-center">
+                  <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center"><svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+                </a>
+                <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                  <span class="text-[10px] font-medium text-white/90 line-clamp-2">{ep.title}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="max-w-[600px] mx-auto px-6">
+        <p class="text-[18px] text-[#aaa] font-light leading-relaxed mb-3">Prove impact. Improve impact. Scale impact.</p>
+        <p class="text-[15px] text-[#777] leading-relaxed">
+          Follow the Product Impact Podcast to learn frameworks and strategies to ensure your product is delivering impact to users, teams, businesses, and communities. We investigate enterprise adoption and highlight builders/startups disrupting value creation.
+        </p>
+      </div>
+    </section>
+
+
+    {/* ═══ EPISODES GRID ═══ */}
+    <section class="py-12 border-t border-[#1c1c1c]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="flex items-baseline justify-between mb-8">
+          <h2 class="text-[20px] md:text-[26px] font-extrabold uppercase tracking-tight text-white">Product Impact Podcast Episodes</h2>
+          <span class="text-[12px] text-[#ff6b4a] font-semibold">{rssEpisodes.length} Live RSS</span>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="podcast-episode-grid">
+          {rssEpisodes.map((ep, i) => {
+            const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
+            const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+            return (
+              <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 8 ? 'hidden' : ''}`} data-ep-card>
+                <div class="relative aspect-square rounded-xl overflow-hidden mb-1.5 border border-[#1c1c1c]">
+                  {ep.imageUrl ? (
+                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 8 ? "eager" : "lazy"} />
+                  ) : (
+                    <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[28px]">🎙</span></div>
+                  )}
+                  <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                      <svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  {epLabel && <div class="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
+                </div>
+                <h3 class="text-[11px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-0.5 transition-colors">{ep.title}</h3>
+                <div class="text-[9px] text-[#555]">{date}</div>
+              </a>
+            );
+          })}
+        </div>
+
+        {rssEpisodes.length > 8 && (
+          <div class="text-center mt-8">
+            <button id="podcast-load-more" class="text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2 transition-colors">
+              ↓ Load more episodes
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+
+
+    {/* ═══ STATS ═══ */}
+    <section class="py-16 border-t border-[#1c1c1c]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+          {stats.map((s) => (
+            <div class="flex flex-col items-center gap-3">
+              <span class="font-extrabold text-[#ff6b4a] leading-none" style="font-size: clamp(2.5rem, 5vw, 4.5rem);">{s.value}</span>
+              <span class="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#666]">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
+    {/* ═══ SUBSCRIBE ═══ */}
+    <section class="py-10 border-t border-[#1c1c1c]">
+      <div class="max-w-md mx-auto px-6 text-center">
+        <span class="inline-block text-[11px] font-bold uppercase tracking-[0.15em] text-[#ff6b4a] mb-5">Never miss our AI strategy resources</span>
+        <form id="podcast-substack-form" class="flex items-stretch gap-0">
+          <input type="email" id="podcast-substack-email" placeholder="Type your email..." required
+            class="flex-1 px-4 py-3 bg-[#111] border border-[#222] rounded-l-lg text-[14px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a] transition-colors" />
+          <button type="submit" class="px-6 py-3 bg-[#ff6b4a] text-white text-[14px] font-bold rounded-r-lg hover:bg-[#ff8566] transition-colors shrink-0">Subscribe</button>
+        </form>
+      </div>
+    </section>
+
+
+    {/* ═══ HOSTS — large photos, vertically offset ═══ */}
+    <section class="py-16 border-t border-[#1c1c1c]">
+      <div class="max-w-[900px] mx-auto px-4 md:px-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {hosts.map((host, i) => (
+            <div class={`text-center md:text-left ${i === 1 ? 'md:mt-16' : ''}`}>
+              <div class="w-[260px] h-[340px] rounded-xl overflow-hidden mx-auto md:mx-0 mb-5 border border-[#1c1c1c]">
+                <img src={host.photo} alt={host.name} class="w-full h-full object-cover" loading="lazy" />
+              </div>
+              <div class="flex items-center gap-2 justify-center md:justify-start mb-2">
+                <h3 class="text-[22px] font-extrabold text-white">{host.name}</h3>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a] bg-[#ff6b4a]/10 px-2 py-0.5 rounded">{host.role}</span>
+              </div>
+              <p class="text-[14px] text-[#888] leading-relaxed mb-3">{host.bio}</p>
+              <a href={host.linkedin} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-[12px] text-[#666] hover:text-[#0077B5] transition-colors">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                LinkedIn
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
+    {/* ═══ SPONSORS — PH1 logo much bigger ═══ */}
+    <section class="py-12 border-t border-[#1c1c1c]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <h2 class="text-[22px] font-extrabold uppercase tracking-tight text-white mb-8">Our Partners</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-[#1c1c1c]">
+          {sponsors.map((s, i) => (
+            <a href={s.url} target="_blank" rel="noopener" class="group flex flex-col justify-between p-8 bg-[#080808] hover:bg-[#0c0c0c] transition-colors min-h-[220px]">
+              <div class="mb-6">
+                <div class={`flex items-center ${i === 0 ? 'h-[100px]' : 'h-[70px]'}`}>
+                  <img src={s.logoUrl} alt={`${s.name} logo`} class={`object-contain opacity-80 group-hover:opacity-100 transition-opacity ${i === 0 ? 'max-h-full max-w-[300px]' : 'max-h-full max-w-[280px]'}`} loading="lazy" />
+                </div>
+              </div>
+              <div class="flex items-end justify-between gap-4">
+                <p class="text-[18px] text-[#888] leading-relaxed max-w-[340px]">{s.tagline}</p>
+                <svg class="w-7 h-7 text-[#ff6b4a] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        <div class="mt-6 flex items-center justify-between p-6 rounded-xl border border-[#1c1c1c] bg-[#0a0a0a]">
+          <div>
+            <p class="text-[16px] font-bold text-white">Interested in sponsoring?</p>
+            <p class="text-[13px] text-[#666] mt-0.5">Reach thousands of product leaders and organizational product adoption leaders</p>
+          </div>
+          <a href="/partnerships/" class="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#ff6b4a] text-white text-[13px] font-bold hover:bg-[#ff8566] transition-colors shrink-0">
+            Get in Touch <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+
+    {/* ═══ SUBSTACK EDITIONS ═══ */}
+    {substackEditions.length > 0 && (
+      <section class="py-12 border-t border-[#1c1c1c]">
+        <div class="max-w-[900px] mx-auto px-4 md:px-6">
+          <h2 class="text-[22px] font-extrabold uppercase tracking-tight text-white mb-8">AI Strategy & Value Creation</h2>
+          <div class="divide-y divide-[#1c1c1c]">
+            {substackEditions.map((ed) => {
+              const date = ed.pubDate ? new Date(ed.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+              return (
+                <a href={ed.link} target="_blank" rel="noopener" class="group block py-4">
+                  <h3 class="text-[16px] font-bold text-[#ddd] group-hover:text-white leading-snug mb-1 transition-colors">{ed.title}</h3>
+                  <p class="text-[13px] text-[#666] line-clamp-2 leading-relaxed mb-1">{ed.description}</p>
+                  <div class="text-[11px] text-[#555]">{date}</div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    )}
+
+
+    {/* ═══ TESTIMONIALS — animated slider ═══ */}
+    <section class="py-14 border-t border-[#1c1c1c] overflow-hidden">
+      <div class="max-w-[800px] mx-auto px-4 md:px-6 text-center">
+        <div class="relative min-h-[120px]" id="testimonial-slider">
+          {testimonials.map((t, i) => (
+            <div class={`testimonial-slide absolute inset-0 flex items-center justify-center transition-opacity duration-700 ${i === 0 ? 'opacity-100' : 'opacity-0'}`} data-slide-idx={i}>
+              <p class="text-[18px] md:text-[22px] text-[#ccc] leading-relaxed italic font-light max-w-[640px]">&ldquo;{t}&rdquo;</p>
+            </div>
+          ))}
+        </div>
+        {/* Dots */}
+        <div class="flex items-center justify-center gap-2 mt-6" id="testimonial-dots">
+          {testimonials.map((_, i) => (
+            <button class={`w-2 h-2 rounded-full transition-all ${i === 0 ? 'bg-[#ff6b4a] w-5' : 'bg-white/20 hover:bg-white/40'}`} data-t-dot={i} aria-label={`Quote ${i + 1}`}></button>
+          ))}
+        </div>
+      </div>
+    </section>
+
+
+    {/* ═══ ABOUT / FAQ — large title, progressive disclosure ═══ */}
+    <section class="py-14 border-t border-[#1c1c1c]">
+      <div class="max-w-[1100px] mx-auto px-4 md:px-6">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-10 items-start">
+          {/* Left: large title */}
+          <div>
+            <h2 class="text-[32px] md:text-[40px] font-extrabold uppercase tracking-tight text-white leading-[1.05]">
+              About Product<br />Impact Podcast
+            </h2>
+          </div>
+
+          {/* Right: FAQ accordion */}
+          <div class="space-y-0">
+            {faqs.map((faq, i) => (
+              <details class="group border-b border-[#1c1c1c]" open={i === 0}>
+                <summary class="flex items-center justify-between py-5 cursor-pointer list-none">
+                  <span class="text-[15px] font-semibold text-[#ddd] group-hover:text-white transition-colors pr-4">{faq.q}</span>
+                  <span class="text-[20px] text-[#555] group-open:hidden flex-shrink-0">+</span>
+                  <span class="text-[20px] text-[#555] hidden group-open:inline flex-shrink-0">&minus;</span>
+                </summary>
+                <div class="pb-5 pr-8">
+                  <p class="text-[14px] text-[#888] leading-relaxed">{faq.a}</p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    {/* ═══ PLATFORM BAR ═══ */}
+    <section class="border-t border-[#1c1c1c]">
+      <div class="max-w-[900px] mx-auto px-4 md:px-6">
+        <div class="flex items-center justify-center gap-6 py-6">
+          <a href={show.spotify} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#1DB954] transition-colors">
+            <span class="w-3 h-3 rounded-full bg-[#1DB954]"></span> Spotify
+          </a>
+          <a href={show.apple} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#B150E2] transition-colors">
+            <span class="w-3 h-3 rounded-full bg-[#B150E2]"></span> Apple Podcasts
+          </a>
+          <a href={show.youtube} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#FF4444] transition-colors">
+            <span class="w-3 h-3 rounded-full bg-[#FF0000]"></span> YouTube
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<script is:inline>
+(function() {
+  // Substack form
+  var form = document.getElementById('podcast-substack-form');
+  var email = document.getElementById('podcast-substack-email');
+  if (form && email) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var val = email.value.trim();
+      if (val) { window.open('https://productimpactpod.substack.com/subscribe?email=' + encodeURIComponent(val), '_blank'); email.value = ''; }
+    });
+  }
+
+  // Load more episodes — reveal 8 more each click
+  var loadBtn = document.getElementById('podcast-load-more');
+  var grid = document.getElementById('podcast-episode-grid');
+  if (loadBtn && grid) {
+    loadBtn.addEventListener('click', function() {
+      var hidden = grid.querySelectorAll('a.hidden');
+      var toShow = Math.min(8, hidden.length);
+      for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
+      if (grid.querySelectorAll('a.hidden').length === 0) { loadBtn.style.display = 'none'; }
+    });
+  }
+
+  // Testimonial slider — auto-rotate every 6s
+  var slides = document.querySelectorAll('.testimonial-slide');
+  var dots = document.querySelectorAll('[data-t-dot]');
+  var current = 0;
+  function goTo(idx) {
+    current = idx;
+    slides.forEach(function(s, i) { s.style.opacity = i === idx ? '1' : '0'; });
+    dots.forEach(function(d, i) {
+      d.className = i === idx
+        ? 'w-5 h-2 rounded-full bg-[#ff6b4a] transition-all'
+        : 'w-2 h-2 rounded-full bg-white/20 hover:bg-white/40 transition-all';
+    });
+  }
+  dots.forEach(function(d, i) { d.addEventListener('click', function() { goTo(i); }); });
+  setInterval(function() { goTo((current + 1) % slides.length); }, 6000);
+})();
+</script>
+
+<style is:global>
+  #podcast-episode-grid > a:nth-child(n+9) { /* handled by JS hidden class */ }
+</style>

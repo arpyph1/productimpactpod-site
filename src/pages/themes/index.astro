@@ -1,74 +1,59 @@
 ---
-// /themes — 8-tile themes grid. Each tile links to its hub page.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { getAllThemes } from "@lib/supabase";
-import { canonicalThemes } from "@lib/themes";
+import { getAllThemes, getAllArticles } from "@lib/supabase";
 
+const themes = await getAllThemes();
+const articles = await getAllArticles();
 const siteUrl = "https://productimpactpod.com";
 
-// Merge with Supabase data if available
-const dbThemes = await getAllThemes();
-const displayThemes = canonicalThemes.map((canonical) => {
-  const db = dbThemes.find((t) => t.slug === canonical.slug);
-  return {
-    ...canonical,
-    description: db?.description ?? canonical.description,
-    articleCount: null as number | null, // populated in Phase 2 with a count query
-  };
-});
+const tc: Record<string, number> = {};
+articles.forEach((a) => a.themes?.forEach((t) => { tc[t] = (tc[t] ?? 0) + 1; }));
 
-const collectionJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: "Themes | Product Impact",
-  url: `${siteUrl}/themes`,
-  description: "Explore Product Impact coverage by theme — 8 areas of AI product impact.",
-  isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
+const themeColors: Record<string, string> = {
+  "ai-product-strategy": "#ff6b4a",
+  "agents-agentic-systems": "#9b7bff",
+  "ux-experience-design-for-ai": "#4ab8c9",
+  "adoption-organizational-change": "#f5a623",
+  "evaluation-benchmarking": "#6bbf71",
+  "go-to-market-distribution": "#ff8566",
+  "data-semantics-knowledge-foundations": "#5ba3cc",
+  "governance-risk-trust": "#c96bff",
 };
 ---
 
 <BaseLayout
   title="Themes | Product Impact"
-  description="Explore Product Impact coverage by theme — 8 areas where AI products are having the greatest impact on work and industries."
+  description="8 canonical themes covering AI product strategy, agents, UX, adoption, evaluation, go-to-market, data foundations, and governance."
   canonicalUrl={`${siteUrl}/themes`}
-  jsonLd={collectionJsonLd}
 >
   <Nav />
 
-  <main class="container-wide py-16">
-    <header class="mb-12">
-      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
-        Themes
-      </h1>
-      <p class="text-lg text-[#d4d4d4] max-w-2xl">
-        Product Impact coverage organized around 8 areas where AI is reshaping products, teams, and industries.
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-8">
+      <div class="flex items-baseline gap-2 mb-1">
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">Themes</h1>
+        <span class="text-[16px] font-bold text-[#ff6b4a]">{themes.length}</span>
+      </div>
+      <p class="text-[14px] text-[#777] max-w-lg">
+        The 8 strategic categories that define AI product impact coverage.
       </p>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {displayThemes.map((theme) => (
-        <a
-          href={`/themes/${theme.slug}`}
-          class="group relative flex flex-col overflow-hidden rounded-2xl bg-background-card hover:bg-background-hover transition-colors min-h-[200px]"
-        >
-          {/* Color bar */}
-          <div class={`h-2 w-full bg-gradient-to-r ${theme.gradient} flex-shrink-0`}></div>
-          <div class="flex-1 p-6 flex flex-col">
-            <h2 class="text-lg font-bold text-white mb-2 leading-snug group-hover:text-accent transition-colors">
-              {theme.name}
-            </h2>
-            <p class="text-sm text-[#a0a0a0] leading-relaxed flex-1">
-              {theme.description}
-            </p>
-            <div class="mt-4 text-xs text-accent font-semibold group-hover:text-accent-hover transition-colors">
-              Explore →
-            </div>
-          </div>
-        </a>
-      ))}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {themes.map((theme) => {
+        const color = themeColors[theme.slug] ?? "#ff6b4a";
+        const count = tc[theme.slug] ?? 0;
+        return (
+          <a href={`/themes/${theme.slug}/`} class="group block p-5 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden" style={`background: linear-gradient(160deg, ${color}08, #0c0c0c 60%)`}>
+            <div class="w-3 h-3 rounded-full mb-3" style={`background: ${color}; box-shadow: 0 0 10px ${color}30`}></div>
+            <h2 class="text-[17px] font-bold text-[#e5e5e5] group-hover:text-white transition-colors mb-1.5 leading-snug">{theme.name}</h2>
+            <p class="text-[13px] text-[#777] leading-relaxed mb-3 line-clamp-2">{theme.description ?? ""}</p>
+            <span class="text-[12px] font-bold" style={`color: ${color}`}>{count} {count === 1 ? "article" : "articles"}</span>
+          </a>
+        );
+      })}
     </div>
   </main>
 

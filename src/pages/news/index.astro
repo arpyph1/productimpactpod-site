@@ -1,102 +1,95 @@
 ---
-// /news — page 1 of the paginated news index.
-// Later pages live at /news/page/2, /news/page/3 etc.
-// Split from /news/page/[page] to avoid URL collision with /news/[year]
-// date archives.
-
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import ArticleCard from "@components/ArticleCard.astro";
-import Pagination from "@components/Pagination.astro";
-import { getAllArticles, formatLabel } from "@lib/supabase";
+import EntityHeadline from "@components/EntityHeadline.astro";
+import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
 
-const PAGE_SIZE = 24;
 const articles = await getAllArticles();
-const pageArticles = articles.slice(0, PAGE_SIZE);
-const lastPage = Math.max(1, Math.ceil(articles.length / PAGE_SIZE));
-const hasNext = articles.length > PAGE_SIZE;
-
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news`;
+
+const formats: ArticleFormat[] = ["news-analysis", "feature", "interview", "case-study", "release-note", "opinion", "explainer"];
+
+function timeAgo(d: string): string {
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
 
 const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: "News | Product Impact",
-  description:
-    "AI product impact — news, releases, and case studies about the products transforming how we work and industries.",
-  url: canonicalUrl,
-  isPartOf: { "@id": `${siteUrl}/#website` },
-  mainEntity: {
-    "@type": "ItemList",
-    itemListElement: pageArticles.map((a, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
-      name: a.title,
-    })),
-  },
+  "@context": "https://schema.org", "@type": "CollectionPage",
+  name: "Product Impact News", url: `${siteUrl}/news`,
+  description: "AI product impact — news, releases, and case studies.",
 };
 ---
 
 <BaseLayout
   title="News | Product Impact"
   description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
-  canonicalUrl={canonicalUrl}
+  canonicalUrl={`${siteUrl}/news`}
   jsonLd={jsonLd}
 >
   <Nav />
 
-  <main class="container-wide py-16">
-    <header class="mb-12">
-      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
-        News
-      </h1>
-      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+  <main class="max-w-[900px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-6">
+      <div class="flex items-baseline gap-2 mb-1">
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">News</h1>
+        <span class="text-[16px] font-bold text-[#ff6b4a]">{articles.length}</span>
+      </div>
+      <p class="text-[14px] text-[#777] max-w-lg">
         AI product impact — news, releases, and case studies about the products transforming how we work.
       </p>
     </header>
 
-    {/* Format filter tabs */}
-    <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
-      <a
-        href="/news"
-        class="px-4 py-2 rounded-full text-sm font-semibold bg-background-card text-white border border-accent"
-        aria-current="page"
-      >
-        All
-      </a>
-      {([
-        "news-brief", "news-analysis", "release-note", "feature",
-        "interview", "case-study", "opinion", "explainer",
-        "product-review", "research-brief",
-      ] as const).map((fmt) => (
-        <a
-          href={`/news/format/${fmt}`}
-          class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
-        >
+    {/* Filter tabs */}
+    <div class="flex flex-wrap gap-1.5 mb-8 pb-5 border-b border-[#141414]">
+      <a href="/news/" class="px-3 py-1.5 rounded-md text-[11px] font-semibold bg-[#ff6b4a] text-white">All</a>
+      {formats.map((fmt) => (
+        <a href={`/news/format/${fmt}/`} class="px-3 py-1.5 rounded-md text-[11px] font-medium text-[#777] hover:text-white hover:bg-[#1a1a1a] transition-colors">
           {formatLabel(fmt)}
         </a>
       ))}
     </div>
 
-    {pageArticles.length === 0 ? (
-      <div class="text-center py-24">
-        <p class="text-xl text-[#a0a0a0]">No articles published yet.</p>
-      </div>
+    {/* Article list — Particle compact rows */}
+    {articles.length === 0 ? (
+      <p class="text-[#666] text-center py-16">No articles published yet.</p>
     ) : (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {pageArticles.map((article) => <ArticleCard article={article} />)}
+      <div class="divide-y divide-[#161616]">
+        {articles.map((a) => {
+          const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+          const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+          const time = timeAgo(a.publish_date);
+          return (
+            <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
+              <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
+                {a.hero_image_url ? (
+                  <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                ) : (
+                  <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
+                )}
+              </div>
+              <div class="flex-1 min-w-0 pt-0.5">
+                <EntityHeadline title={a.title} entities={entities} tag="h3"
+                  class="text-[15px] md:text-[17px] font-bold text-[#e5e5e5] leading-[1.3] group-hover:text-white transition-colors inline" />
+                {a.subtitle && <span class="text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
+                <div class="flex items-center gap-2 mt-1.5 text-[11px]">
+                  <span class="font-semibold text-[#ff6b4a] uppercase tracking-wide">{author}</span>
+                  <span class="text-[#333]">|</span>
+                  <span class="text-[#555]">{formatLabel(a.format)}</span>
+                  <span class="text-[#333]">·</span>
+                  <span class="text-[#555]">{time}</span>
+                </div>
+              </div>
+            </a>
+          );
+        })}
       </div>
     )}
-
-    <Pagination
-      currentPage={1}
-      lastPage={lastPage}
-      prevUrl={null}
-      nextUrl={hasNext ? "/news/page/2" : null}
-    />
   </main>
 
   <Footer />
