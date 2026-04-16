@@ -161,7 +161,7 @@ def check_rest_tables(base: str, anon: str) -> Section:
          "Join table. Must exist for article sidebars to render entity mentions."),
         ("themes",          {"select": "slug,name", "limit": "1"},
          "Can be empty — site falls back to src/lib/themes.ts canonicalThemes."),
-        ("shownotes",       {"select": "episode_guid,title", "published": "eq.true", "limit": "1"},
+        ("episode_shownotes", {"select": "episode_guid,title", "published": "eq.true", "limit": "1"},
          "Podcast episodes. Empty is fine — /episodes will just render empty state."),
     ]
 
