@@ -4,7 +4,7 @@
 
 <header>
   <nav class="fixed top-0 left-0 right-0 z-50 border-b border-transparent transition-all duration-300" id="main-nav">
-    <div class="container-wide flex items-center justify-between transition-all duration-300" style="height: 96px;" id="nav-inner">
+    <div class="container-wide flex items-center justify-between transition-all duration-300" style="height: 120px;" id="nav-inner">
 
       {/* Left nav items — with mega menu dropdowns */}
       <div class="hidden md:flex items-center gap-6 flex-1">
@@ -71,7 +71,7 @@
 
       {/* Center logo */}
       <a href="/" class="flex items-center justify-center flex-shrink-0">
-        <img src="/logo.png" alt="Product Impact Podcast" class="object-contain transition-all duration-300" style="width: 160px; height: 160px;" id="nav-logo" />
+        <img src="/nav-logo-full.png" alt="Product Impact Podcast" class="object-contain transition-all duration-300" style="width: 300px; height: 300px;" id="nav-logo" />
       </a>
 
       {/* Right nav items */}
@@ -103,7 +103,7 @@
     </div>
   </nav>
   {/* Spacer */}
-  <div style="height: 96px;"></div>
+  <div style="height: 120px;"></div>
 </header>
 
 <script is:inline>
@@ -124,16 +124,16 @@
         nav.style.background = 'rgba(8,8,8,0.95)';
         nav.style.backdropFilter = 'blur(12px)';
         nav.style.borderColor = 'rgba(255,255,255,0.06)';
-        inner.style.height = '64px';
-        logo.style.width = '140px';
-        logo.style.height = '140px';
+        inner.style.height = '80px';
+        logo.style.width = '200px';
+        logo.style.height = '200px';
       } else {
         nav.style.background = 'rgba(8,8,8,0.6)';
         nav.style.backdropFilter = 'blur(8px)';
         nav.style.borderColor = 'transparent';
-        inner.style.height = '96px';
-        logo.style.width = '220px';
-        logo.style.height = '220px';
+        inner.style.height = '120px';
+        logo.style.width = '300px';
+        logo.style.height = '300px';
       }
     }
   }, { passive: true });

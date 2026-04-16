@@ -194,9 +194,12 @@ async function buildAll() {
   // iOS home screen icon — full logo so the wordmark is visible
   results.push(await resizeSquare(SRC_FULL_500, "apple-touch-icon.png", 180));
 
-  // Horizontal publisher logos — circle + "Product Impact" wordmark
+  // Horizontal publisher logo (Google News / NewsMediaOrganization schema)
   results.push(await composePublisherLogo("logo.png",       600,  60));
   results.push(await composePublisherLogo("logo-large.png", 1200, 120));
+
+  // Square nav logo — full circle + baked-in wordmark art for the centered nav mark
+  results.push(await resizeSquare(SRC_FULL_1000, "nav-logo-full.png", 600));
 
   // Open Graph default card
   results.push(await composeOgCard("og-default.png"));
