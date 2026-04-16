@@ -95,15 +95,18 @@ const jsonLd = [
           Product Impact<br />Podcast
         </h1>
 
-        <div class="flex flex-wrap items-center justify-center gap-3 mb-8">
-          <a href={show.spotify} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
-            <span class="w-3 h-3 rounded-full bg-[#1DB954]"></span> Spotify
+        <div class="flex flex-wrap items-center justify-center gap-4 mb-8">
+          <a href={show.spotify} target="_blank" rel="noopener" class="flex items-center gap-2.5 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#1DB954]/50 transition-all">
+            <svg viewBox="0 0 168 168" class="w-5 h-5"><path fill="#1DB954" d="M83.996.277C37.747.277.253 37.77.253 84.019c0 46.251 37.494 83.741 83.743 83.741 46.254 0 83.744-37.49 83.744-83.741 0-46.246-37.49-83.738-83.745-83.738l.001-.004zm38.404 120.78a5.217 5.217 0 01-7.18 1.73c-19.662-12.01-44.414-14.73-73.564-8.07a5.222 5.222 0 01-6.249-3.93 5.213 5.213 0 013.926-6.25c31.9-7.291 59.263-4.15 81.337 9.34 2.46 1.51 3.24 4.72 1.73 7.18zm10.25-22.805c-1.89 3.075-5.91 4.045-8.98 2.155-22.51-13.839-56.823-17.846-83.448-9.764-3.453 1.043-7.1-.903-8.148-4.35a6.538 6.538 0 014.354-8.143c30.413-9.228 68.222-4.758 94.072 11.127 3.07 1.89 4.04 5.91 2.15 8.976zm.88-23.744c-26.99-16.031-71.52-17.505-97.289-9.684-4.138 1.255-8.514-1.081-9.768-5.219a7.835 7.835 0 015.221-9.771c29.581-8.98 78.756-7.245 109.83 11.202a7.823 7.823 0 012.74 10.733c-2.2 3.722-7.02 4.949-10.73 2.739z"/></svg>
+            Spotify
           </a>
-          <a href={show.apple} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
-            <span class="w-3 h-3 rounded-full bg-[#B150E2]"></span> Apple Podcasts
+          <a href={show.apple} target="_blank" rel="noopener" class="flex items-center gap-2.5 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#B150E2]/50 transition-all">
+            <svg viewBox="0 0 32 32" class="w-5 h-5"><path fill="#BC5FE8" d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0zm0 4.8a11.2 11.2 0 110 22.4 11.2 11.2 0 010-22.4zm0 3.2a8 8 0 100 16 8 8 0 000-16zm0 2.4a2.8 2.8 0 110 5.6 2.8 2.8 0 010-5.6zm-1.6 7.2h3.2l.8 7.6h-4.8l.8-7.6z"/></svg>
+            Apple Podcasts
           </a>
-          <a href={show.youtube} target="_blank" rel="noopener" class="flex items-center gap-3 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#444] transition-all">
-            <span class="w-3 h-3 rounded-full bg-[#FF0000]"></span> YouTube
+          <a href={show.youtube} target="_blank" rel="noopener" class="flex items-center gap-2.5 px-6 py-3 rounded-full border border-[#222] text-[14px] font-medium text-white hover:border-[#FF0000]/50 transition-all">
+            <svg viewBox="0 0 24 24" class="w-5 h-5"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            YouTube
           </a>
         </div>
       </div>
@@ -122,7 +125,6 @@ const jsonLd = [
                       <svg class="w-5 h-5 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </div>
                   </button>
-                  <div class="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ff6b4a] text-white">{slot.label}</div>
                   <div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
                     <span class="text-[11px] font-medium text-white/90 line-clamp-2">{slot.short.title}</span>
                   </div>
@@ -148,7 +150,6 @@ const jsonLd = [
                   <button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center" aria-label={`Play: ${slot.short.title}`}>
                     <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center"><svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
                   </button>
-                  <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#ff6b4a] text-white">{slot.label}</div>
                   <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
                     <span class="text-[10px] font-medium text-white/90 line-clamp-2">{slot.short.title}</span>
                   </div>
@@ -379,17 +380,17 @@ const jsonLd = [
 
 
     {/* ═══ PLATFORM BAR ═══ */}
-    <section class="border-t border-[#1c1c1c]">
+    <section class="border-t border-[#1c1c1c] mb-16">
       <div class="max-w-[900px] mx-auto px-4 md:px-6">
-        <div class="flex items-center justify-center gap-6 py-6">
-          <a href={show.spotify} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#1DB954] transition-colors">
-            <span class="w-3 h-3 rounded-full bg-[#1DB954]"></span> Spotify
+        <div class="flex items-center justify-center gap-10 py-8">
+          <a href={show.spotify} target="_blank" rel="noopener" class="opacity-50 hover:opacity-100 transition-opacity" title="Spotify">
+            <svg viewBox="0 0 168 168" class="w-8 h-8"><path fill="#1DB954" d="M83.996.277C37.747.277.253 37.77.253 84.019c0 46.251 37.494 83.741 83.743 83.741 46.254 0 83.744-37.49 83.744-83.741 0-46.246-37.49-83.738-83.745-83.738l.001-.004zm38.404 120.78a5.217 5.217 0 01-7.18 1.73c-19.662-12.01-44.414-14.73-73.564-8.07a5.222 5.222 0 01-6.249-3.93 5.213 5.213 0 013.926-6.25c31.9-7.291 59.263-4.15 81.337 9.34 2.46 1.51 3.24 4.72 1.73 7.18zm10.25-22.805c-1.89 3.075-5.91 4.045-8.98 2.155-22.51-13.839-56.823-17.846-83.448-9.764-3.453 1.043-7.1-.903-8.148-4.35a6.538 6.538 0 014.354-8.143c30.413-9.228 68.222-4.758 94.072 11.127 3.07 1.89 4.04 5.91 2.15 8.976zm.88-23.744c-26.99-16.031-71.52-17.505-97.289-9.684-4.138 1.255-8.514-1.081-9.768-5.219a7.835 7.835 0 015.221-9.771c29.581-8.98 78.756-7.245 109.83 11.202a7.823 7.823 0 012.74 10.733c-2.2 3.722-7.02 4.949-10.73 2.739z"/></svg>
           </a>
-          <a href={show.apple} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#B150E2] transition-colors">
-            <span class="w-3 h-3 rounded-full bg-[#B150E2]"></span> Apple Podcasts
+          <a href={show.apple} target="_blank" rel="noopener" class="opacity-50 hover:opacity-100 transition-opacity" title="Apple Podcasts">
+            <svg viewBox="0 0 32 32" class="w-8 h-8"><path fill="#BC5FE8" d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0zm0 4.8a11.2 11.2 0 110 22.4 11.2 11.2 0 010-22.4zm0 3.2a8 8 0 100 16 8 8 0 000-16zm0 2.4a2.8 2.8 0 110 5.6 2.8 2.8 0 010-5.6zm-1.6 7.2h3.2l.8 7.6h-4.8l.8-7.6z"/></svg>
           </a>
-          <a href={show.youtube} target="_blank" rel="noopener" class="flex items-center gap-2 text-[13px] text-[#888] hover:text-[#FF4444] transition-colors">
-            <span class="w-3 h-3 rounded-full bg-[#FF0000]"></span> YouTube
+          <a href={show.youtube} target="_blank" rel="noopener" class="opacity-50 hover:opacity-100 transition-opacity" title="YouTube">
+            <svg viewBox="0 0 24 24" class="w-8 h-8"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
           </a>
         </div>
       </div>

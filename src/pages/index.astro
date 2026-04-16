@@ -169,7 +169,7 @@ const jsonLd = {
       <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           {/* Left: article list */}
-          <div>
+          <div class="pl-4 md:pl-8">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
                 Latest <span class="text-[#ff6b4a]">&#8250;</span>
@@ -385,14 +385,14 @@ const jsonLd = {
         ══════════════════════════════════════════════════════════════ */}
     <section class="py-12 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-8">
 
           {/* Left: subscribe CTA */}
           <div class="relative rounded-2xl overflow-hidden p-8 md:p-10" style="background: linear-gradient(135deg, #1a0a05 0%, #120808 30%, #0a0812 100%);">
             <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,107,74,0.1),transparent_50%)]"></div>
             <div class="relative">
               <span class="inline-block text-[11px] font-bold uppercase tracking-[0.15em] text-[#ff6b4a] mb-4">Never miss our AI Strategy Resources</span>
-              <h2 class="text-[26px] md:text-[30px] font-extrabold text-white mb-3 tracking-tight">Subscribe to the Newsletter</h2>
+              <h2 class="text-[26px] md:text-[30px] font-extrabold text-white mb-3 tracking-tight">Subscribe to our Substack</h2>
               <p class="text-[15px] text-[#888] mb-6 leading-relaxed">AI product impact news, frameworks, and original analysis delivered weekly.</p>
               <form id="substack-form" class="flex items-stretch gap-0 max-w-md mb-4">
                 <input type="email" id="substack-email" placeholder="Type your email..." required
@@ -441,18 +441,18 @@ const jsonLd = {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           {partners.map((p, i) => (
             <a href={p.url} target={p.url.startsWith('http') ? '_blank' : undefined} rel={p.url.startsWith('http') ? 'noopener' : undefined}
-              class="group block p-6 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden" style={`background: linear-gradient(160deg, ${p.color}08, #0c0c0c 50%)`}>
+              class="group block p-8 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden min-h-[200px] flex flex-col justify-between" style={`background: linear-gradient(160deg, ${p.color}08, #0c0c0c 50%)`}>
               {p.logoUrl ? (
-                <div class="h-[48px] flex items-center mb-3">
+                <div class="h-[96px] flex items-center mb-4">
                   <img src={p.logoUrl} alt={`${p.name} logo`} class={`object-contain opacity-80 group-hover:opacity-100 transition-opacity ${i === 0 ? "max-h-[120px] max-w-[260px]" : "max-h-full max-w-[200px]"}`} loading="lazy" />
                 </div>
               ) : (
-                <div class="flex items-center gap-2 mb-3">
+                <div class="flex items-center gap-2 mb-4">
                   <div class="w-2.5 h-2.5 rounded-full" style={`background: ${p.color}; box-shadow: 0 0 8px ${p.color}30`}></div>
                   <h3 class="text-[16px] font-bold text-white group-hover:text-[#ff6b4a] transition-colors">{p.name}</h3>
                 </div>
               )}
-              <p class="text-[14px] text-[#888] leading-relaxed">{p.tagline}</p>
+              <p class="text-[15px] text-[#888] leading-relaxed">{p.tagline}</p>
               <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
             </a>
           ))}

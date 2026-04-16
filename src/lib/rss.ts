@@ -5,7 +5,7 @@
 import { getPodcastEpisodes, type PodcastEpisode } from "./podcast-rss";
 import { getSubstackPosts, type SubstackPost } from "./substack";
 
-const PODCAST_FEED_URL = import.meta.env.PUBLIC_PODCAST_RSS_URL ?? "";
+const PODCAST_FEED_URL = import.meta.env.PUBLIC_PODCAST_RSS_URL ?? "https://anchor.fm/s/f32cce5c/podcast/rss";
 const SUBSTACK_URL =
   import.meta.env.PUBLIC_SUBSTACK_URL ??
   "https://productimpactpod.substack.com";
