@@ -32,11 +32,12 @@ jobs:
       # CF Pages can reach Supabase at deploy time).
       - name: Build
         env:
-          # The build calls Supabase at build time to enumerate articles,
-          # entities, topics, themes, episodes. CI has no network access to
-          # the Supabase project here — the site helpers return [] on failure
-          # so the build still produces empty listings and completes.
-          PUBLIC_SUPABASE_URL: https://cyqkfkvsrdbbjuaqiglx.supabase.co
+          # CI can't reach Supabase (no network access) — the site's query
+          # helpers return [] on failure, producing empty listings. These values
+          # just need to pass the startup check in supabase.ts.
+          # Both are PUBLIC (anon key is RLS-gated) — safe to include here.
+          PUBLIC_SUPABASE_URL: https://pgsljoqwfhufubodlqjk.supabase.co
+          PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-key-not-used-at-build-time
         run: npm run build
 
       - name: Verify key outputs exist
