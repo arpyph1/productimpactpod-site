@@ -4,6 +4,39 @@ import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 
 const siteUrl = "https://productimpactpod.com";
+
+const offerings = [
+  {
+    title: "Theme Sponsorship",
+    desc: "Own a canonical theme page — your brand associated with a strategic topic like \"Agents & Agentic Systems\" or \"AI Product Strategy\" across all articles, episodes, and entity pages in that theme.",
+    icon: "M7 7h10v10H7z M3 3h4v4H3z M17 3h4v4h-4z M3 17h4v4H3z M17 17h4v4h-4z",
+    color: "#ff6b4a",
+  },
+  {
+    title: "Episode Sponsorship",
+    desc: "Sponsor a podcast episode — pre-roll, mid-roll, and show notes placement alongside editorial interviews with AI product leaders reaching thousands of listeners.",
+    icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z",
+    color: "#9b7bff",
+  },
+  {
+    title: "Product Spotlight",
+    desc: "A dedicated product review or release note — editorial-quality coverage of your product launch, written by Product Impact's editorial team with full disclosure.",
+    icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+    color: "#4ab8c9",
+  },
+  {
+    title: "Newsletter Placement",
+    desc: "Feature placement in the Product Impact weekly newsletter — reaching subscribers who opted in for AI product strategy news, frameworks, and analysis.",
+    icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
+    color: "#f5a623",
+  },
+];
+
+const stats = [
+  { value: "Top 2%", label: "Most shared podcasts globally" },
+  { value: "10,000+", label: "Newsletter & podcast followers" },
+  { value: "#1", label: "AI strategy podcast" },
+];
 ---
 
 <BaseLayout
@@ -13,48 +46,59 @@ const siteUrl = "https://productimpactpod.com";
 >
   <Nav />
 
-  <main class="max-w-[800px] mx-auto px-4 md:px-6 py-8">
-    <header class="mb-10">
-      <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight mb-3">Partnerships</h1>
-      <p class="text-[16px] text-[#999] leading-relaxed">
-        Product Impact reaches AI product leaders, founders, and enterprise decision-makers through editorial coverage, the podcast, and a weekly newsletter. We partner with companies whose products deserve a credible, editorial-quality spotlight.
+  <main class="max-w-[1100px] mx-auto px-4 md:px-6 py-12">
+
+    {/* Hero */}
+    <header class="text-center mb-16 max-w-[700px] mx-auto">
+      <h1 class="text-[36px] md:text-[48px] font-extrabold text-white tracking-tight leading-[1.1] mb-5">
+        Partner with <span class="text-[#ff6b4a]">Product Impact</span>
+      </h1>
+      <p class="text-[18px] md:text-[20px] text-[#999] leading-relaxed">
+        Reach AI product leaders, founders, and enterprise decision-makers through editorial coverage, the podcast, and a weekly newsletter.
       </p>
     </header>
 
-    <section class="space-y-6 mb-12">
-      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
-        <h2 class="text-[16px] font-bold text-white mb-2">Theme Sponsorship</h2>
-        <p class="text-[13px] text-[#888] leading-relaxed">
-          Own a canonical theme page — your brand associated with a strategic topic like "Agents & Agentic Systems" or "AI Product Strategy" across all articles, episodes, and entity pages in that theme.
-        </p>
-      </div>
-      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
-        <h2 class="text-[16px] font-bold text-white mb-2">Episode Sponsorship</h2>
-        <p class="text-[13px] text-[#888] leading-relaxed">
-          Sponsor a podcast episode — pre-roll, mid-roll, and show notes placement alongside editorial interviews with AI product leaders.
-        </p>
-      </div>
-      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
-        <h2 class="text-[16px] font-bold text-white mb-2">Product Spotlight</h2>
-        <p class="text-[13px] text-[#888] leading-relaxed">
-          A dedicated product review or release note — editorial-quality coverage of your product launch, written by Product Impact's editorial team with full disclosure.
-        </p>
-      </div>
-      <div class="p-5 rounded-xl bg-[#0c0c0c] border border-[#161616]">
-        <h2 class="text-[16px] font-bold text-white mb-2">Newsletter Placement</h2>
-        <p class="text-[13px] text-[#888] leading-relaxed">
-          Feature placement in the Product Impact weekly newsletter — reaching subscribers who opted in for AI product news.
-        </p>
-      </div>
-    </section>
+    {/* Stats row */}
+    <div class="grid grid-cols-3 gap-6 mb-16 max-w-[700px] mx-auto">
+      {stats.map((s) => (
+        <div class="text-center">
+          <div class="text-[28px] md:text-[36px] font-extrabold text-[#ff6b4a] leading-none mb-1">{s.value}</div>
+          <div class="text-[12px] text-[#666] uppercase tracking-wider">{s.label}</div>
+        </div>
+      ))}
+    </div>
 
-    <section class="text-center py-8 border-t border-[#181818]">
-      <h2 class="text-[18px] font-bold text-white mb-2">Get in touch</h2>
-      <p class="text-[13px] text-[#888] mb-4">We'd love to hear from you.</p>
-      <a href="mailto:partner@productimpactpod.com" class="inline-flex px-5 py-2 rounded-lg bg-[#ff6b4a] hover:bg-[#ff8566] text-white text-[13px] font-semibold transition-colors">
-        partner@productimpactpod.com
+    {/* 2x2 Grid of offering cards */}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-16">
+      {offerings.map((o) => (
+        <div class="relative p-8 rounded-2xl border border-[#1a1a1a] hover:border-[#282828] transition-all overflow-hidden group"
+          style={`background: linear-gradient(160deg, ${o.color}06, #0c0c0c 40%)`}>
+          <div class="absolute top-0 left-0 w-full h-1 rounded-t-2xl" style={`background: linear-gradient(90deg, ${o.color}, ${o.color}40)`}></div>
+          <div class="w-12 h-12 rounded-xl mb-5 flex items-center justify-center" style={`background: ${o.color}12; border: 1px solid ${o.color}20`}>
+            <svg class="w-6 h-6" style={`color: ${o.color}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d={o.icon} />
+            </svg>
+          </div>
+          <h2 class="text-[22px] font-bold text-white mb-3 group-hover:text-[#ff6b4a] transition-colors">{o.title}</h2>
+          <p class="text-[16px] text-[#999] leading-relaxed">{o.desc}</p>
+        </div>
+      ))}
+    </div>
+
+    {/* CTA */}
+    <div class="text-center py-12 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a]"
+      style="background: linear-gradient(160deg, #1a0a0506, #0a0a0a 50%)">
+      <h2 class="text-[28px] md:text-[32px] font-extrabold text-white mb-3">Let's work together</h2>
+      <p class="text-[16px] text-[#888] mb-6 max-w-md mx-auto leading-relaxed">
+        We partner with companies whose products deserve a credible, editorial-quality spotlight.
+      </p>
+      <a href="mailto:info@productimpactpod.com"
+        class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#ff6b4a] hover:bg-[#ff8566] text-white text-[16px] font-bold transition-colors shadow-lg shadow-[#ff6b4a]/15">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        info@productimpactpod.com
       </a>
-    </section>
+    </div>
+
   </main>
 
   <Footer />

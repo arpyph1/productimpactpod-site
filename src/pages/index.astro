@@ -251,9 +251,9 @@ const jsonLd = {
           </div>
         </div>
 
-        {/* Last 4 episodes — smaller cards with play */}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-[900px] mx-auto">
-          {rssEpisodes.slice(0, 4).map((ep) => {
+        {/* Last 5 episodes — smaller cards with play */}
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-[1100px] mx-auto">
+          {rssEpisodes.slice(0, 5).map((ep) => {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
