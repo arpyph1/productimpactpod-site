@@ -1,4 +1,5 @@
 ---
+import "../../styles/global.css";
 const siteUrl = "https://productimpactpod.com";
 ---
 
@@ -10,16 +11,8 @@ const siteUrl = "https://productimpactpod.com";
     <title>Admin | Product Impact</title>
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-      body { background: #080808; color: #e5e5e5; min-height: 100vh; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .animate-spin { animation: spin 1s linear infinite; }
-    </style>
   </head>
-  <body>
+  <body class="bg-[#080808] text-[#e5e5e5] min-h-screen font-sans antialiased">
     <div id="admin-root"></div>
   </body>
 </html>
