@@ -20,6 +20,12 @@ const FORMAT_LABELS: Record<string, string> = {
   "research-brief": "Research",
 };
 
+const AUTHOR_OPTIONS = [
+  { slug: "arpy-dragffy", name: "Arpy Dragffy" },
+  { slug: "brittany-hobbs", name: "Brittany Hobbs" },
+  { slug: "product-impact", name: "Product Impact" },
+];
+
 export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [search, setSearch] = useState("");
@@ -127,13 +133,23 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-[11px] text-[#666]">{FORMAT_LABELS[a.format] ?? a.format}</span>
+                    <select className="bg-transparent text-[11px] text-[#666] hover:text-white focus:outline-none cursor-pointer appearance-none pr-4"
+                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
+                      value={a.format} onChange={(e) => updateField(a.id, "format", e.target.value)}>
+                      {Object.entries(FORMAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
                   </td>
                   <td className="px-4 py-3">
-                    <EditableCell value={a.author_slugs?.[0] ?? ""} onSave={(v) => updateField(a.id, "author_slugs", [v])} />
+                    <select className="bg-transparent text-[11px] text-[#666] hover:text-white focus:outline-none cursor-pointer appearance-none pr-4"
+                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
+                      value={a.author_slugs?.[0] ?? ""} onChange={(e) => updateField(a.id, "author_slugs", [e.target.value])}>
+                      <option value="">—</option>
+                      {AUTHOR_OPTIONS.map((au) => <option key={au.slug} value={au.slug}>{au.name}</option>)}
+                    </select>
                   </td>
                   <td className="px-4 py-3">
-                    <EditableDate value={a.publish_date} onSave={(v) => updateField(a.id, "publish_date", v)} />
+                    <input type="date" className="bg-transparent text-[11px] text-[#666] hover:text-white focus:outline-none cursor-pointer"
+                      value={a.publish_date?.slice(0, 10) ?? ""} onChange={(e) => updateField(a.id, "publish_date", e.target.value)} />
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => openArticle(a)} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
@@ -151,41 +167,3 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
   );
 }
 
-function EditableCell({ value, onSave }: { value: string; onSave: (v: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(value);
-
-  if (!editing) {
-    return (
-      <button onClick={() => setEditing(true)} className="text-[11px] text-[#666] hover:text-white transition-colors">
-        {value || "—"}
-      </button>
-    );
-  }
-
-  return (
-    <input type="text" autoFocus className="w-full px-2 py-1 bg-[#111] border border-[#ff6b4a]/30 rounded text-[11px] text-white focus:outline-none"
-      value={val} onChange={(e) => setVal(e.target.value)}
-      onBlur={() => { setEditing(false); if (val !== value) onSave(val); }}
-      onKeyDown={(e) => { if (e.key === "Enter") { setEditing(false); if (val !== value) onSave(val); } }} />
-  );
-}
-
-function EditableDate({ value, onSave }: { value: string; onSave: (v: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(value?.slice(0, 10) ?? "");
-
-  if (!editing) {
-    return (
-      <button onClick={() => setEditing(true)} className="text-[11px] text-[#666] hover:text-white transition-colors">
-        {value?.slice(0, 10) || "—"}
-      </button>
-    );
-  }
-
-  return (
-    <input type="date" autoFocus className="px-2 py-1 bg-[#111] border border-[#ff6b4a]/30 rounded text-[11px] text-white focus:outline-none"
-      value={val} onChange={(e) => setVal(e.target.value)}
-      onBlur={() => { setEditing(false); if (val !== value?.slice(0, 10)) onSave(val); }} />
-  );
-}

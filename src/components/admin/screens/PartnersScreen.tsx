@@ -8,14 +8,14 @@ interface Sponsor {
   description: string | null; logo_url: string | null; website_url: string | null;
   cta_text: string | null; tier: string | null; active: boolean;
   display_order: number | null; themes: string[] | null; created_at: string;
-  show_on_homepage?: boolean; show_on_podcast?: boolean; ad_image_url?: string | null;
 }
 
-const EMPTY_SPONSOR: Partial<Sponsor> = {
-  name: "", slug: "", tagline: "", description: "", logo_url: "", website_url: "",
-  cta_text: "", tier: "standard", active: true, display_order: 0, themes: [],
-  show_on_homepage: true, show_on_podcast: true, ad_image_url: null,
-};
+interface DisplayAd { id: string; name: string; image_url: string; link_url: string; active: boolean }
+
+const SEED_PARTNERS = [
+  { slug: "ph1", name: "PH1", tagline: "Ship products that are proven to deliver impact in the AI era", logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true", website_url: "https://ph1.ca", tier: "founding", active: true, display_order: 0 },
+  { slug: "ai-value-acceleration", name: "AI Value Acceleration", tagline: "We find exactly where value stalls, why, and whose job it is to fix", logo_url: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png", website_url: "https://aivalueacceleration.com/", tier: "founding", active: true, display_order: 1 },
+];
 
 export default function PartnersScreen({ supabase }: Props) {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
@@ -24,44 +24,50 @@ export default function PartnersScreen({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [uploading, setUploading] = useState(false);
-  const adFileRef = useRef<HTMLInputElement>(null);
-  const logoFileRef = useRef<HTMLInputElement>(null);
+  const [ads, setAds] = useState<DisplayAd[]>([]);
+  const [adName, setAdName] = useState("");
+  const [adLink, setAdLink] = useState("");
+  const logoRef = useRef<HTMLInputElement>(null);
+  const adRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadSponsors(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  async function loadSponsors() {
+  async function loadAll() {
     setLoading(true);
-    const { data } = await supabase.from("sponsors").select("*").order("display_order", { ascending: true });
-    if (data) setSponsors(data);
+    const [spRes, setRes] = await Promise.all([
+      supabase.from("sponsors").select("*").order("display_order"),
+      supabase.from("site_settings").select("*").eq("key", "display_ads"),
+    ]);
+    if (spRes.data) setSponsors(spRes.data);
+    if (setRes.data?.[0]?.value?.ads) setAds(setRes.data[0].value.ads);
     setLoading(false);
+  }
+
+  async function seedPartners() {
+    for (const p of SEED_PARTNERS) {
+      await supabase.from("sponsors").upsert(p, { onConflict: "slug" });
+    }
+    setMsg("Seeded PH1 & AI Value Acceleration"); setTimeout(() => setMsg(""), 2000);
+    loadAll();
   }
 
   async function saveSponsor() {
     if (!editing) return;
     if (!editing.name?.trim()) { setMsg("Name is required"); return; }
     if (!editing.slug?.trim()) editing.slug = editing.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
-    const payload = { ...editing };
-    delete (payload as any).id;
-    delete (payload as any).created_at;
-
+    const payload: any = { ...editing };
+    delete payload.id; delete payload.created_at;
     let error;
-    if (isNew) {
-      const res = await supabase.from("sponsors").insert(payload);
-      error = res.error;
-    } else {
-      const res = await supabase.from("sponsors").update(payload).eq("id", editing.id);
-      error = res.error;
-    }
-
-    if (error) { setMsg(`Error: ${error.message}`); }
-    else { setMsg("Saved"); setEditing(null); setTimeout(() => setMsg(""), 2000); loadSponsors(); }
+    if (isNew) { error = (await supabase.from("sponsors").insert(payload)).error; }
+    else { error = (await supabase.from("sponsors").update(payload).eq("id", editing.id)).error; }
+    if (error) setMsg(`Error: ${error.message}`);
+    else { setMsg("Saved"); setEditing(null); setTimeout(() => setMsg(""), 2000); loadAll(); }
   }
 
   async function deleteSponsor(id: string) {
     if (!confirm("Delete this partner?")) return;
     await supabase.from("sponsors").delete().eq("id", id);
-    loadSponsors();
+    loadAll();
   }
 
   async function toggleActive(id: string, current: boolean) {
@@ -69,111 +75,156 @@ export default function PartnersScreen({ supabase }: Props) {
     setSponsors(prev => prev.map(s => s.id === id ? { ...s, active: !current } : s));
   }
 
-  async function moveOrder(id: string, direction: "up" | "down") {
+  async function moveOrder(id: string, dir: "up" | "down") {
     const idx = sponsors.findIndex(s => s.id === id);
-    if (idx < 0) return;
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= sponsors.length) return;
-
-    const a = sponsors[idx];
-    const b = sponsors[swapIdx];
     await Promise.all([
-      supabase.from("sponsors").update({ display_order: swapIdx }).eq("id", a.id),
-      supabase.from("sponsors").update({ display_order: idx }).eq("id", b.id),
+      supabase.from("sponsors").update({ display_order: swapIdx }).eq("id", sponsors[idx].id),
+      supabase.from("sponsors").update({ display_order: idx }).eq("id", sponsors[swapIdx].id),
     ]);
-    loadSponsors();
+    loadAll();
   }
 
-  async function uploadImage(file: File, field: "logo_url" | "ad_image_url") {
+  async function uploadFile(file: File, field: "logo_url") {
     if (!editing) return;
     setUploading(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-    const path = `partners/${editing.slug || "partner"}-${field}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("resources").upload(path, file, { contentType: file.type });
-    if (upErr) { setMsg(`Upload error: ${upErr.message}`); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
-    setEditing({ ...editing, [field]: urlData.publicUrl });
-    setMsg("Uploaded"); setTimeout(() => setMsg(""), 2000);
+    const path = `partners/${editing.slug || "p"}-${Date.now()}.${file.name.split(".").pop()}`;
+    const { error } = await supabase.storage.from("resources").upload(path, file, { contentType: file.type });
+    if (error) { setMsg(`Upload error: ${error.message}`); setUploading(false); return; }
+    const { data } = supabase.storage.from("resources").getPublicUrl(path);
+    setEditing({ ...editing, [field]: data.publicUrl });
+    setUploading(false);
+  }
+
+  async function saveAds(updatedAds: DisplayAd[]) {
+    setAds(updatedAds);
+    await supabase.from("site_settings").upsert({ key: "display_ads", value: { ads: updatedAds }, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setMsg("Ads saved"); setTimeout(() => setMsg(""), 2000);
+  }
+
+  async function uploadAd(file: File) {
+    setUploading(true);
+    const path = `ads/ad-${Date.now()}.${file.name.split(".").pop()}`;
+    const { error } = await supabase.storage.from("resources").upload(path, file, { contentType: file.type });
+    if (error) { setMsg(`Upload error: ${error.message}`); setUploading(false); return; }
+    const { data } = supabase.storage.from("resources").getPublicUrl(path);
+    const newAd: DisplayAd = { id: crypto.randomUUID(), name: adName || file.name, image_url: data.publicUrl, link_url: adLink || "#", active: true };
+    saveAds([...ads, newAd]);
+    setAdName(""); setAdLink("");
     setUploading(false);
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8 max-w-4xl">
       {msg && <div className={`px-4 py-2 rounded-lg text-[13px] font-medium ${msg.startsWith("Error") || msg.startsWith("Upload") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>{msg}</div>}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-[16px] font-bold text-white">Partners & Sponsors</h3>
-          <p className="text-[12px] text-[#555] mt-1">Manage sponsors shown on the homepage and podcast page.</p>
+      {/* ─── Partners ─── */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-[16px] font-bold text-white">Partners & Sponsors</h3>
+            <p className="text-[12px] text-[#555] mt-1">Manage partners shown on homepage and podcast page.</p>
+          </div>
+          <div className="flex gap-2">
+            {sponsors.length === 0 && (
+              <button onClick={seedPartners} className="px-4 py-2.5 bg-[#1a1a1a] border border-[#222] text-[#ccc] rounded-lg text-[13px] font-medium hover:border-[#444]">
+                Seed PH1 &amp; AI Value
+              </button>
+            )}
+            <button onClick={() => { setEditing({ name: "", slug: "", tagline: "", logo_url: "", website_url: "", tier: "standard", active: true, display_order: sponsors.length }); setIsNew(true); }}
+              className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] flex items-center gap-1.5">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+              Add Partner
+            </button>
+          </div>
         </div>
-        <button onClick={() => { setEditing({ ...EMPTY_SPONSOR }); setIsNew(true); }}
-          className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors flex items-center gap-1.5">
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-          Add Partner
-        </button>
-      </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" /></div>
-      ) : sponsors.length === 0 ? (
-        <div className="text-center py-12 text-[#555]">
-          <p className="text-[14px] mb-2">No partners in database</p>
-          <p className="text-[12px]">Partners are currently hardcoded in index.astro and podcast/index.astro. Add them to the sponsors table to manage them here.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {sponsors.map((s, idx) => (
-            <div key={s.id} className="flex items-center gap-4 p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a] hover:border-[#282828] transition-colors">
-              {/* Reorder */}
-              <div className="flex flex-col gap-0.5">
-                <button onClick={() => moveOrder(s.id, "up")} disabled={idx === 0} className="text-[#555] hover:text-white disabled:opacity-20 transition-colors">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
-                </button>
-                <button onClick={() => moveOrder(s.id, "down")} disabled={idx === sponsors.length - 1} className="text-[#555] hover:text-white disabled:opacity-20 transition-colors">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
-              </div>
-
-              {/* Logo */}
-              <div className="w-16 h-12 rounded bg-[#111] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {s.logo_url ? (
-                  <img src={s.logo_url} alt="" className="max-w-full max-h-full object-contain" />
-                ) : (
-                  <span className="text-[10px] text-[#444]">No logo</span>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-semibold text-[#ccc]">{s.name}</span>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.active ? "bg-green-500/10 text-green-400" : "bg-[#222] text-[#555]"}`}>
-                    {s.active ? "Active" : "Inactive"}
-                  </span>
-                  {s.tier && <span className="text-[10px] text-[#555] uppercase">{s.tier}</span>}
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" /></div>
+        ) : (
+          <div className="space-y-2">
+            {sponsors.map((s, idx) => (
+              <div key={s.id} className="flex items-center gap-4 p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a] hover:border-[#282828] transition-colors">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => moveOrder(s.id, "up")} disabled={idx === 0} className="text-[#555] hover:text-white disabled:opacity-20">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
+                  </button>
+                  <button onClick={() => moveOrder(s.id, "down")} disabled={idx === sponsors.length - 1} className="text-[#555] hover:text-white disabled:opacity-20">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
                 </div>
-                {s.tagline && <div className="text-[12px] text-[#666] line-clamp-1 mt-0.5">{s.tagline}</div>}
+                <div className="w-20 h-14 rounded bg-[#111] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 overflow-hidden p-1.5">
+                  {s.logo_url ? <img src={s.logo_url} alt="" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] text-[#444]">No logo</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[14px] font-semibold text-[#ccc]">{s.name}</span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.active ? "bg-green-500/10 text-green-400" : "bg-[#222] text-[#555]"}`}>{s.active ? "Active" : "Inactive"}</span>
+                    {s.tier && <span className="text-[10px] text-[#555] uppercase">{s.tier}</span>}
+                  </div>
+                  {s.tagline && <div className="text-[12px] text-[#666] line-clamp-1 mt-0.5">{s.tagline}</div>}
+                  {s.website_url && <div className="text-[11px] text-[#444] mt-0.5 truncate">{s.website_url}</div>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => toggleActive(s.id, s.active)} className="text-[11px] text-[#666] hover:text-white">{s.active ? "Deactivate" : "Activate"}</button>
+                  <button onClick={() => { setEditing({ ...s }); setIsNew(false); }} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
+                  <button onClick={() => deleteSponsor(s.id)} className="text-[11px] text-[#555] hover:text-red-400">Delete</button>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => toggleActive(s.id, s.active)}
-                  className="text-[11px] text-[#666] hover:text-white transition-colors">
-                  {s.active ? "Deactivate" : "Activate"}
-                </button>
-                <button onClick={() => { setEditing({ ...s }); setIsNew(false); }}
-                  className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
-                <button onClick={() => deleteSponsor(s.id)}
-                  className="text-[11px] text-[#555] hover:text-red-400 transition-colors">Delete</button>
+      {/* ─── Display Ads ─── */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">Display Ads</h3>
+        <p className="text-[12px] text-[#555] mb-4">Upload banner ads that rotate randomly in the homepage sidebar ad slot.</p>
+
+        {ads.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {ads.map((ad, i) => (
+              <div key={ad.id} className="flex items-center gap-4 p-3 rounded-lg bg-[#111] border border-[#1a1a1a]">
+                <div className="w-24 h-16 rounded bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden flex-shrink-0">
+                  <img src={ad.image_url} alt="" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-[#ccc]">{ad.name}</div>
+                  <div className="text-[11px] text-[#555] truncate">{ad.link_url}</div>
+                </div>
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={ad.active} onChange={() => { const u = [...ads]; u[i] = { ...ad, active: !ad.active }; saveAds(u); }}
+                    className="w-3.5 h-3.5 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+                  <span className="text-[10px] text-[#666]">Active</span>
+                </label>
+                <button onClick={() => saveAds(ads.filter((_, j) => j !== i))} className="text-[11px] text-[#555] hover:text-red-400">Remove</button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+
+        <div className="p-4 rounded-lg bg-[#0c0c0c] border border-[#1a1a1a]">
+          <div className="text-[12px] font-semibold text-[#888] mb-3">Upload new ad</div>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <input type="text" placeholder="Ad name" className="px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none"
+              value={adName} onChange={(e) => setAdName(e.target.value)} />
+            <input type="text" placeholder="Click-through URL" className="px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none"
+              value={adLink} onChange={(e) => setAdLink(e.target.value)} />
+          </div>
+          <input ref={adRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAd(f); }} />
+          <button onClick={() => adRef.current?.click()} disabled={uploading}
+            className="px-4 py-2.5 bg-[#1a1a1a] border border-[#222] rounded-lg text-[13px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center gap-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            {uploading ? "Uploading..." : "Upload Ad Image"}
+          </button>
         </div>
-      )}
+      </section>
 
-      {/* Edit modal */}
+      {/* ─── Edit Partner Modal ─── */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 overflow-y-auto py-8">
           <div className="w-full max-w-lg bg-[#0c0c0c] border border-[#222] rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-[16px] font-bold text-white">{isNew ? "Add Partner" : "Edit Partner"}</h3>
@@ -182,25 +233,28 @@ export default function PartnersScreen({ supabase }: Props) {
               </button>
             </div>
 
-            <EditField label="Name" value={editing.name ?? ""} onChange={(v) => setEditing({ ...editing, name: v, slug: v.toLowerCase().replace(/[^a-z0-9]+/g, "-") })} />
-            <EditField label="Slug" value={editing.slug ?? ""} onChange={(v) => setEditing({ ...editing, slug: v })} mono />
-            <EditField label="Tagline" value={editing.tagline ?? ""} onChange={(v) => setEditing({ ...editing, tagline: v })} />
-            {/* Logo */}
+            <F label="Name" value={editing.name ?? ""} onChange={(v) => setEditing({ ...editing, name: v, slug: v.toLowerCase().replace(/[^a-z0-9]+/g, "-") })} />
+            <F label="Slug" value={editing.slug ?? ""} onChange={(v) => setEditing({ ...editing, slug: v })} mono />
+            <F label="Tagline" value={editing.tagline ?? ""} onChange={(v) => setEditing({ ...editing, tagline: v })} />
+
             <div>
               <label className="block text-[11px] font-medium text-[#666] mb-1">Logo</label>
-              <input ref={logoFileRef} type="file" accept="image/*" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, "logo_url"); }} />
-              <button onClick={() => logoFileRef.current?.click()} disabled={uploading}
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center justify-center gap-2 mb-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                Upload Logo
-              </button>
-              <EditField label="" value={editing.logo_url ?? ""} onChange={(v) => setEditing({ ...editing, logo_url: v })} />
-              {editing.logo_url && <div className="h-14 bg-[#111] rounded-lg flex items-center justify-center p-2 mt-1"><img src={editing.logo_url} alt="" className="max-h-full object-contain" /></div>}
+              <input ref={logoRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f, "logo_url"); }} />
+              <div className="flex gap-2 mb-1">
+                <button onClick={() => logoRef.current?.click()} disabled={uploading}
+                  className="px-3 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Upload
+                </button>
+                <input type="text" className="flex-1 px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] text-[#888] focus:outline-none" placeholder="Or paste URL"
+                  value={editing.logo_url ?? ""} onChange={(e) => setEditing({ ...editing, logo_url: e.target.value })} />
+              </div>
+              {editing.logo_url && <div className="h-14 bg-[#111] rounded-lg flex items-center justify-center p-2"><img src={editing.logo_url} alt="" className="max-h-full object-contain" /></div>}
             </div>
 
-            <EditField label="Website URL" value={editing.website_url ?? ""} onChange={(v) => setEditing({ ...editing, website_url: v })} />
-            <EditField label="CTA Text" value={editing.cta_text ?? ""} onChange={(v) => setEditing({ ...editing, cta_text: v })} />
+            <F label="Website URL" value={editing.website_url ?? ""} onChange={(v) => setEditing({ ...editing, website_url: v })} />
+            <F label="CTA Text" value={editing.cta_text ?? ""} onChange={(v) => setEditing({ ...editing, cta_text: v })} />
             <div>
               <label className="block text-[11px] font-medium text-[#666] mb-1">Description</label>
               <textarea className="w-full h-20 bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-white focus:outline-none resize-y"
@@ -215,39 +269,9 @@ export default function PartnersScreen({ supabase }: Props) {
                 <option value="standard">Standard</option>
               </select>
             </div>
-            <EditField label="Display Order" value={String(editing.display_order ?? 0)} onChange={(v) => setEditing({ ...editing, display_order: parseInt(v) || 0 })} type="number" />
+            <F label="Display Order" value={String(editing.display_order ?? 0)} onChange={(v) => setEditing({ ...editing, display_order: parseInt(v) || 0 })} type="number" />
 
-            {/* Display Ad Image */}
-            <div>
-              <label className="block text-[11px] font-medium text-[#666] mb-1">Display Ad Image</label>
-              <input ref={adFileRef} type="file" accept="image/*" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, "ad_image_url"); }} />
-              <button onClick={() => adFileRef.current?.click()} disabled={uploading}
-                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center justify-center gap-2 mb-1">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                Upload Ad
-              </button>
-              {editing.ad_image_url && <img src={editing.ad_image_url} alt="ad" className="mt-1 rounded-lg w-full border border-[#222]" />}
-            </div>
-
-            {/* Visibility */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-                <span className="text-[13px] text-[#ccc]">Active</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={editing.show_on_homepage ?? true} onChange={(e) => setEditing({ ...editing, show_on_homepage: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-                <span className="text-[13px] text-[#ccc]">Show on Homepage</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={editing.show_on_podcast ?? true} onChange={(e) => setEditing({ ...editing, show_on_podcast: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-                <span className="text-[13px] text-[#ccc]">Show on Podcast Page</span>
-              </label>
-            </div>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" /><span className="text-[13px] text-[#ccc]">Active</span></label>
 
             <div className="flex justify-end gap-3 pt-2">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-[13px] text-[#888] hover:text-white">Cancel</button>
@@ -260,10 +284,10 @@ export default function PartnersScreen({ supabase }: Props) {
   );
 }
 
-function EditField({ label, value, onChange, mono, type }: { label: string; value: string; onChange: (v: string) => void; mono?: boolean; type?: string }) {
+function F({ label, value, onChange, mono, type }: { label: string; value: string; onChange: (v: string) => void; mono?: boolean; type?: string }) {
   return (
     <div>
-      <label className="block text-[11px] font-medium text-[#666] mb-1">{label}</label>
+      {label && <label className="block text-[11px] font-medium text-[#666] mb-1">{label}</label>}
       <input type={type ?? "text"} className={`w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 ${mono ? "font-mono text-[12px] text-[#888]" : ""}`}
         value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
