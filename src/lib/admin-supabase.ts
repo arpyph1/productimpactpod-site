@@ -12,8 +12,13 @@ export function getAdminClient(): SupabaseClient {
   return _client;
 }
 
-const ALLOWED_ADMINS = ["arpy@ph1.ca", "brittany@ph1.ca", "info@productimpactpod.com"];
+const ALLOWED_EMAILS = ["arpy@ph1.ca", "brittany@ph1.ca", "info@productimpactpod.com"];
+const ALLOWED_DOMAINS = ["ph1.ca", "productimpactpod.com"];
 
 export function isAllowedAdmin(email: string | undefined): boolean {
-  return !!email && ALLOWED_ADMINS.includes(email.toLowerCase());
+  if (!email) return false;
+  const lower = email.toLowerCase();
+  if (ALLOWED_EMAILS.includes(lower)) return true;
+  const domain = lower.split("@")[1];
+  return ALLOWED_DOMAINS.includes(domain);
 }

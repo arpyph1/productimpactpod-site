@@ -140,6 +140,15 @@ export default function AdminApp() {
   const supabase = getAdminClient();
 
   useEffect(() => {
+    // Check for OAuth error in URL hash (Supabase redirects errors here)
+    const hash = window.location.hash;
+    if (hash.includes("error=")) {
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const errDesc = decodeURIComponent(params.get("error_description") ?? "Unknown error");
+      setError(`Auth error: ${errDesc}`);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
@@ -148,7 +157,7 @@ export default function AdminApp() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       if (sess && !isAllowedAdmin(sess.user.email)) {
-        setError("Access denied. Your account is not authorized.");
+        setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
         supabase.auth.signOut();
       }
     });

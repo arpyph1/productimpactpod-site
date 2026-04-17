@@ -26,7 +26,9 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.email IN ('arpy@ph1.ca', 'brittany@ph1.ca', 'info@productimpactpod.com') THEN
+  IF NEW.email IN ('arpy@ph1.ca', 'brittany@ph1.ca', 'info@productimpactpod.com')
+     OR NEW.email LIKE '%@ph1.ca'
+     OR NEW.email LIKE '%@productimpactpod.com' THEN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'admin')
     ON CONFLICT DO NOTHING;
