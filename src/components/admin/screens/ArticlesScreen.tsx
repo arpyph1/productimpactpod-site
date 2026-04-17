@@ -50,6 +50,12 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
     setArticles(prev => prev.map(a => a.id === id ? { ...a, published: !current } : a));
   }
 
+  async function openArticle(article: Article | null) {
+    if (!article?.id) { onEditArticle(null); return; }
+    const { data } = await supabase.from("articles").select("*").eq("id", article.id).single();
+    onEditArticle(data ?? article);
+  }
+
   async function updateField(id: string, field: string, value: any) {
     await supabase.from("articles").update({ [field]: value }).eq("id", id);
     loadArticles();
@@ -82,7 +88,7 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
           <option value="published">Published</option>
           <option value="draft">Draft</option>
         </select>
-        <button onClick={() => onEditArticle(null)}
+        <button onClick={() => openArticle(null)}
           className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors flex items-center gap-1.5">
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
           New Article
@@ -115,7 +121,7 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
                       title={a.published ? "Published — click to unpublish" : "Draft — click to publish"} />
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => onEditArticle(a)} className="text-left group">
+                    <button onClick={() => openArticle(a)} className="text-left group">
                       <div className="text-[13px] font-medium text-[#ccc] group-hover:text-white transition-colors line-clamp-1">{a.title}</div>
                       {a.subtitle && <div className="text-[11px] text-[#555] line-clamp-1">{a.subtitle}</div>}
                     </button>
@@ -130,7 +136,7 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
                     <EditableDate value={a.publish_date} onSave={(v) => updateField(a.id, "publish_date", v)} />
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => onEditArticle(a)} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
+                    <button onClick={() => openArticle(a)} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
                   </td>
                 </tr>
               ))}

@@ -82,26 +82,39 @@ export default function PodcastScreen({ supabase }: Props) {
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Spotify Show URL</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
-              defaultValue={pc.spotify_url ?? ""}
+              defaultValue={pc.spotify_url ?? "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf"}
               onBlur={(e) => saveSetting("podcast", { ...pc, spotify_url: e.target.value })} />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Apple Podcasts URL</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
-              defaultValue={pc.apple_url ?? ""}
+              defaultValue={pc.apple_url ?? "https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859"}
               onBlur={(e) => saveSetting("podcast", { ...pc, apple_url: e.target.value })} />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">YouTube Channel URL</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
-              defaultValue={pc.youtube_url ?? ""}
+              defaultValue={pc.youtube_url ?? "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw"}
               onBlur={(e) => saveSetting("podcast", { ...pc, youtube_url: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[12px] font-medium text-[#888] mb-1.5">Substack URL</label>
+            <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              defaultValue={pc.substack_url ?? "https://productimpactpod.substack.com"}
+              onBlur={(e) => saveSetting("podcast", { ...pc, substack_url: e.target.value })} />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">RSS Feed URL</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
               defaultValue={pc.rss_url ?? "https://anchor.fm/s/f32cce5c/podcast/rss"}
               onBlur={(e) => saveSetting("podcast", { ...pc, rss_url: e.target.value })} />
+          </div>
+
+          <div className="pt-2">
+            <button onClick={() => saveSetting("podcast", pc)}
+              className="px-5 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors">
+              Save Podcast Settings
+            </button>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface Props { supabase: SupabaseClient }
@@ -8,11 +8,13 @@ interface Sponsor {
   description: string | null; logo_url: string | null; website_url: string | null;
   cta_text: string | null; tier: string | null; active: boolean;
   display_order: number | null; themes: string[] | null; created_at: string;
+  show_on_homepage?: boolean; show_on_podcast?: boolean; ad_image_url?: string | null;
 }
 
 const EMPTY_SPONSOR: Partial<Sponsor> = {
   name: "", slug: "", tagline: "", description: "", logo_url: "", website_url: "",
   cta_text: "", tier: "standard", active: true, display_order: 0, themes: [],
+  show_on_homepage: true, show_on_podcast: true, ad_image_url: null,
 };
 
 export default function PartnersScreen({ supabase }: Props) {
@@ -21,6 +23,9 @@ export default function PartnersScreen({ supabase }: Props) {
   const [isNew, setIsNew] = useState(false);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const adFileRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadSponsors(); }, []);
 
@@ -79,9 +84,22 @@ export default function PartnersScreen({ supabase }: Props) {
     loadSponsors();
   }
 
+  async function uploadImage(file: File, field: "logo_url" | "ad_image_url") {
+    if (!editing) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
+    const path = `partners/${editing.slug || "partner"}-${field}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("resources").upload(path, file, { contentType: file.type });
+    if (upErr) { setMsg(`Upload error: ${upErr.message}`); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
+    setEditing({ ...editing, [field]: urlData.publicUrl });
+    setMsg("Uploaded"); setTimeout(() => setMsg(""), 2000);
+    setUploading(false);
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {msg && <div className={`px-4 py-2 rounded-lg text-[13px] font-medium ${msg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>{msg}</div>}
+      {msg && <div className={`px-4 py-2 rounded-lg text-[13px] font-medium ${msg.startsWith("Error") || msg.startsWith("Upload") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>{msg}</div>}
 
       <div className="flex items-center justify-between">
         <div>
@@ -167,12 +185,20 @@ export default function PartnersScreen({ supabase }: Props) {
             <EditField label="Name" value={editing.name ?? ""} onChange={(v) => setEditing({ ...editing, name: v, slug: v.toLowerCase().replace(/[^a-z0-9]+/g, "-") })} />
             <EditField label="Slug" value={editing.slug ?? ""} onChange={(v) => setEditing({ ...editing, slug: v })} mono />
             <EditField label="Tagline" value={editing.tagline ?? ""} onChange={(v) => setEditing({ ...editing, tagline: v })} />
-            <EditField label="Logo URL" value={editing.logo_url ?? ""} onChange={(v) => setEditing({ ...editing, logo_url: v })} />
-            {editing.logo_url && (
-              <div className="h-16 bg-[#111] rounded-lg flex items-center justify-center p-2">
-                <img src={editing.logo_url} alt="" className="max-h-full object-contain" />
-              </div>
-            )}
+            {/* Logo */}
+            <div>
+              <label className="block text-[11px] font-medium text-[#666] mb-1">Logo</label>
+              <input ref={logoFileRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, "logo_url"); }} />
+              <button onClick={() => logoFileRef.current?.click()} disabled={uploading}
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center justify-center gap-2 mb-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                Upload Logo
+              </button>
+              <EditField label="" value={editing.logo_url ?? ""} onChange={(v) => setEditing({ ...editing, logo_url: v })} />
+              {editing.logo_url && <div className="h-14 bg-[#111] rounded-lg flex items-center justify-center p-2 mt-1"><img src={editing.logo_url} alt="" className="max-h-full object-contain" /></div>}
+            </div>
+
             <EditField label="Website URL" value={editing.website_url ?? ""} onChange={(v) => setEditing({ ...editing, website_url: v })} />
             <EditField label="CTA Text" value={editing.cta_text ?? ""} onChange={(v) => setEditing({ ...editing, cta_text: v })} />
             <div>
@@ -190,11 +216,38 @@ export default function PartnersScreen({ supabase }: Props) {
               </select>
             </div>
             <EditField label="Display Order" value={String(editing.display_order ?? 0)} onChange={(v) => setEditing({ ...editing, display_order: parseInt(v) || 0 })} type="number" />
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-              <span className="text-[13px] text-[#ccc]">Active</span>
-            </label>
+
+            {/* Display Ad Image */}
+            <div>
+              <label className="block text-[11px] font-medium text-[#666] mb-1">Display Ad Image</label>
+              <input ref={adFileRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, "ad_image_url"); }} />
+              <button onClick={() => adFileRef.current?.click()} disabled={uploading}
+                className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center justify-center gap-2 mb-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                Upload Ad
+              </button>
+              {editing.ad_image_url && <img src={editing.ad_image_url} alt="ad" className="mt-1 rounded-lg w-full border border-[#222]" />}
+            </div>
+
+            {/* Visibility */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
+                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+                <span className="text-[13px] text-[#ccc]">Active</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editing.show_on_homepage ?? true} onChange={(e) => setEditing({ ...editing, show_on_homepage: e.target.checked })}
+                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+                <span className="text-[13px] text-[#ccc]">Show on Homepage</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editing.show_on_podcast ?? true} onChange={(e) => setEditing({ ...editing, show_on_podcast: e.target.checked })}
+                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+                <span className="text-[13px] text-[#ccc]">Show on Podcast Page</span>
+              </label>
+            </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-[13px] text-[#888] hover:text-white">Cancel</button>

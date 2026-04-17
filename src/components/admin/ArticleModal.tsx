@@ -50,7 +50,9 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   });
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [topicInput, setTopicInput] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   function update(field: string, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -76,6 +78,19 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     if (editorRef.current) {
       update("content_html", editorRef.current.innerHTML);
     }
+  }
+
+  async function uploadHeroImage(file: File) {
+    setUploading(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `heroes/${form.slug || "article"}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("article-heroes").upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) { setMsg(`Upload error: ${upErr.message}`); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("article-heroes").getPublicUrl(path);
+    update("hero_image_url", urlData.publicUrl);
+    setMsg("Image uploaded");
+    setTimeout(() => setMsg(""), 2000);
+    setUploading(false);
   }
 
   async function handleSave() {
@@ -272,9 +287,16 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
 
             {/* Hero Image */}
             <div>
-              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Hero Image URL</label>
-              <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
-                value={form.hero_image_url} onChange={(e) => update("hero_image_url", e.target.value)} placeholder="https://..." />
+              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Hero Image</label>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadHeroImage(f); }} />
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                className="w-full px-3 py-2.5 bg-[#1a1a1a] border border-[#222] rounded-lg text-[12px] text-[#ccc] hover:text-white hover:border-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mb-2">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                {uploading ? "Uploading..." : "Upload Image"}
+              </button>
+              <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[11px] text-[#888] focus:outline-none focus:border-[#ff6b4a]/50"
+                value={form.hero_image_url} onChange={(e) => update("hero_image_url", e.target.value)} placeholder="Or paste image URL" />
               {form.hero_image_url && (
                 <img src={form.hero_image_url} alt="" className="mt-2 rounded-lg w-full aspect-video object-cover border border-[#222]" />
               )}
