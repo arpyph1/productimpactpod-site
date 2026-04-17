@@ -1,0 +1,185 @@
+import React, { useState, useEffect, useCallback } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+interface Props {
+  supabase: SupabaseClient;
+  onEditArticle: (article: any) => void;
+}
+
+interface Article {
+  id: string; slug: string; title: string; subtitle: string | null; format: string;
+  author_slugs: string[] | null; publish_date: string; published: boolean;
+  is_lead_story: boolean; hero_image_url: string | null; themes: string[] | null;
+  meta_description: string | null; read_time_minutes: number | null;
+}
+
+const FORMAT_LABELS: Record<string, string> = {
+  "news-analysis": "News Analysis", feature: "Feature", interview: "Interview",
+  "case-study": "Case Study", "release-note": "Release", opinion: "Opinion",
+  explainer: "Explainer", "news-brief": "Brief", "product-review": "Review",
+  "research-brief": "Research",
+};
+
+export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [search, setSearch] = useState("");
+  const [filterFormat, setFilterFormat] = useState("");
+  const [filterPub, setFilterPub] = useState<"all" | "published" | "draft">("all");
+  const [loading, setLoading] = useState(true);
+
+  const loadArticles = useCallback(async () => {
+    setLoading(true);
+    let q = supabase.from("articles")
+      .select("id, slug, title, subtitle, format, author_slugs, publish_date, published, is_lead_story, hero_image_url, themes, meta_description, read_time_minutes")
+      .order("publish_date", { ascending: false })
+      .limit(200);
+
+    if (filterFormat) q = q.eq("format", filterFormat);
+    if (filterPub === "published") q = q.eq("published", true);
+    if (filterPub === "draft") q = q.eq("published", false);
+
+    const { data } = await q;
+    setArticles(data ?? []);
+    setLoading(false);
+  }, [filterFormat, filterPub]);
+
+  useEffect(() => { loadArticles(); }, [loadArticles]);
+
+  async function togglePublished(id: string, current: boolean) {
+    await supabase.from("articles").update({ published: !current }).eq("id", id);
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, published: !current } : a));
+  }
+
+  async function updateField(id: string, field: string, value: any) {
+    await supabase.from("articles").update({ [field]: value }).eq("id", id);
+    loadArticles();
+  }
+
+  const filtered = articles.filter(a => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return a.title.toLowerCase().includes(q) || (a.slug ?? "").includes(q) || (a.meta_description ?? "").toLowerCase().includes(q);
+  });
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px]">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#555]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search articles..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a]/50"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <select className="px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+          value={filterFormat} onChange={(e) => setFilterFormat(e.target.value)}>
+          <option value="">All formats</option>
+          {Object.entries(FORMAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select className="px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+          value={filterPub} onChange={(e) => setFilterPub(e.target.value as any)}>
+          <option value="all">All status</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+        </select>
+        <button onClick={() => onEditArticle(null)}
+          className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors flex items-center gap-1.5">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+          New Article
+        </button>
+      </div>
+
+      <div className="text-[12px] text-[#555] mb-3">{filtered.length} articles</div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" /></div>
+      ) : (
+        <div className="border border-[#1a1a1a] rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#0c0c0c] text-[11px] font-semibold text-[#555] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 w-12">Pub</th>
+                <th className="text-left px-4 py-3">Title</th>
+                <th className="text-left px-4 py-3 w-28">Format</th>
+                <th className="text-left px-4 py-3 w-28">Author</th>
+                <th className="text-left px-4 py-3 w-28">Date</th>
+                <th className="text-left px-4 py-3 w-16"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#141414]">
+              {filtered.map((a) => (
+                <tr key={a.id} className="hover:bg-[#0c0c0c] transition-colors">
+                  <td className="px-4 py-3">
+                    <button onClick={() => togglePublished(a.id, a.published)}
+                      className={`w-3 h-3 rounded-full ${a.published ? "bg-green-500" : "bg-[#333]"}`}
+                      title={a.published ? "Published — click to unpublish" : "Draft — click to publish"} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => onEditArticle(a)} className="text-left group">
+                      <div className="text-[13px] font-medium text-[#ccc] group-hover:text-white transition-colors line-clamp-1">{a.title}</div>
+                      {a.subtitle && <div className="text-[11px] text-[#555] line-clamp-1">{a.subtitle}</div>}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-[11px] text-[#666]">{FORMAT_LABELS[a.format] ?? a.format}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <EditableCell value={a.author_slugs?.[0] ?? ""} onSave={(v) => updateField(a.id, "author_slugs", [v])} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <EditableDate value={a.publish_date} onSave={(v) => updateField(a.id, "publish_date", v)} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => onEditArticle(a)} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-[#555] text-[14px]">No articles found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditableCell({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value);
+
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="text-[11px] text-[#666] hover:text-white transition-colors">
+        {value || "—"}
+      </button>
+    );
+  }
+
+  return (
+    <input type="text" autoFocus className="w-full px-2 py-1 bg-[#111] border border-[#ff6b4a]/30 rounded text-[11px] text-white focus:outline-none"
+      value={val} onChange={(e) => setVal(e.target.value)}
+      onBlur={() => { setEditing(false); if (val !== value) onSave(val); }}
+      onKeyDown={(e) => { if (e.key === "Enter") { setEditing(false); if (val !== value) onSave(val); } }} />
+  );
+}
+
+function EditableDate({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value?.slice(0, 10) ?? "");
+
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="text-[11px] text-[#666] hover:text-white transition-colors">
+        {value?.slice(0, 10) || "—"}
+      </button>
+    );
+  }
+
+  return (
+    <input type="date" autoFocus className="px-2 py-1 bg-[#111] border border-[#ff6b4a]/30 rounded text-[11px] text-white focus:outline-none"
+      value={val} onChange={(e) => setVal(e.target.value)}
+      onBlur={() => { setEditing(false); if (val !== value?.slice(0, 10)) onSave(val); }} />
+  );
+}
