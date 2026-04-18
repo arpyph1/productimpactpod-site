@@ -213,6 +213,15 @@ export default function SettingsScreen({ supabase }: Props) {
         </div>
       </section>
 
+      {/* Deploy Hook */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">Deploy Hook</h3>
+        <p className="text-[12px] text-[#555] mb-4">
+          Cloudflare Pages deploy hook URL. Get this from CF Dashboard → Pages → your project → Settings → Builds & deployments → Deploy hooks → Add deploy hook.
+        </p>
+        <Field label="Deploy Hook URL" value={settings.deploy_hook?.url ?? ""} onChange={(v) => saveSetting("deploy_hook", { url: v })} />
+      </section>
+
       {/* Custom CSS */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-4">Custom CSS Snippet</h3>

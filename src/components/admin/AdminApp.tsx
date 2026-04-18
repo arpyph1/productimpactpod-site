@@ -136,6 +136,8 @@ export default function AdminApp() {
   const [error, setError] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>("articles");
   const [editingArticle, setEditingArticle] = useState<any | undefined>(undefined);
+  const [deploying, setDeploying] = useState(false);
+  const [deployMsg, setDeployMsg] = useState("");
 
   const supabase = getAdminClient();
 
@@ -179,6 +181,30 @@ export default function AdminApp() {
     setSession(null);
   }, []);
 
+  const handleDeploy = useCallback(async () => {
+    setDeploying(true);
+    setDeployMsg("");
+    const { data } = await supabase.from("site_settings").select("value").eq("key", "deploy_hook").single();
+    const hookUrl = data?.value?.url;
+    if (!hookUrl) {
+      setDeployMsg("No deploy hook configured. Go to Settings and add a Cloudflare Pages deploy hook URL.");
+      setDeploying(false);
+      return;
+    }
+    try {
+      const res = await fetch(hookUrl, { method: "POST" });
+      if (res.ok) {
+        setDeployMsg("Build triggered! Site will update in ~3 minutes.");
+      } else {
+        setDeployMsg(`Deploy hook returned ${res.status}. Check the URL in Settings.`);
+      }
+    } catch (e: any) {
+      setDeployMsg(`Deploy failed: ${e.message}`);
+    }
+    setDeploying(false);
+    setTimeout(() => setDeployMsg(""), 8000);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#080808] flex items-center justify-center">
@@ -201,8 +227,18 @@ export default function AdminApp() {
     <div className="flex min-h-screen bg-[#080808] text-white">
       <Sidebar active={screen} onNav={setScreen} admin={admin} onLogout={handleLogout} />
       <main className="flex-1 min-w-0">
-        <header className="sticky top-0 z-10 bg-[#080808]/95 backdrop-blur-sm border-b border-[#1a1a1a] px-8 py-4">
+        <header className="sticky top-0 z-10 bg-[#080808]/95 backdrop-blur-sm border-b border-[#1a1a1a] px-8 py-4 flex items-center justify-between">
           <h2 className="text-[20px] font-bold text-white capitalize">{screen}</h2>
+          <div className="flex items-center gap-3">
+            {deployMsg && (
+              <span className={`text-[12px] ${deployMsg.includes("triggered") ? "text-green-400" : "text-[#ff6b4a]"}`}>{deployMsg}</span>
+            )}
+            <button onClick={handleDeploy} disabled={deploying}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#222] text-[12px] font-semibold text-[#ccc] hover:text-white hover:border-[#444] transition-colors disabled:opacity-50">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              {deploying ? "Deploying..." : "Rebuild & Deploy"}
+            </button>
+          </div>
         </header>
         <div className="p-8">
           <ScreenRouter screen={screen} supabase={supabase} admin={admin} onEditArticle={(a: any) => setEditingArticle(a)} />
