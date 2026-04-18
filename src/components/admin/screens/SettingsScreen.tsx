@@ -213,6 +213,19 @@ export default function SettingsScreen({ supabase }: Props) {
         </div>
       </section>
 
+      {/* Social / Platform Links */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">Platform Links</h3>
+        <p className="text-[12px] text-[#555] mb-4">URLs for the social logos in the footer and podcast page. These are hardcoded in the footer but stored here for reference and future CMS-driven rendering.</p>
+        <div className="space-y-3">
+          <Field label="Spotify" value={settings.social_links?.spotify ?? "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf"} onChange={(v) => saveSetting("social_links", { ...settings.social_links, spotify: v })} />
+          <Field label="Apple Podcasts" value={settings.social_links?.apple ?? "https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859"} onChange={(v) => saveSetting("social_links", { ...settings.social_links, apple: v })} />
+          <Field label="YouTube" value={settings.social_links?.youtube ?? "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw"} onChange={(v) => saveSetting("social_links", { ...settings.social_links, youtube: v })} />
+          <Field label="Substack" value={settings.social_links?.substack ?? "https://productimpactpod.substack.com"} onChange={(v) => saveSetting("social_links", { ...settings.social_links, substack: v })} />
+          <Field label="LinkedIn" value={settings.social_links?.linkedin ?? "https://www.linkedin.com/company/product-impact-podcast"} onChange={(v) => saveSetting("social_links", { ...settings.social_links, linkedin: v })} />
+        </div>
+      </section>
+
       {/* Deploy Hook */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-1">Deploy Hook</h3>
@@ -220,6 +233,34 @@ export default function SettingsScreen({ supabase }: Props) {
           Cloudflare Pages deploy hook URL. Get this from CF Dashboard → Pages → your project → Settings → Builds & deployments → Deploy hooks → Add deploy hook.
         </p>
         <Field label="Deploy Hook URL" value={settings.deploy_hook?.url ?? ""} onChange={(v) => saveSetting("deploy_hook", { url: v })} />
+      </section>
+
+      {/* Hero Image Generation Prompt */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">Hero Image Generation</h3>
+        <p className="text-[12px] text-[#555] mb-4">
+          Master prompts used by <code className="text-[#ff6b4a]">scripts/publishing/generate_hero_image.py</code> when creating article header images via Replicate Flux.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[12px] font-medium text-[#888] mb-1.5">Claude Distillation System Prompt</label>
+            <textarea className="w-full h-40 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+              defaultValue={settings.hero_prompts?.distillation ?? "You distill news article headers into short photographic concepts for a hero image. Output ONE sentence describing what to photograph.\n\nHard rules:\n- PHOTOGRAPHIC subject — real objects, spaces, natural phenomena, documentary moments. No abstractions.\n- Prefer scenes with NO people. If the article's about a person, photograph their workspace / tool / environment instead.\n- NEVER include: futuristic scenes, sci-fi, robots, screens with readable content, text, logos, signage, or crowds.\n- Concrete nouns + lighting/setting adjective. ~15 words.\n- Output ONLY the sentence. No preamble, no quotes."}
+              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, distillation: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[12px] font-medium text-[#888] mb-1.5">Editorial Style (appended to every image prompt)</label>
+            <textarea className="w-full h-24 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+              defaultValue={settings.hero_prompts?.style ?? "Editorial photograph, documentary photojournalism style, natural lighting, shallow depth of field, muted colour grade, fine grain. Shot on a 35mm prime lens. Composition follows rule of thirds. Analogue, understated, restrained."}
+              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, style: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[12px] font-medium text-[#888] mb-1.5">Negative Prompt (what to avoid)</label>
+            <textarea className="w-full h-24 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+              defaultValue={settings.hero_prompts?.negative ?? "text, letters, numbers, logos, watermarks, signage, captions, subtitles, futuristic, sci-fi, cyberpunk, neon, holographic, robotic, android, cyborg, glowing elements, lens flare, HDR, oversaturated, cartoon, illustration, 3D render, CGI, painting, anime, stylised, multiple people, crowd, group, extra fingers, extra limbs, distorted anatomy, deformed hands, blurry faces, low quality, artefacts, JPEG compression, uncanny"}
+              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, negative: e.target.value })} />
+          </div>
+        </div>
       </section>
 
       {/* Custom CSS */}

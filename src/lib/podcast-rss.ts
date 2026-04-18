@@ -8,12 +8,13 @@
 export interface PodcastEpisode {
   guid: string;
   title: string;
-  description: string;        // first ~250 chars, plain text
-  pubDate: string;            // formatted "Apr 8, 2026"
+  description: string;
+  fullDescription: string;
+  pubDate: string;
   pubDateISO: string;
   audioUrl: string;
   imageUrl: string;
-  duration: string;           // "45:32" or "01:23:45"
+  duration: string;
   episodeNumber: string;
   link: string;
 }
@@ -144,13 +145,14 @@ export async function getPodcastEpisodes(
     const contentEncoded = extractTag(block, "content:encoded");
     const itunesSummary = extractTag(block, "itunes:summary");
     const rawDesc = contentEncoded || itunesSummary || extractTag(block, "description");
-    const description = decodeHtmlEntities(rawDesc.replace(STRIP_HTML, ""))
+    const cleanedDesc = decodeHtmlEntities(rawDesc.replace(STRIP_HTML, ""))
       .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 250);
+      .trim();
+    const description = cleanedDesc.slice(0, 250);
+    const fullDescription = cleanedDesc;
 
     episodes.push({
-      guid, title, description, pubDate, pubDateISO,
+      guid, title, description, fullDescription, pubDate, pubDateISO,
       audioUrl, imageUrl, duration, episodeNumber, link,
     });
   });
