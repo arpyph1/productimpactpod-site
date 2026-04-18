@@ -5,18 +5,18 @@ import Footer from "@components/Footer.astro";
 import StoryCard from "@components/StoryCard.astro";
 import { getAllThemes, getAllArticles, themeLabel, type Theme, type Article } from "@lib/supabase";
 
-const THEME_KEYWORDS: Record<string, string[]> = {
-  "ai-product-strategy": ["product strategy", "roadmap", "prioriti", "product-market", "product leader", "product manag", "product vision", "strategic", "ship"],
-  "adoption-organizational-change": ["adoption", "organizational", "change management", "transformation", "enterprise", "scaling", "resistance", "stakeholder", "workforce", "deploy"],
-  "agents-agentic-systems": ["agent", "agentic", "autonomous", "multi-agent", "orchestrat", "copilot", "chatbot"],
-  "data-semantics-knowledge-foundations": ["data", "knowledge", "semantic", "ontolog", "taxonomy", "graph", "rag", "retrieval", "embedding", "vector"],
-  "evaluation-benchmarking": ["evaluat", "benchmark", "metric", "measur", "kpi", "roi", "testing", "a/b test", "accuracy", "performance"],
-  "go-to-market-distribution": ["go-to-market", "gtm", "distribution", "pricing", "monetiz", "growth", "acquisition", "retention", "competitive", "launch"],
-  "governance-risk-trust": ["governance", "risk", "trust", "safety", "ethic", "bias", "fairness", "regulat", "compliance", "transparen", "responsible", "guardrail"],
-  "ux-experience-design-for-ai": ["ux", "user experience", "design", "interface", "interaction", "usability", "human-centered", "conversational", "prototype"],
-};
-
 export async function getStaticPaths() {
+  const THEME_KEYWORDS: Record<string, string[]> = {
+    "ai-product-strategy": ["product strategy", "roadmap", "prioriti", "product-market", "product leader", "product manag", "product vision", "strategic", "ship"],
+    "adoption-organizational-change": ["adoption", "organizational", "change management", "transformation", "enterprise", "scaling", "resistance", "stakeholder", "workforce", "deploy"],
+    "agents-agentic-systems": ["agent", "agentic", "autonomous", "multi-agent", "orchestrat", "copilot", "chatbot"],
+    "data-semantics-knowledge-foundations": ["data", "knowledge", "semantic", "ontolog", "taxonomy", "graph", "rag", "retrieval", "embedding", "vector"],
+    "evaluation-benchmarking": ["evaluat", "benchmark", "metric", "measur", "kpi", "roi", "testing", "a/b test", "accuracy", "performance"],
+    "go-to-market-distribution": ["go-to-market", "gtm", "distribution", "pricing", "monetiz", "growth", "acquisition", "retention", "competitive", "launch"],
+    "governance-risk-trust": ["governance", "risk", "trust", "safety", "ethic", "bias", "fairness", "regulat", "compliance", "transparen", "responsible", "guardrail"],
+    "ux-experience-design-for-ai": ["ux", "user experience", "design", "interface", "interaction", "usability", "human-centered", "conversational", "prototype"],
+  };
+
   const themes = await getAllThemes();
   const articles = await getAllArticles();
   return themes.map((theme) => {
