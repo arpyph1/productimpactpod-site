@@ -8,9 +8,10 @@ import ArticlesScreen from "./screens/ArticlesScreen";
 import PodcastScreen from "./screens/PodcastScreen";
 import PartnersScreen from "./screens/PartnersScreen";
 import ResourcesScreen from "./screens/ResourcesScreen";
+import SocialScreen from "./screens/SocialScreen";
 import ArticleModal from "./ArticleModal";
 
-type Screen = "settings" | "seo" | "homepage" | "articles" | "resources" | "podcast" | "partners";
+type Screen = "settings" | "seo" | "homepage" | "articles" | "resources" | "podcast" | "partners" | "social";
 
 interface AdminUser {
   user: User;
@@ -27,6 +28,7 @@ const NAV_ITEMS: { key: Screen; label: string; icon: string }[] = [
   { key: "resources", label: "Resources", icon: "M7 18h10M7 14h10M7 10h4M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7zM13 2v7h7" },
   { key: "podcast", label: "Podcast", icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" },
   { key: "partners", label: "Partners", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
+  { key: "social", label: "Social", icon: "M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" },
 ];
 
 function Sidebar({ active, onNav, admin, onLogout }: {
@@ -265,6 +267,7 @@ function ScreenRouter({ screen, supabase, admin, onEditArticle }: { screen: Scre
     case "resources": return <ResourcesScreen supabase={supabase} />;
     case "podcast": return <PodcastScreen supabase={supabase} />;
     case "partners": return <PartnersScreen supabase={supabase} />;
+    case "social": return <SocialScreen supabase={supabase} />;
     default: return null;
   }
 }
