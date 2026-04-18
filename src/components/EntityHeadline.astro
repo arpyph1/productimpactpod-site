@@ -24,24 +24,36 @@ const {
 // Global entity dictionary — names that get highlighted in any headline.
 // Add new entities as coverage expands.
 const KNOWN_ENTITIES: string[] = [
-  // Companies
-  "Anthropic", "OpenAI", "Google", "Meta", "Apple", "Microsoft", "NVIDIA",
-  "Amazon", "Tesla", "Samsung", "Hugging Face", "Cohere", "Mistral",
-  "LangChain", "CrewAI", "Dust", "Figure AI", "Apptronik",
-  "AWS", "Bedrock", "Vertex AI",
+  // Companies — tech giants
+  "Anthropic", "OpenAI", "Google", "DeepMind", "Meta", "Apple", "Microsoft", "NVIDIA",
+  "Amazon", "Tesla", "Samsung", "IBM", "Intel", "Oracle", "Salesforce", "Adobe",
+  "ServiceNow", "Databricks", "Snowflake", "Palantir", "HubSpot", "Notion",
+  "Figma", "Stripe", "Slack", "Zoom", "Atlassian", "Datadog",
+  // Companies — AI startups
+  "Hugging Face", "Cohere", "Mistral", "Perplexity", "Stability AI",
+  "LangChain", "CrewAI", "Dust", "Figure AI", "Apptronik", "Runway",
+  "Scale AI", "Weights & Biases", "Pinecone", "Weaviate",
+  // Companies — research/advisory
+  "Gartner", "Forrester", "McKinsey", "Deloitte", "Accenture", "Stanford",
+  "MIT", "Harvard", "Berkeley",
+  // Companies — finance/enterprise
+  "HSBC", "BBVA", "JPMorgan", "Goldman Sachs",
+  // Cloud / platforms
+  "AWS", "Azure", "Bedrock", "Vertex AI", "Cloudflare",
   // Products
   "ChatGPT", "Claude", "Claude Managed Agents", "Copilot", "Gemini",
-  "GPT-4", "GPT-5", "Sora", "DALL-E", "Midjourney",
+  "GPT-4", "GPT-4o", "GPT-5", "Sora", "DALL-E", "Midjourney",
   "Ray-Ban Display", "Apple Glass", "Vision Pro",
   "Humane AI Pin", "Rabbit R1", "Limitless Pin",
-  "Cosmos", "Rubin",
+  "Cosmos", "Rubin", "Llama", "Firefly",
   // People
   "Jensen Huang", "Sam Altman", "Mark Zuckerberg", "Tim Cook",
   "Satya Nadella", "Sundar Pichai", "Elon Musk",
   "Robert Brunner", "Jony Ive", "Jessica Yan",
   "Dario Amodei", "Daniela Amodei",
-  // Concepts that deserve highlighting
-  "Physical AI", "Agentic AI",
+  // Concepts
+  "Physical AI", "Agentic AI", "AI Agents",
+  "LLM", "RAG", "AEO",
 ];
 
 // Convert slugs to display names and add to the list

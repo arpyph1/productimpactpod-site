@@ -394,6 +394,17 @@ export async function getArticlesByEntity(
   return unique.slice(0, limit);
 }
 
+// ── Site Settings ─────────────────────────────────────────────────────────────
+
+export async function getSiteSetting(key: string): Promise<any> {
+  const { data } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", key)
+    .single();
+  return data?.value ?? null;
+}
+
 // ── YouTube Shorts (via Supabase edge function) ─────────────────────────────
 
 export interface YouTubeShort {

@@ -5,7 +5,7 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import {
   getAllArticles, getAllThemes,
-  formatLabel, authorDisplayName,
+  formatLabel, authorDisplayName, getSiteSetting,
 } from "@lib/supabase";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
 
@@ -14,6 +14,15 @@ const themes = await getAllThemes();
 const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
+
+const hp = (await getSiteSetting("homepage")) ?? {};
+const showHero = hp.show_hero !== false;
+const showLatest = hp.show_latest !== false;
+const showPodcast = hp.show_podcast !== false;
+const showFeatured = hp.show_featured !== false;
+const showResources = hp.show_resources !== false;
+const showNewsletter = hp.show_newsletter !== false;
+const showPartners = hp.show_partners !== false;
 
 const leadStories = articles.filter((a) => a.is_lead_story);
 const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
@@ -90,7 +99,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         HERO CAROUSEL — full-bleed cards with Particle warm gradients
         ══════════════════════════════════════════════════════════════ */}
-    {carouselArticles.length > 0 && (
+    {showHero && carouselArticles.length > 0 && (
       <section class="relative pt-4 pb-6">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="relative overflow-hidden rounded-2xl" id="hero-carousel">
@@ -166,7 +175,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         LATEST ARTICLES — left column with ad slot on right
         ══════════════════════════════════════════════════════════════ */}
-    {articles.length > 1 && (
+    {showLatest && articles.length > 1 && (
       <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           {/* Left: article list */}
@@ -225,6 +234,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         PODCAST — last 3 episodes prominently
         ══════════════════════════════════════════════════════════════ */}
+    {showPodcast && (
     <section class="py-12 border-t border-[#141414] relative">
       <div class="absolute inset-0 bg-gradient-to-b from-[#0c0808] via-[#080808] to-[#080810]"></div>
       <div class="relative max-w-[1200px] mx-auto px-4 md:px-6">
@@ -255,7 +265,8 @@ const jsonLd = {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
-              <a href={ep.link || "/podcast/"} target="_blank" rel="noopener" class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+              <button type="button" class="ep-modal-trigger group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] text-left cursor-pointer"
+                data-title={ep.title} data-desc={ep.description} data-audio={ep.audioUrl} data-image={ep.imageUrl} data-date={date} data-ep={epLabel} data-link={ep.link} data-duration={ep.duration}>
                 <div class="relative aspect-square overflow-hidden">
                   {ep.imageUrl ? (
                     <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
@@ -273,7 +284,7 @@ const jsonLd = {
                   <h3 class="text-[12px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
                   <div class="text-[10px] text-[#555]">{date}</div>
                 </div>
-              </a>
+              </button>
             );
           })}
         </div>
@@ -286,12 +297,13 @@ const jsonLd = {
         </div>
       </div>
     </section>
+    )}
 
 
     {/* ══════════════════════════════════════════════════════════════
         FEATURED / EVERGREEN ARTICLES — 4 cards (CMS-selected in future)
         ══════════════════════════════════════════════════════════════ */}
-    {articles.length > 2 && (
+    {showFeatured && articles.length > 2 && (
       <section class="py-10 border-t border-[#141414]">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
@@ -335,6 +347,7 @@ const jsonLd = {
         AI STRATEGY RESOURCES — CMS-managed reports and long-form docs
         PDF previews in large format carousel. Placeholder until CMS populated.
         ══════════════════════════════════════════════════════════════ */}
+    {showResources && (
     <section class="py-10 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-center justify-between mb-5">
@@ -374,11 +387,13 @@ const jsonLd = {
         </div>
       </div>
     </section>
+    )}
 
 
     {/* ══════════════════════════════════════════════════════════════
         SUBSTACK — newsletter subscribe + 3 latest editions
         ══════════════════════════════════════════════════════════════ */}
+    {showNewsletter && (
     <section class="py-12 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-8">
@@ -423,11 +438,13 @@ const jsonLd = {
         </div>
       </div>
     </section>
+    )}
 
 
     {/* ══════════════════════════════════════════════════════════════
         PARTNERS
         ══════════════════════════════════════════════════════════════ */}
+    {showPartners && (
     <section class="py-10 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-center justify-between mb-6">
@@ -455,9 +472,46 @@ const jsonLd = {
         </div>
       </div>
     </section>
+    )}
 
 
   </main>
+
+  {/* ── Episode Modal ── */}
+  <div id="ep-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+    <div class="w-full max-w-2xl bg-[#0c0c0c] border border-[#222] rounded-2xl shadow-2xl mx-auto">
+      <div class="flex items-start gap-5 p-6 border-b border-[#1a1a1a]">
+        <img id="ep-modal-img" src="" alt="" class="w-24 h-24 rounded-xl object-cover flex-shrink-0 bg-[#111]" />
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span id="ep-modal-num" class="text-[11px] font-bold text-[#ff6b4a] uppercase"></span>
+            <span id="ep-modal-date" class="text-[11px] text-[#555]"></span>
+            <span id="ep-modal-dur" class="text-[11px] text-[#555]"></span>
+          </div>
+          <h3 id="ep-modal-title" class="text-[20px] font-extrabold text-white leading-tight mb-2"></h3>
+        </div>
+        <button id="ep-modal-close" class="text-[#555] hover:text-white flex-shrink-0 p-1 -mt-1">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <div id="ep-modal-audio-wrap" class="mb-5"></div>
+        <p id="ep-modal-desc" class="text-[14px] text-[#999] leading-relaxed mb-6"></p>
+        <div class="flex flex-wrap gap-3">
+          <a id="ep-modal-spotify" href="#" target="_blank" rel="noopener" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20 text-[12px] font-semibold text-[#1DB954] hover:bg-[#1DB954]/20 transition-colors">
+            <svg viewBox="0 0 168 168" class="w-4 h-4"><path fill="#1DB954" d="M83.996.277C37.747.277.253 37.77.253 84.019c0 46.251 37.494 83.741 83.743 83.741 46.254 0 83.744-37.49 83.744-83.741 0-46.246-37.49-83.738-83.745-83.738l.001-.004zm38.404 120.78a5.217 5.217 0 01-7.18 1.73c-19.662-12.01-44.414-14.73-73.564-8.07a5.222 5.222 0 01-6.249-3.93 5.213 5.213 0 013.926-6.25c31.9-7.291 59.263-4.15 81.337 9.34 2.46 1.51 3.24 4.72 1.73 7.18zm10.25-22.805c-1.89 3.075-5.91 4.045-8.98 2.155-22.51-13.839-56.823-17.846-83.448-9.764-3.453 1.043-7.1-.903-8.148-4.35a6.538 6.538 0 014.354-8.143c30.413-9.228 68.222-4.758 94.072 11.127 3.07 1.89 4.04 5.91 2.15 8.976zm.88-23.744c-26.99-16.031-71.52-17.505-97.289-9.684-4.138 1.255-8.514-1.081-9.768-5.219a7.835 7.835 0 015.221-9.771c29.581-8.98 78.756-7.245 109.83 11.202a7.823 7.823 0 012.74 10.733c-2.2 3.722-7.02 4.949-10.73 2.739z"/></svg>
+            Spotify
+          </a>
+          <a id="ep-modal-apple" href="https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859" target="_blank" rel="noopener" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#BC5FE8]/10 border border-[#BC5FE8]/20 text-[12px] font-semibold text-[#BC5FE8] hover:bg-[#BC5FE8]/20 transition-colors">
+            Apple Podcasts
+          </a>
+          <a id="ep-modal-link" href="#" target="_blank" rel="noopener" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#111] border border-[#222] text-[12px] font-semibold text-[#888] hover:text-white hover:border-[#333] transition-colors">
+            View Episode →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <Footer />
 </BaseLayout>
@@ -522,6 +576,62 @@ const jsonLd = {
   }, { passive: true });
 
   startAuto();
+
+  // Episode modal
+  var modal = document.getElementById('ep-modal');
+  var closeBtn = document.getElementById('ep-modal-close');
+  if (modal && closeBtn) {
+    document.querySelectorAll('.ep-modal-trigger').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var title = btn.getAttribute('data-title') || '';
+        var desc = btn.getAttribute('data-desc') || '';
+        var audio = btn.getAttribute('data-audio') || '';
+        var image = btn.getAttribute('data-image') || '';
+        var date = btn.getAttribute('data-date') || '';
+        var ep = btn.getAttribute('data-ep') || '';
+        var link = btn.getAttribute('data-link') || '';
+        var dur = btn.getAttribute('data-duration') || '';
+
+        document.getElementById('ep-modal-title').textContent = title;
+        document.getElementById('ep-modal-desc').textContent = desc;
+        document.getElementById('ep-modal-num').textContent = ep;
+        document.getElementById('ep-modal-date').textContent = date;
+        document.getElementById('ep-modal-dur').textContent = dur;
+        document.getElementById('ep-modal-link').href = link || '#';
+
+        var imgEl = document.getElementById('ep-modal-img');
+        if (image) { imgEl.src = image; imgEl.style.display = ''; }
+        else { imgEl.style.display = 'none'; }
+
+        var audioWrap = document.getElementById('ep-modal-audio-wrap');
+        if (audio) {
+          audioWrap.innerHTML = '<audio controls preload="none" class="w-full rounded-lg" style="height:48px"><source src="' + audio + '" type="audio/mpeg" /></audio>';
+        } else { audioWrap.innerHTML = ''; }
+
+        var spotifyLink = document.getElementById('ep-modal-spotify');
+        spotifyLink.href = 'https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf';
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+    });
+
+    closeBtn.addEventListener('click', function() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      var audioWrap = document.getElementById('ep-modal-audio-wrap');
+      audioWrap.innerHTML = '';
+    });
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        var audioWrap = document.getElementById('ep-modal-audio-wrap');
+        audioWrap.innerHTML = '';
+      }
+    });
+  }
 })();
 </script>
 
