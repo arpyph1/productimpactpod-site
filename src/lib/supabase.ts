@@ -69,6 +69,7 @@ export interface Article {
   schema_jsonld: Record<string, unknown> | null;
   canonical_url: string;
   published: boolean;
+  is_lead_story: boolean;
   overview_bullets: string[] | null;
   created_at: string;
   updated_at: string;
