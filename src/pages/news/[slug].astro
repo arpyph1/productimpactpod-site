@@ -331,26 +331,25 @@ const bcJsonLd = {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ?? "";
             return (
-              <div class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] cursor-pointer ep-card" data-link={ep.link} data-audio={ep.audioUrl} data-title={ep.title} data-desc={ep.description} data-date={date}>
+              <a href={ep.link || "/podcast/"} target="_blank" rel="noopener" class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
                 <div class="relative aspect-square overflow-hidden">
                   {ep.imageUrl ? (
                     <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
                   ) : (
                     <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[28px]">🎙</span></div>
                   )}
-                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <button class="ep-play absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10" data-audio={ep.audioUrl} aria-label="Play">
+                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
                       <svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </div>
-                  </button>
+                  </div>
                   {epLabel && <div class="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
                 </div>
                 <div class="p-2.5">
                   <h3 class="text-[12px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
                   <div class="text-[10px] text-[#555]">{date}</div>
                 </div>
-              </div>
+              </a>
             );
           })}
         </div>

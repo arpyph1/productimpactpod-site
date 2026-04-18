@@ -193,7 +193,7 @@ const jsonLd = {
                     <div class="flex-1 min-w-0 pt-0.5">
                       <EntityHeadline title={a.title} entities={entities} tag="h3"
                         class="text-[15px] md:text-[17px] font-bold text-[#e5e5e5] leading-[1.3] group-hover:text-white transition-colors inline" />
-                      {a.subtitle && <span class="text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
+                      {a.subtitle && <span class="hidden md:inline text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
                       <div class="flex items-center gap-2 mt-1.5 text-[11px]">
                         <span class="font-semibold text-[#ff6b4a] uppercase tracking-wide">{author}</span>
                         <span class="text-[#333]">|</span>
@@ -229,14 +229,11 @@ const jsonLd = {
       <div class="relative max-w-[1200px] mx-auto px-4 md:px-6">
 
         <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <img src="/logo.png" alt="PI" class="w-10 h-10 object-contain" />
-            <div>
-              <h2 class="text-[24px] md:text-[28px] font-extrabold text-white tracking-tight">
-                Product Impact Podcast <span class="text-[#ff6b4a]">&#8250;</span>
-              </h2>
-              <p class="text-[13px] text-[#666]">Prove impact. Improve impact. Scale impact.</p>
-            </div>
+          <div>
+            <h2 class="text-[24px] md:text-[28px] font-extrabold text-white tracking-tight">
+              Product Impact Podcast <span class="text-[#ff6b4a]">&#8250;</span>
+            </h2>
+            <p class="text-[13px] text-[#666]">Prove impact. Improve impact. Scale impact.</p>
           </div>
           <div class="flex items-center gap-3">
             <a href="https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf" target="_blank" rel="noopener" class="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center hover:brightness-110 transition-all" title="Spotify">
@@ -257,27 +254,25 @@ const jsonLd = {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
-              <div class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] cursor-pointer ep-card" data-link={ep.link} data-audio={ep.audioUrl} data-title={ep.title} data-desc={ep.description} data-date={date}>
+              <a href={ep.link || "/podcast/"} target="_blank" rel="noopener" class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
                 <div class="relative aspect-square overflow-hidden">
                   {ep.imageUrl ? (
                     <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
                   ) : (
                     <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[28px]">🎙</span></div>
                   )}
-                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  {/* Play button */}
-                  <button class="ep-play absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10" data-audio={ep.audioUrl} aria-label="Play">
+                  <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
                       <svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </div>
-                  </button>
+                  </div>
                   {epLabel && <div class="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">{epLabel}</div>}
                 </div>
                 <div class="p-2.5">
                   <h3 class="text-[12px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
                   <div class="text-[10px] text-[#555]">{date}</div>
                 </div>
-              </div>
+              </a>
             );
           })}
         </div>

@@ -1,0 +1,208 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllEntitiesByType, getAllArticles, type Entity } from "@lib/supabase";
+
+const siteUrl = "https://productimpactpod.com";
+
+const dbOrgs = await getAllEntitiesByType("organization");
+const articles = await getAllArticles();
+
+const KNOWN_COMPANIES: Record<string, { name: string; description: string }> = {
+  "google": { name: "Google", description: "Search, cloud, and AI products including Gemini, DeepMind, and Google Cloud." },
+  "openai": { name: "OpenAI", description: "Creator of GPT, ChatGPT, and DALL-E. Leading AI research lab." },
+  "microsoft": { name: "Microsoft", description: "Enterprise software, Azure cloud, Copilot AI, and GitHub." },
+  "apple": { name: "Apple", description: "Consumer hardware and software — iPhone, Mac, Apple Intelligence." },
+  "amazon": { name: "Amazon", description: "E-commerce, AWS cloud, Alexa, and AI/ML services." },
+  "meta": { name: "Meta", description: "Social media (Facebook, Instagram, WhatsApp) and AI research (Llama)." },
+  "anthropic": { name: "Anthropic", description: "AI safety company. Creator of Claude." },
+  "nvidia": { name: "NVIDIA", description: "GPU hardware and AI compute infrastructure." },
+  "salesforce": { name: "Salesforce", description: "CRM platform and AI (Einstein, Agentforce)." },
+  "adobe": { name: "Adobe", description: "Creative software, Firefly AI, and digital experience tools." },
+  "hubspot": { name: "HubSpot", description: "Marketing, sales, and CRM platform." },
+  "spotify": { name: "Spotify", description: "Audio streaming and podcast platform." },
+  "servicenow": { name: "ServiceNow", description: "Enterprise IT service management and workflow automation." },
+  "databricks": { name: "Databricks", description: "Data lakehouse platform and AI/ML infrastructure." },
+  "snowflake": { name: "Snowflake", description: "Cloud data platform and analytics." },
+  "palantir": { name: "Palantir", description: "Data analytics and AI platforms for enterprise and government." },
+  "ibm": { name: "IBM", description: "Enterprise technology, Watson AI, and consulting." },
+  "tesla": { name: "Tesla", description: "Electric vehicles and autonomous driving AI." },
+  "gartner": { name: "Gartner", description: "Technology research and advisory firm." },
+  "forrester": { name: "Forrester", description: "Technology research and advisory." },
+  "mckinsey": { name: "McKinsey", description: "Management consulting and AI strategy advisory." },
+  "deloitte": { name: "Deloitte", description: "Professional services and consulting." },
+  "accenture": { name: "Accenture", description: "Technology services and consulting." },
+  "aws": { name: "AWS", description: "Amazon Web Services — cloud computing platform." },
+  "notion": { name: "Notion", description: "Productivity and knowledge management platform." },
+  "figma": { name: "Figma", description: "Collaborative design and prototyping tool." },
+  "stripe": { name: "Stripe", description: "Payment processing and financial infrastructure." },
+  "slack": { name: "Slack", description: "Business messaging and collaboration platform." },
+  "zoom": { name: "Zoom", description: "Video conferencing and communications platform." },
+  "atlassian": { name: "Atlassian", description: "Team collaboration tools — Jira, Confluence." },
+  "datadog": { name: "Datadog", description: "Cloud monitoring and analytics platform." },
+  "hsbc": { name: "HSBC", description: "Global banking and financial services." },
+  "bbva": { name: "BBVA", description: "Global banking — digital banking innovator." },
+  "perplexity": { name: "Perplexity", description: "AI-powered answer engine and search." },
+};
+
+interface CompanyEntry {
+  slug: string;
+  name: string;
+  description: string;
+  articleCount: number;
+  latestMention: string;
+  fromDb: boolean;
+}
+
+const companyMap = new Map<string, CompanyEntry>();
+
+for (const org of dbOrgs) {
+  companyMap.set(org.slug, {
+    slug: org.slug,
+    name: org.name,
+    description: org.description ?? "",
+    articleCount: 0,
+    latestMention: "",
+    fromDb: true,
+  });
+}
+
+for (const article of articles) {
+  const text = `${article.title} ${article.subtitle ?? ""} ${article.meta_description ?? ""}`.toLowerCase();
+  const orgs = article.organizations ?? [];
+
+  for (const orgName of orgs) {
+    const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    if (!companyMap.has(slug)) {
+      const known = KNOWN_COMPANIES[slug];
+      companyMap.set(slug, { slug, name: known?.name ?? orgName, description: known?.description ?? "", articleCount: 0, latestMention: "", fromDb: false });
+    }
+    const entry = companyMap.get(slug)!;
+    entry.articleCount++;
+    if (!entry.latestMention || article.publish_date > entry.latestMention) entry.latestMention = article.publish_date;
+  }
+
+  for (const [slug, info] of Object.entries(KNOWN_COMPANIES)) {
+    if (text.includes(info.name.toLowerCase()) || text.includes(slug)) {
+      if (!companyMap.has(slug)) {
+        companyMap.set(slug, { slug, name: info.name, description: info.description, articleCount: 0, latestMention: "", fromDb: false });
+      }
+      const entry = companyMap.get(slug)!;
+      entry.articleCount++;
+      if (!entry.latestMention || article.publish_date > entry.latestMention) entry.latestMention = article.publish_date;
+    }
+  }
+}
+
+const companies = [...companyMap.values()]
+  .filter(c => c.articleCount > 0)
+  .sort((a, b) => b.articleCount - a.articleCount);
+
+const grouped = new Map<string, CompanyEntry[]>();
+for (const c of companies) {
+  const letter = (c.name[0] ?? "#").toUpperCase();
+  const key = /[A-Z]/.test(letter) ? letter : "#";
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(c);
+}
+const sortedGroups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+const jsonLd = {
+  "@context": "https://schema.org", "@type": "CollectionPage",
+  name: "Companies | Product Impact",
+  url: `${siteUrl}/companies`,
+  description: "Companies covered in Product Impact articles and podcast episodes.",
+};
+---
+
+<BaseLayout
+  title="Companies | Product Impact"
+  description="Companies covered in Product Impact — AI products, enterprise software, consulting, and technology."
+  canonicalUrl={`${siteUrl}/companies`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <header class="mb-8">
+      <nav class="text-[11px] text-[#555] mb-3 flex items-center gap-1.5">
+        <a href="/" class="hover:text-white">Home</a>
+        <span class="text-[#333]">›</span>
+        <span class="text-[#888]">Companies</span>
+      </nav>
+      <div class="flex items-baseline gap-3 mb-2">
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">Companies</h1>
+        <span class="text-[16px] font-bold text-[#ff6b4a]">{companies.length}</span>
+      </div>
+      <p class="text-[14px] text-[#777] max-w-lg">
+        Companies covered across Product Impact articles, analysis, and podcast episodes — sorted by mention frequency.
+      </p>
+    </header>
+
+    {/* Top mentioned */}
+    {companies.length > 0 && (
+      <div class="mb-10">
+        <h2 class="text-[14px] font-bold text-[#888] uppercase tracking-wider mb-4">Most Mentioned</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {companies.slice(0, 10).map((c) => (
+            <a href={c.fromDb ? `/organizations/${c.slug}/` : `/news/?q=${encodeURIComponent(c.name)}`}
+              class="group p-4 rounded-xl bg-[#0c0c0c] border border-[#161616] hover:border-[#282828] transition-all">
+              <div class="text-[16px] font-bold text-white group-hover:text-[#ff6b4a] transition-colors mb-1">{c.name}</div>
+              <div class="text-[11px] text-[#555]">{c.articleCount} article{c.articleCount !== 1 ? "s" : ""}</div>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* Alphabetical index */}
+    {sortedGroups.length > 0 && (
+      <>
+        <nav class="flex flex-wrap gap-1.5 mb-8 pb-5 border-b border-[#141414]">
+          {sortedGroups.map(([letter]) => (
+            <a href={`#letter-${letter}`}
+              class="w-8 h-8 flex items-center justify-center rounded-md text-[12px] font-bold text-[#888] bg-[#111] hover:bg-[#1a1a1a] hover:text-white transition-colors">
+              {letter}
+            </a>
+          ))}
+        </nav>
+
+        <div class="space-y-8">
+          {sortedGroups.map(([letter, list]) => (
+            <section id={`letter-${letter}`}>
+              <h2 class="text-[22px] font-extrabold text-[#ff6b4a] mb-4 pb-2 border-b border-[#1a1a1a]">{letter}</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {list.sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
+                  <a href={c.fromDb ? `/organizations/${c.slug}/` : `/news/?q=${encodeURIComponent(c.name)}`}
+                    class="group flex items-start gap-3 p-3 rounded-lg bg-[#0c0c0c] border border-[#141414] hover:border-[#282828] transition-all">
+                    <div class="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center flex-shrink-0">
+                      <span class="text-[13px] font-bold text-[#666] group-hover:text-[#ff6b4a] transition-colors">
+                        {c.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-[14px] font-semibold text-[#ccc] group-hover:text-white transition-colors">{c.name}</div>
+                      {c.description && <div class="text-[11px] text-[#555] line-clamp-2 mt-0.5">{c.description}</div>}
+                      <div class="text-[10px] text-[#444] mt-1">{c.articleCount} mention{c.articleCount !== 1 ? "s" : ""}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <p class="text-[12px] text-[#444] italic mt-10 pt-6 border-t border-[#1a1a1a]">
+          {companies.length} companies indexed. Auto-compiled from article metadata and content analysis.
+        </p>
+      </>
+    )}
+
+    {companies.length === 0 && (
+      <p class="text-[#666] text-center py-16">No companies indexed yet. Companies are detected from article metadata and content.</p>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>
