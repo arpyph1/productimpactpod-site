@@ -58,6 +58,15 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
 
+    {/* Google Analytics (gtag.js) */}
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5XKLYD86P7"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-5XKLYD86P7');
+    </script>
+
     <meta
       name="robots"
       content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}

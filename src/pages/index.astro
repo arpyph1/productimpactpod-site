@@ -15,7 +15,8 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-const carouselArticles = articles.slice(0, 6);
+const leadStories = articles.filter((a) => a.is_lead_story);
+const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
 
 // Article counts per theme
 const tc: Record<string, number> = {};

@@ -342,7 +342,8 @@ export async function getArticlesByEntity(
   entitySlug: string,
   limit = 20,
 ): Promise<Article[]> {
-  const { data: rows, error } = await supabase
+  // Try join table first
+  const { data: rows } = await supabase
     .from("article_entities")
     .select(
       `
@@ -352,20 +353,45 @@ export async function getArticlesByEntity(
     )
     .eq("entities.slug", entitySlug)
     .limit(limit);
-  if (error || !rows || rows.length === 0) return [];
 
-  // Deduplicate + filter to published + newest first
-  const articles = rows
+  const fromJoin = (rows ?? [])
     .map((r: any) => r.articles as Article)
     .filter((a) => a && a.published);
+
+  // Also search articles that mention this entity in their arrays
+  const entityName = entitySlug.replace(/-/g, " ");
+  const { data: byArray } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .or(`organizations.cs.{${entitySlug}},organizations.cs.{${entityName}},people.cs.{${entitySlug}},people.cs.{${entityName}},products.cs.{${entitySlug}},products.cs.{${entityName}}`)
+    .order("publish_date", { ascending: false })
+    .limit(limit);
+
+  // Also text search titles
+  const titleSearch = entityName.length >= 3 ? entitySlug : null;
+  let byTitle: Article[] = [];
+  if (titleSearch) {
+    const { data } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("published", true)
+      .or(`title.ilike.%${entityName}%,meta_description.ilike.%${entityName}%`)
+      .order("publish_date", { ascending: false })
+      .limit(limit);
+    byTitle = (data ?? []) as Article[];
+  }
+
+  // Deduplicate + sort
+  const all = [...fromJoin, ...((byArray ?? []) as Article[]), ...byTitle];
   const seen = new Set<string>();
-  const unique = articles.filter((a) => {
-    if (seen.has(a.slug)) return false;
+  const unique = all.filter((a) => {
+    if (!a?.slug || seen.has(a.slug)) return false;
     seen.add(a.slug);
     return true;
   });
   unique.sort((a, b) => (a.publish_date < b.publish_date ? 1 : -1));
-  return unique;
+  return unique.slice(0, limit);
 }
 
 // ── YouTube Shorts (via Supabase edge function) ─────────────────────────────
