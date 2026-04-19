@@ -34,6 +34,8 @@ const VOICE_META: Record<Voice, { label: string; description: string }> = {
   },
 };
 
+const LINKEDIN_MAX = 3000;
+
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -44,10 +46,10 @@ function plainText(html: string): string {
   return (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function extractSentences(html: string, minLen = 30, maxLen = 220): string[] {
+function allSentences(html: string): string[] {
   return plainText(html)
     .split(/(?<=[.!?])\s+/)
-    .filter(s => s.length >= minLen && s.length <= maxLen);
+    .filter(s => s.length >= 25 && s.length <= 250);
 }
 
 function extractStats(html: string): string[] {
@@ -66,31 +68,25 @@ function extractStats(html: string): string[] {
         stats.push(s);
     }
   }
-  return stats.slice(0, 6);
-}
-
-function extractKeyInsight(article: Article): string {
-  const desc = article.meta_description ?? "";
-  const first = desc.split(/(?<=[.!?])\s+/).find(s => s.length > 20);
-  if (first && first.length > 30) return first;
-  return extractSentences(article.content_html)[0] ?? desc.slice(0, 200);
+  return stats.slice(0, 8);
 }
 
 // ——— Product Impact ———
 // Professional, editorial, title + meta_description aligned, no first-person.
+// Target: SHORT. 400-1000 chars (13-33% of LinkedIn max).
 
 function generateProductImpactTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
-  const insight = extractKeyInsight(article);
+  const desc = article.meta_description ?? "";
+  const firstSentence = desc.split(/(?<=[.!?])\s+/).find(s => s.length > 20) ?? "";
 
   const intros = ["", "New on Product Impact:", "Just published:", "This week:", "Worth reading:"];
   const intro = pick(intros);
 
   const variants = [
-    () => `${intro ? intro + "\n\n" : ""}${article.title}\n\n${insight.slice(0, 150)}\n\n${link}`,
-    () => `${article.title}\n\n${insight.slice(0, 180)}\n\n${link}`,
+    () => `${intro ? intro + "\n\n" : ""}${article.title}\n\n${firstSentence.slice(0, 150)}\n\n${link}`,
+    () => `${article.title}\n\n${firstSentence.slice(0, 180)}\n\n${link}`,
     () => `${intro ? intro + " " : ""}${article.title}\n\n${link}`,
-    () => `"${article.title}"\n\n${insight.slice(0, 160)}\n\n${link}`,
   ];
 
   let text = pick(variants)();
@@ -98,99 +94,65 @@ function generateProductImpactTwitter(article: Article): string {
   return text;
 }
 
-function makeHook(article: Article): string {
-  const title = article.title;
-  if (title.length >= 40 && title.length <= 65) return title;
-  const desc = article.meta_description ?? "";
-  const firstSentence = desc.split(/(?<=[.!?])\s+/)[0] ?? "";
-  if (firstSentence.length >= 40 && firstSentence.length <= 65) return firstSentence;
-  if (title.length > 65) return title.slice(0, 60).replace(/\s+\S*$/, "") + "...";
-  return title;
-}
-
 function generateProductImpactLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const desc = article.meta_description ?? "";
-  const sentences = extractSentences(article.content_html, 30, 200);
-  const hook = makeHook(article);
+  const sentences = allSentences(article.content_html);
 
   const keyPoints = sentences
-    .filter(s => s.match(/\d|key|important|critical|significant|major|primary|core|leading|growing|declining/i))
-    .slice(0, 4)
+    .filter(s => s.match(/\d|key|important|critical|significant|major|leading|growing/i))
+    .slice(0, 3)
     .map(s => "• " + s);
-  const points = keyPoints.length >= 3 ? keyPoints : sentences.slice(1, 5).map(s => "• " + s);
-
-  const context = sentences
-    .filter(s => !points.some(p => p.includes(s)))
-    .slice(0, 3);
+  const points = keyPoints.length >= 2 ? keyPoints : sentences.slice(1, 4).map(s => "• " + s);
 
   const tags = pick([
     "#AIProducts #ProductStrategy #ProductImpact",
     "#AI #ProductManagement #ProductImpact",
     "#AIStrategy #Enterprise #ProductImpact",
-    "#ProductLeadership #AI #Innovation",
   ]);
 
   const parts: string[] = [
-    hook,
+    article.title,
     "",
-    desc || context[0] || "",
+    desc || sentences[0] || "",
     "",
+    ...points,
+    "",
+    `Read the full article: ${link}`,
+    "",
+    tags,
   ];
-
-  if (desc && context[0]) {
-    parts.push(context[0]);
-    parts.push("");
-  }
-
-  parts.push("Key points from our analysis:");
-  parts.push(...points);
-  parts.push("");
-
-  if (context.length > 1) {
-    parts.push(context[1]);
-    parts.push("");
-  }
-
-  parts.push(`Read the full article: ${link}`);
-  parts.push("");
-  parts.push(tags);
 
   return parts.join("\n");
 }
 
 // ——— Arpy ———
-// Strategic insight distilled into impact. Longer-form. Multi-role framing.
-// First-person. Challenges reader assumptions. Explains why this matters across PM / exec / enterprise roles.
+// Strategic insight distilled into impact. LONG-FORM narrative.
+// First-person, opinionated, no lists. Challenges assumptions.
+// Explains why this matters for PMs / execs / enterprise.
+// Target: 1500-2700 chars (50-90% of LinkedIn max).
+// MUST end with a strong declarative closing point.
 
 function generateArpyTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
-  const sentences = extractSentences(article.content_html);
+  const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
-  const insight = extractKeyInsight(article);
+  const desc = article.meta_description ?? "";
 
   const bold = stats[0]
     ?? sentences.find(s => s.match(/should|must|can't|won't|fail|miss|overlook|underestimate|wrong|broken/i))
-    ?? insight;
+    ?? desc.split(/(?<=[.!?])\s+/)[0] ?? article.title;
 
   const intros = [
     "Something I keep seeing product teams get wrong —",
     "This one's worth reading carefully.",
     "Hot take:",
     "Been researching this. Key finding:",
-    "Can't stop thinking about this —",
     "The real story here isn't in the headline:",
     "Product leaders: pay attention to this.",
   ];
 
-  const variants = [
-    () => `${pick(intros)}\n\n${bold.slice(0, 195)}\n\n${link}`,
-    () => `${bold.slice(0, 200)}\n\nMy take on why this matters for product leaders:\n${link}`,
-    () => `${article.title}\n\n${bold.slice(0, 160)}\n\n${link}`,
-    () => `${pick(intros)}\n\n${insight.slice(0, 200)}\n\n👇\n${link}`,
-  ];
-
-  let text = pick(variants)();
+  let text = `${pick(intros)}\n\n${bold.slice(0, 195)}\n\n${link}`;
   if (text.length > 280) text = `${bold.slice(0, 210)}\n\n${link}`;
   return text;
 }
@@ -198,107 +160,144 @@ function generateArpyTwitter(article: Article): string {
 function generateArpyLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const desc = article.meta_description ?? "";
-  const sentences = extractSentences(article.content_html, 30, 220);
+  const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
-  const hook = makeHook(article);
+
+  // Arpy uses a punchy opening line, NOT the article title
+  const openers = [
+    "Something shifted this quarter and product leaders need to pay attention.",
+    "I've been digging into this and the implications are bigger than the headline suggests.",
+    "I keep hearing the same question from product teams. This article gets at the answer.",
+    "A pattern I keep seeing across enterprise AI deployments — and it should worry you.",
+    "This came up on the podcast and I decided to go deeper. Glad I did.",
+    "The conventional wisdom on this is wrong. Here's what the data actually shows.",
+    "Most product teams are making the same mistake right now. Here's what it is.",
+    "If you're in AI product leadership, this is the most important thing I've read this month.",
+  ];
 
   const roles = [
-    {
-      audience: "PMs",
-      lens: "If you're a PM leading an AI feature right now",
-      impact: "the build/buy decision looks completely different in this light",
-    },
-    {
-      audience: "product executives",
-      lens: "If you're a product executive setting the AI roadmap",
-      impact: "this reframes where you should actually be investing",
-    },
-    {
-      audience: "enterprise AI leads",
-      lens: "If you're responsible for AI adoption at scale",
-      impact: "this explains exactly why your rollout numbers look the way they do",
-    },
-    {
-      audience: "anyone building AI products",
-      lens: "If you're building an AI-native product",
-      impact: "this is the data point your strategy probably isn't accounting for",
-    },
-    {
-      audience: "engineering leaders",
-      lens: "If you're an engineering leader evaluating AI tooling",
-      impact: "this changes the calculus on what's worth building in-house",
-    },
+    { lens: "If you're a PM leading an AI feature", what: "this changes how you should think about the build/buy decision entirely" },
+    { lens: "If you're a product exec setting AI roadmap priorities", what: "this should make you reconsider where you're allocating resources" },
+    { lens: "If you're leading AI adoption at scale", what: "this data explains what's actually happening underneath the adoption curves" },
+    { lens: "If you're an engineering leader evaluating AI infrastructure", what: "this reframes the technical debt conversation completely" },
+    { lens: "If you're a founder building in the AI space", what: "this is the market signal your pitch deck needs to address" },
   ];
   const rf = pick(roles);
 
+  // Strategic sentence (implication-focused)
   const strategic = sentences.find(s =>
-    s.match(/means|indicates|suggests|reveals|shows|demonstrates|impact|implication|consequence|result|shift/i)
+    s.match(/means|indicates|suggests|reveals|demonstrates|impact|implication|consequence|shift|fundamental|transform/i)
   ) ?? sentences[0] ?? desc;
 
+  // Contrarian/challenge sentence
   const challenge = sentences.find(s =>
-    s.match(/but|however|despite|yet|while|although|contrary|instead|rather|not just|beyond/i)
-  ) ?? sentences[1] ?? strategic;
+    s.match(/but|however|despite|yet|although|contrary|instead|rather|not just|beyond|overlooked|missed|wrong/i)
+  ) ?? sentences[2] ?? "";
 
-  const additionalInsights = sentences
-    .filter(s => s !== strategic && s !== challenge)
-    .filter(s => s.match(/\d|key|important|critical|significant|shift|change|trend|adoption|growth|decline|impact|strategy|decision|risk/i))
-    .slice(0, 4);
-
+  // Build narrative paragraphs — no lists, flowing prose
   const closingPoints = [
     "The companies that figure this out first won't just have a competitive advantage — they'll define the next era of product development.",
     "This is the kind of shift that separates companies that are genuinely AI-native from those that are just adding AI as a feature checkbox.",
     "The window to act on this is shorter than most product teams realize. The organizations moving now are the ones that will set the standard.",
     "If your AI strategy doesn't account for this, you're building on assumptions that are already outdated.",
-    "This isn't a trend to watch — it's a structural change in how products get built, deployed, and adopted at scale.",
-    "The teams that internalize this will ship better products. The ones that ignore it will keep wondering why adoption stalls.",
+    "This isn't a trend to monitor. It's a structural change in how products get built, deployed, and adopted at scale. Act accordingly.",
+    "The teams that internalize this insight will ship better products, faster. The ones that don't will spend the next two years wondering why their AI features aren't getting adopted.",
   ];
 
-  const parts: string[] = [
-    hook,
-    "",
-    desc || strategic,
-    "",
-  ];
+  // Gather more article substance to fill the length
+  const usedSentences = new Set([strategic, challenge]);
+  const impactSentences = sentences
+    .filter(s => !usedSentences.has(s))
+    .filter(s => s.match(/\d|key|critical|significant|shift|change|trend|adoption|growth|decline|impact|strategy|decision|risk|opportunity|failure|success/i));
+  const contextSentences = sentences
+    .filter(s => !usedSentences.has(s) && !impactSentences.includes(s));
 
-  if (desc && strategic !== desc) {
+  const parts: string[] = [];
+
+  // Section 1: Punchy opener
+  parts.push(pick(openers));
+  parts.push("");
+
+  // Section 2: What the article is about (desc or strategic finding)
+  parts.push(desc || strategic);
+  parts.push("");
+
+  // Section 3: The strategic insight, elaborated
+  if (strategic !== desc && strategic) {
     parts.push(strategic);
     parts.push("");
   }
 
-  parts.push(`${rf.lens}, ${rf.impact}.`);
+  // Section 4: Role-specific framing
+  parts.push(`${rf.lens}, ${rf.what}.`);
   parts.push("");
 
+  // Section 5: Supporting data/evidence (woven into narrative, NOT lists)
   if (stats[0]) {
-    parts.push(`The data point that stood out to me: ${stats[0]}`);
+    parts.push(`The number that jumped out at me: ${stats[0]}`);
     parts.push("");
   }
 
-  if (challenge !== strategic) {
-    parts.push(challenge);
+  // Section 6: Challenge / contrarian point
+  if (challenge && challenge !== strategic) {
+    parts.push(`Here's what most people are getting wrong: ${challenge}`);
     parts.push("");
   }
 
-  for (const insight of additionalInsights) {
-    parts.push(insight);
+  // Section 7: Additional strategic observations — add until we hit minimum length
+  let currentLen = parts.join("\n").length;
+  const targetMin = Math.floor(LINKEDIN_MAX * 0.50);
+  const targetMax = Math.floor(LINKEDIN_MAX * 0.90);
+
+  for (const s of impactSentences) {
+    if (currentLen >= targetMin) break;
+    parts.push(s);
     parts.push("");
+    currentLen += s.length + 2;
   }
 
+  for (const s of contextSentences) {
+    if (currentLen >= targetMin) break;
+    parts.push(s);
+    parts.push("");
+    currentLen += s.length + 2;
+  }
+
+  // If still short and we have stats, add more
+  if (currentLen < targetMin) {
+    for (const st of stats.slice(1, 4)) {
+      if (currentLen >= targetMin) break;
+      parts.push(st);
+      parts.push("");
+      currentLen += st.length + 2;
+    }
+  }
+
+  // Section 8: Link
   parts.push(`I wrote about this in depth on Product Impact: ${link}`);
   parts.push("");
+
+  // Section 9: Strong closing point (NEVER a question)
   parts.push(pick(closingPoints));
 
-  return parts.join("\n");
+  let result = parts.join("\n");
+  if (result.length > targetMax) {
+    result = result.slice(0, targetMax - 3) + "...";
+  }
+  return result;
 }
 
 // ——— Brittany ———
-// Data points + research. Numbered lists. Key Takeaways format.
-// Audience: researchers and enterprise AI leads.
+// Data-driven, research perspective. USES numbered lists.
+// Audience: researchers + enterprise AI leads.
+// Target: 900-2100 chars (30-70% of LinkedIn max).
+// MUST end with a question.
 
 function generateBrittanyTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const stats = extractStats(article.content_html);
-  const insight = extractKeyInsight(article);
-  const leadStat = stats[0] ?? insight;
+  const desc = article.meta_description ?? "";
+  const leadStat = stats[0] ?? desc.split(/(?<=[.!?])\s+/)[0] ?? article.title;
 
   const intros = [
     "The research on this is clear —",
@@ -306,16 +305,9 @@ function generateBrittanyTwitter(article: Article): string {
     "Data point worth noting:",
     "Here's what the evidence actually says:",
     "The numbers behind this story:",
-    "Research finding:",
   ];
 
-  const variants = [
-    () => `${pick(intros)}\n\n${leadStat.slice(0, 200)}\n\n${link}`,
-    () => `${article.title}\n\n${leadStat.slice(0, 190)}\n\n${link}`,
-    () => `${pick(intros)} ${leadStat.slice(0, 195)}\n\n${link}`,
-  ];
-
-  let text = pick(variants)();
+  let text = `${pick(intros)}\n\n${leadStat.slice(0, 200)}\n\n${link}`;
   if (text.length > 280) text = `${leadStat.slice(0, 210)}\n\n${link}`;
   return text;
 }
@@ -323,29 +315,39 @@ function generateBrittanyTwitter(article: Article): string {
 function generateBrittanyLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const desc = article.meta_description ?? "";
-  const sentences = extractSentences(article.content_html, 25, 220);
+  const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
-  const hook = makeHook(article);
 
+  // Brittany uses a research-framed opening, different from Arpy's personal take
+  const openers = [
+    "From a research perspective, this is significant.",
+    "New research findings that AI product and enterprise teams should know about.",
+    "The gap between perception and reality here is striking.",
+    "The adoption data tells a different story than the headlines.",
+    "This is the kind of evidence-based insight enterprise AI teams need right now.",
+    "The behavioral data on this is really interesting — and underreported.",
+  ];
+
+  // Build numbered list from stats + data sentences
   const dataPoints: string[] = [...stats];
-
   sentences
     .filter(s => !stats.some(st => st.slice(0, 30) === s.slice(0, 30)))
     .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|adoption|rate|gap|correlation|percent|growth|decline/i))
-    .slice(0, 5)
+    .slice(0, 6)
     .forEach(s => dataPoints.push(s));
 
-  if (dataPoints.length < 4) {
-    sentences.slice(0, 6).forEach(s => {
-      if (dataPoints.length < 5 && !dataPoints.includes(s)) dataPoints.push(s);
+  if (dataPoints.length < 3) {
+    sentences.slice(0, 5).forEach(s => {
+      if (dataPoints.length < 4 && !dataPoints.includes(s)) dataPoints.push(s);
     });
   }
 
-  const numberedList = dataPoints.slice(0, 6).map((p, i) => `${i + 1}. ${p}`).join("\n");
+  const targetMin = Math.floor(LINKEDIN_MAX * 0.30);
+  const targetMax = Math.floor(LINKEDIN_MAX * 0.70);
 
-  const contextSentences = sentences
-    .filter(s => !dataPoints.includes(s))
-    .slice(0, 3);
+  // Cap list length based on target
+  const maxItems = dataPoints.length > 6 ? 6 : dataPoints.length;
+  const numberedList = dataPoints.slice(0, maxItems).map((p, i) => `${i + 1}. ${p}`).join("\n");
 
   const closingQuestions = [
     "How is your organization measuring the real impact of AI adoption — and are those metrics actually telling you the truth?",
@@ -354,41 +356,54 @@ function generateBrittanyLinkedin(article: Article): string {
     "What's the biggest gap between AI research findings and how your team is actually implementing them?",
     "I'd love to hear from other researchers and enterprise leads — are you seeing these same patterns in your data?",
     "For those leading AI initiatives at scale: what surprised you most when you looked at the actual adoption numbers?",
-    "How do you validate AI impact claims in your org when the research is evolving this quickly?",
   ];
 
-  const parts: string[] = [
-    hook,
-    "",
-    desc || contextSentences[0] || "",
-    "",
-  ];
+  const parts: string[] = [];
 
-  if (desc && contextSentences[0]) {
-    parts.push(contextSentences[0]);
+  // Section 1: Research-framed opener
+  parts.push(pick(openers));
+  parts.push("");
+
+  // Section 2: Context from desc
+  if (desc) {
+    parts.push(desc);
     parts.push("");
   }
 
+  // Section 3: Numbered Key Takeaways (Brittany's signature)
   parts.push("Key Takeaways:");
   parts.push(numberedList);
   parts.push("");
 
-  if (contextSentences.length > 1) {
-    parts.push("Why this matters for enterprise AI:");
-    parts.push(contextSentences[1]);
-    if (contextSentences[2]) {
-      parts.push(contextSentences[2]);
+  // Section 4: Brief "why it matters" (only add if we need length)
+  let currentLen = parts.join("\n").length;
+  if (currentLen < targetMin) {
+    const contextSentences = sentences
+      .filter(s => !dataPoints.includes(s))
+      .slice(0, 2);
+    if (contextSentences.length > 0) {
+      parts.push("Why this matters for enterprise AI:");
+      contextSentences.forEach(s => parts.push(s));
+      parts.push("");
     }
-    parts.push("");
   }
 
+  // Section 5: Link
   parts.push(`Full analysis and methodology: ${link}`);
   parts.push("");
+
+  // Section 6: Closing question (ALWAYS a question, never a statement)
   parts.push(pick(closingQuestions));
   parts.push("");
+
+  // Section 7: Hashtags
   parts.push("#AIResearch #EnterpriseAI #ProductResearch #DataDriven");
 
-  return parts.join("\n");
+  let result = parts.join("\n");
+  if (result.length > targetMax) {
+    result = result.slice(0, targetMax - 3) + "...";
+  }
+  return result;
 }
 
 // ——— Dispatchers ———
@@ -595,6 +610,12 @@ export default function SocialScreen({ supabase }: Props) {
   );
 }
 
+const VOICE_LINKEDIN_TARGETS: Record<Voice, { min: number; max: number; label: string }> = {
+  "product-impact": { min: 400, max: 1000, label: "13-33%" },
+  arpy: { min: 1500, max: 2700, label: "50-90%" },
+  brittany: { min: 900, max: 2100, label: "30-70%" },
+};
+
 function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTextChange, onRegenerate, onCopy, copied, charLimit, shareUrl, shareLabel, shareClass }: {
   platform: string; icon: React.ReactNode; label: string;
   voice: Voice; onVoiceChange: (v: Voice) => void;
@@ -602,6 +623,9 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
   onRegenerate: () => void; onCopy: () => void; copied: boolean;
   charLimit?: number; shareUrl: string; shareLabel: string; shareClass: string;
 }) {
+  const liTarget = platform === "linkedin" ? VOICE_LINKEDIN_TARGETS[voice] : null;
+  const liInRange = liTarget ? text.length >= liTarget.min && text.length <= liTarget.max : true;
+
   return (
     <div className="rounded-xl border border-[#1a1a1a] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
@@ -611,6 +635,11 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
           {charLimit && (
             <span className={`text-[10px] ${text.length > charLimit ? "text-red-400 font-bold" : "text-[#555]"}`}>
               {text.length}/{charLimit}
+            </span>
+          )}
+          {liTarget && (
+            <span className={`text-[10px] ${liInRange ? "text-green-400" : "text-yellow-400"}`}>
+              {text.length}/{LINKEDIN_MAX} · target {liTarget.label}
             </span>
           )}
         </div>
