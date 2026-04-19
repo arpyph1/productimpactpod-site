@@ -98,23 +98,32 @@ function generateProductImpactTwitter(article: Article): string {
   return text;
 }
 
+function makeHook(article: Article): string {
+  const title = article.title;
+  if (title.length >= 40 && title.length <= 65) return title;
+  const desc = article.meta_description ?? "";
+  const firstSentence = desc.split(/(?<=[.!?])\s+/)[0] ?? "";
+  if (firstSentence.length >= 40 && firstSentence.length <= 65) return firstSentence;
+  if (title.length > 65) return title.slice(0, 60).replace(/\s+\S*$/, "") + "...";
+  return title;
+}
+
 function generateProductImpactLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const desc = article.meta_description ?? "";
   const sentences = extractSentences(article.content_html, 30, 200);
+  const hook = makeHook(article);
 
   const keyPoints = sentences
     .filter(s => s.match(/\d|key|important|critical|significant|major|primary|core|leading|growing|declining/i))
-    .slice(0, 3)
+    .slice(0, 4)
     .map(s => "• " + s);
-  const points = keyPoints.length >= 2 ? keyPoints : sentences.slice(1, 4).map(s => "• " + s);
+  const points = keyPoints.length >= 3 ? keyPoints : sentences.slice(1, 5).map(s => "• " + s);
 
-  const intros = [
-    "We just published a new analysis.",
-    "New on Product Impact — worth a read if you're in AI product leadership.",
-    "Our latest piece examines something we keep hearing about.",
-    "We've been tracking this closely. Here's what the data shows.",
-  ];
+  const context = sentences
+    .filter(s => !points.some(p => p.includes(s)))
+    .slice(0, 3);
+
   const tags = pick([
     "#AIProducts #ProductStrategy #ProductImpact",
     "#AI #ProductManagement #ProductImpact",
@@ -122,12 +131,32 @@ function generateProductImpactLinkedin(article: Article): string {
     "#ProductLeadership #AI #Innovation",
   ]);
 
-  const variants = [
-    () => `${pick(intros)}\n\n${article.title}\n\n${desc ? desc + "\n\n" : ""}${points.join("\n")}\n\n${link}\n\n${tags}`,
-    () => `${article.title}\n\n${desc ? desc + "\n\n" : ""}${points.join("\n")}\n\n${link}\n\n${tags}`,
-    () => `${pick(intros)}\n\n${article.title}\n\n${points.join("\n")}\n\n${desc ? desc + "\n\n" : ""}${link}\n\n${tags}`,
+  const parts: string[] = [
+    hook,
+    "",
+    desc || context[0] || "",
+    "",
   ];
-  return pick(variants)();
+
+  if (desc && context[0]) {
+    parts.push(context[0]);
+    parts.push("");
+  }
+
+  parts.push("Key points from our analysis:");
+  parts.push(...points);
+  parts.push("");
+
+  if (context.length > 1) {
+    parts.push(context[1]);
+    parts.push("");
+  }
+
+  parts.push(`Read the full article: ${link}`);
+  parts.push("");
+  parts.push(tags);
+
+  return parts.join("\n");
 }
 
 // ——— Arpy ———
@@ -171,6 +200,7 @@ function generateArpyLinkedin(article: Article): string {
   const desc = article.meta_description ?? "";
   const sentences = extractSentences(article.content_html, 30, 220);
   const stats = extractStats(article.content_html);
+  const hook = makeHook(article);
 
   const roles = [
     {
@@ -193,6 +223,11 @@ function generateArpyLinkedin(article: Article): string {
       lens: "If you're building an AI-native product",
       impact: "this is the data point your strategy probably isn't accounting for",
     },
+    {
+      audience: "engineering leaders",
+      lens: "If you're an engineering leader evaluating AI tooling",
+      impact: "this changes the calculus on what's worth building in-house",
+    },
   ];
   const rf = pick(roles);
 
@@ -204,47 +239,53 @@ function generateArpyLinkedin(article: Article): string {
     s.match(/but|however|despite|yet|while|although|contrary|instead|rather|not just|beyond/i)
   ) ?? sentences[1] ?? strategic;
 
-  const intros = [
-    `I've been digging into this and the implications for ${rf.audience} are significant.`,
-    "Something shifted this quarter and product leaders need to pay attention.",
-    "I wrote this because I kept hearing the same question from product teams.",
-    "A pattern I keep seeing across enterprise AI deployments:",
-    "This came up on the podcast — I decided to go deeper.",
-  ];
-
-  const signoffs = [
-    "What are you seeing on your end?",
-    "Curious what others are experiencing in their orgs.",
-    "Would love to hear if this matches your experience.",
-    "The full analysis is on Product Impact — link in comments.",
-    "Thoughts? Especially from anyone who's navigated this transition.",
-  ];
-
   const additionalInsights = sentences
     .filter(s => s !== strategic && s !== challenge)
-    .filter(s => s.match(/\d|key|important|critical|significant|shift|change|trend|adoption|growth|decline|impact/i))
-    .slice(0, 2);
+    .filter(s => s.match(/\d|key|important|critical|significant|shift|change|trend|adoption|growth|decline|impact|strategy|decision|risk/i))
+    .slice(0, 4);
+
+  const closingPoints = [
+    "The companies that figure this out first won't just have a competitive advantage — they'll define the next era of product development.",
+    "This is the kind of shift that separates companies that are genuinely AI-native from those that are just adding AI as a feature checkbox.",
+    "The window to act on this is shorter than most product teams realize. The organizations moving now are the ones that will set the standard.",
+    "If your AI strategy doesn't account for this, you're building on assumptions that are already outdated.",
+    "This isn't a trend to watch — it's a structural change in how products get built, deployed, and adopted at scale.",
+    "The teams that internalize this will ship better products. The ones that ignore it will keep wondering why adoption stalls.",
+  ];
 
   const parts: string[] = [
-    pick(intros),
+    hook,
     "",
-    strategic,
-    "",
-    stats[0] ? `The data point that stood out to me: ${stats[0]}` : challenge,
-    "",
-    `${rf.lens}, ${rf.impact}.`,
+    desc || strategic,
     "",
   ];
 
-  if (additionalInsights.length > 0) {
-    parts.push("What the analysis actually tells us:");
-    additionalInsights.forEach(s => parts.push("→ " + s));
+  if (desc && strategic !== desc) {
+    parts.push(strategic);
     parts.push("");
   }
 
-  parts.push(`Full piece: ${link}`);
+  parts.push(`${rf.lens}, ${rf.impact}.`);
   parts.push("");
-  parts.push(pick(signoffs));
+
+  if (stats[0]) {
+    parts.push(`The data point that stood out to me: ${stats[0]}`);
+    parts.push("");
+  }
+
+  if (challenge !== strategic) {
+    parts.push(challenge);
+    parts.push("");
+  }
+
+  for (const insight of additionalInsights) {
+    parts.push(insight);
+    parts.push("");
+  }
+
+  parts.push(`I wrote about this in depth on Product Impact: ${link}`);
+  parts.push("");
+  parts.push(pick(closingPoints));
 
   return parts.join("\n");
 }
@@ -284,40 +325,70 @@ function generateBrittanyLinkedin(article: Article): string {
   const desc = article.meta_description ?? "";
   const sentences = extractSentences(article.content_html, 25, 220);
   const stats = extractStats(article.content_html);
-
-  const intros = [
-    "From a research perspective, this is significant.",
-    "I've been studying this problem and the gap between perception and reality is striking.",
-    "New research findings that AI product and enterprise teams should know about.",
-    "The behavioral science angle on this is really interesting.",
-    "I co-authored this piece because the adoption data tells a different story than the headlines.",
-  ];
-
-  const signoffs = [
-    "The methodology and full findings are in the article.",
-    "Happy to discuss the research approach if anyone wants to go deeper.",
-    "What patterns are you seeing in your organization?",
-    "Full analysis on Product Impact.",
-    "Tagging researchers and enterprise AI leads who may find this useful.",
-  ];
+  const hook = makeHook(article);
 
   const dataPoints: string[] = [...stats];
 
   sentences
     .filter(s => !stats.some(st => st.slice(0, 30) === s.slice(0, 30)))
-    .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|adoption|rate|gap|correlation/i))
-    .slice(0, 4)
+    .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|adoption|rate|gap|correlation|percent|growth|decline/i))
+    .slice(0, 5)
     .forEach(s => dataPoints.push(s));
 
-  if (dataPoints.length < 3) {
-    sentences.slice(0, 5).forEach(s => {
-      if (dataPoints.length < 4 && !dataPoints.includes(s)) dataPoints.push(s);
+  if (dataPoints.length < 4) {
+    sentences.slice(0, 6).forEach(s => {
+      if (dataPoints.length < 5 && !dataPoints.includes(s)) dataPoints.push(s);
     });
   }
 
-  const numberedList = dataPoints.slice(0, 5).map((p, i) => `${i + 1}. ${p}`).join("\n");
+  const numberedList = dataPoints.slice(0, 6).map((p, i) => `${i + 1}. ${p}`).join("\n");
 
-  return `${pick(intros)}\n\n${desc ? desc + "\n\n" : ""}Key Takeaways:\n${numberedList}\n\nFull analysis: ${link}\n\n${pick(signoffs)}\n\n#AIResearch #EnterpriseAI #ProductResearch #DataDriven`;
+  const contextSentences = sentences
+    .filter(s => !dataPoints.includes(s))
+    .slice(0, 3);
+
+  const closingQuestions = [
+    "How is your organization measuring the real impact of AI adoption — and are those metrics actually telling you the truth?",
+    "What methodologies are you using to separate AI hype from measurable outcomes in your product decisions?",
+    "Are enterprise teams actually benchmarking AI ROI correctly, or are we all just optimizing for the wrong metrics?",
+    "What's the biggest gap between AI research findings and how your team is actually implementing them?",
+    "I'd love to hear from other researchers and enterprise leads — are you seeing these same patterns in your data?",
+    "For those leading AI initiatives at scale: what surprised you most when you looked at the actual adoption numbers?",
+    "How do you validate AI impact claims in your org when the research is evolving this quickly?",
+  ];
+
+  const parts: string[] = [
+    hook,
+    "",
+    desc || contextSentences[0] || "",
+    "",
+  ];
+
+  if (desc && contextSentences[0]) {
+    parts.push(contextSentences[0]);
+    parts.push("");
+  }
+
+  parts.push("Key Takeaways:");
+  parts.push(numberedList);
+  parts.push("");
+
+  if (contextSentences.length > 1) {
+    parts.push("Why this matters for enterprise AI:");
+    parts.push(contextSentences[1]);
+    if (contextSentences[2]) {
+      parts.push(contextSentences[2]);
+    }
+    parts.push("");
+  }
+
+  parts.push(`Full analysis and methodology: ${link}`);
+  parts.push("");
+  parts.push(pick(closingQuestions));
+  parts.push("");
+  parts.push("#AIResearch #EnterpriseAI #ProductResearch #DataDriven");
+
+  return parts.join("\n");
 }
 
 // ——— Dispatchers ———
@@ -565,7 +636,7 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
       <div className="px-4 py-2 bg-[#0a0a0a] border-b border-[#141414]">
         <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_META[voice].label}</strong> — {VOICE_META[voice].description}</span>
       </div>
-      <textarea className={`w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y ${platform === "twitter" ? "h-32" : "h-64"}`}
+      <textarea className={`w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y ${platform === "twitter" ? "h-32" : "h-96"}`}
         value={text} onChange={(e) => onTextChange(e.target.value)} />
     </div>
   );

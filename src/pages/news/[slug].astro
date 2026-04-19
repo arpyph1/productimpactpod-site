@@ -39,8 +39,9 @@ const pubDate = new Date(article.publish_date);
 const pubISO = pubDate.toISOString();
 const pubFormatted = pubDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-const twitterShareText = `${article.title}${article.meta_description ? '\n\n' + article.meta_description.slice(0, 180) : ''}\n\n${articleUrl}`;
-const linkedinSummary = article.meta_description ?? article.subtitle ?? '';
+const shareDesc = article.meta_description ?? article.subtitle ?? '';
+const twitterShareText = `${article.title}${shareDesc ? '\n\n' + shareDesc.slice(0, 180) : ''}\n\n${articleUrl}`;
+const linkedinSummary = shareDesc + (bullets.length > 0 ? '\n\n' + bullets.slice(0, 2).map((b: string) => '• ' + b).join('\n') : '');
 
 function timeAgo(d: string): string {
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
