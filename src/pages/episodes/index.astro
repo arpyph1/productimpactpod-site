@@ -28,13 +28,13 @@ const themes = [
 
 const focusLenses = [
   { slug: "business", label: "Business Lens",
-    keywords: ["business", "revenue", "cost", "profit", "roi", "enterprise", "b2b", "saas", "startup", "founder", "ceo", "cto", "exec", "leader", "strateg", "invest", "funding", "market", "competitive"] },
+    keywords: ["business", "revenue", "cost", "profit", "roi", "enterprise", "b2b", "saas", "startup", "founder", "ceo", "cto", "exec", "leader", "strateg", "invest", "funding", "market", "competitive", "spend", "billion", "million", "budget", "value", "growth", "return", "deliver", "nothing", "waste", "efficiency", "capital", "dollar"] },
   { slug: "product", label: "Product Lens",
-    keywords: ["product", "feature", "roadmap", "backlog", "sprint", "agile", "user story", "pm ", "ship", "build", "iteration", "mvp", "prototype", "release", "deploy"] },
+    keywords: ["product", "feature", "roadmap", "backlog", "sprint", "agile", "user story", "pm ", "ship", "build", "iteration", "mvp", "prototype", "release", "deploy", "orchestrat", "workflow", "pipeline", "integration", "platform", "tool", "solution", "fix"] },
   { slug: "societal", label: "Societal Lens",
-    keywords: ["societal", "society", "community", "human", "people", "workforce", "job", "employment", "education", "health", "wellbeing", "environment", "sustainab", "equity", "inclusion", "impact"] },
+    keywords: ["societal", "society", "community", "human", "people", "workforce", "job", "employment", "education", "health", "wellbeing", "environment", "sustainab", "equity", "inclusion", "impact", "public", "citizen", "democracy", "regulation", "policy", "labor", "displacement"] },
   { slug: "technical", label: "Technical Lens",
-    keywords: ["technical", "engineer", "architect", "infrastructure", "api", "model", "algorithm", "neural", "transformer", "llm", "gpt", "machine learning", "deep learning", "nlp", "computer vision", "code", "system"] },
+    keywords: ["technical", "engineer", "architect", "infrastructure", "api", "model", "algorithm", "neural", "transformer", "llm", "gpt", "machine learning", "deep learning", "nlp", "computer vision", "code", "system", "orchestrat", "framework", "stack", "runtime", "latency", "throughput", "fine-tun", "inference", "training", "compute", "gpu", "cpu"] },
 ];
 
 function categorize(title: string, desc: string) {
@@ -49,7 +49,7 @@ function categorize(title: string, desc: string) {
   }
   for (const f of focusLenses) {
     const matchCount = f.keywords.filter(k => text.includes(k)).length;
-    if (matchCount >= 2) matchedFocus.push(f.slug);
+    if (matchCount >= 1) matchedFocus.push(f.slug);
   }
   if (matchedThemes.length === 0) matchedThemes.push("ai-product-strategy");
 

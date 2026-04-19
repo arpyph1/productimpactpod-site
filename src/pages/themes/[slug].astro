@@ -40,6 +40,13 @@ const { theme, articles } = Astro.props as { theme: Theme; articles: Article[] }
 const siteUrl = "https://productimpactpod.com";
 const canonicalUrl = `${siteUrl}/themes/${theme.slug}`;
 
+function stripPlaceholders(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/\([^)]*(?:compounds|widget|scoped to|auto[- ]?generat|placeholder|auto[- ]?populat)[^)]*\)/gi, "")
+    .trim();
+}
+
 const themeColors: Record<string, string> = {
   "ai-product-strategy": "#ff6b4a",
   "agents-agentic-systems": "#9b7bff",
@@ -80,16 +87,26 @@ const color = themeColors[theme.slug] ?? "#ff6b4a";
             <span class="text-[16px] font-bold" style={`color: ${color}`}>{articles.length}</span>
           </div>
           <p class="text-[15px] text-[#999] leading-relaxed max-w-2xl">
-            {theme.description ?? ""}
+            {stripPlaceholders(theme.description)}
           </p>
         </div>
       </div>
     </header>
 
-    {/* Long-form intro (if exists) */}
-    {theme.long_form_intro && (
-      <div class="article-prose mb-12 max-w-[680px]" set:html={theme.long_form_intro}></div>
-    )}
+    {/* Long-form intro (if exists) — strip parenthetical placeholders */}
+    {theme.long_form_intro && (() => {
+      const cleaned = theme.long_form_intro
+        .replace(/\(This list compounds[^)]*\)/gi, "")
+        .replace(/\(Semantic search widget[^)]*\)/gi, "")
+        .replace(/\(Auto-populated[^)]*\)/gi, "")
+        .replace(/\(Placeholder[^)]*\)/gi, "")
+        .replace(/\([^)]*widget[^)]*\)/gi, "")
+        .replace(/\([^)]*scoped to[^)]*\)/gi, "")
+        .replace(/\([^)]*auto[- ]?generat[^)]*\)/gi, "")
+        .replace(/<p>\s*<\/p>/g, "")
+        .trim();
+      return cleaned ? <div class="article-prose mb-12 max-w-[680px]" set:html={cleaned}></div> : null;
+    })()}
 
     {/* Articles in this theme */}
     {articles.length > 0 ? (

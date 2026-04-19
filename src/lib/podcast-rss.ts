@@ -10,6 +10,7 @@ export interface PodcastEpisode {
   title: string;
   description: string;
   fullDescription: string;
+  fullDescriptionHtml: string;
   pubDate: string;
   pubDateISO: string;
   audioUrl: string;
@@ -21,6 +22,7 @@ export interface PodcastEpisode {
 
 const STRIP_HTML = /<[^>]*>/g;
 const STRIP_CDATA = /<!\[CDATA\[|\]\]>/g;
+const UNSAFE_TAGS = /<\/?(script|iframe|object|embed|form|input|style|meta|link|base)[^>]*>/gi;
 
 function decodeHtmlEntities(s: string): string {
   return s
@@ -151,8 +153,16 @@ export async function getPodcastEpisodes(
     const description = cleanedDesc.slice(0, 250);
     const fullDescription = cleanedDesc;
 
+    // HTML version: keep formatting (p, br, a, strong, em, ul, ol, li) but strip unsafe tags
+    const safeHtml = decodeHtmlEntities(rawDesc)
+      .replace(UNSAFE_TAGS, "")
+      .replace(/on\w+="[^"]*"/gi, "")
+      .replace(/javascript:/gi, "")
+      .trim();
+    const fullDescriptionHtml = safeHtml || fullDescription;
+
     episodes.push({
-      guid, title, description, fullDescription, pubDate, pubDateISO,
+      guid, title, description, fullDescription, fullDescriptionHtml, pubDate, pubDateISO,
       audioUrl, imageUrl, duration, episodeNumber, link,
     });
   });
