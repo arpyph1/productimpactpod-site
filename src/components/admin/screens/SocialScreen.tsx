@@ -163,17 +163,21 @@ function generateArpyLinkedin(article: Article): string {
   const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
 
-  // Arpy uses a punchy opening line, NOT the article title
-  const openers = [
-    "Something shifted this quarter and product leaders need to pay attention.",
-    "I've been digging into this and the implications are bigger than the headline suggests.",
-    "I keep hearing the same question from product teams. This article gets at the answer.",
-    "A pattern I keep seeing across enterprise AI deployments — and it should worry you.",
-    "This came up on the podcast and I decided to go deeper. Glad I did.",
-    "The conventional wisdom on this is wrong. Here's what the data actually shows.",
-    "Most product teams are making the same mistake right now. Here's what it is.",
-    "If you're in AI product leadership, this is the most important thing I've read this month.",
-  ];
+  // Generate opening that states actual impact, trend, or signal from the article
+  function generateArpyOpener(): string {
+    if (stats[0]) {
+      return stats[0];
+    }
+    const trendSentence = sentences.find(s =>
+      s.match(/shift|trend|pattern|signal|emerging|accelerat|growing|declin|expanding|contracting|changing/i)
+    );
+    if (trendSentence) return trendSentence;
+    const impactSentence = sentences.find(s =>
+      s.match(/impact|consequence|implication|means|reveals|demonstrates|reshap|transform|fundamentally/i)
+    );
+    if (impactSentence) return impactSentence;
+    return desc || sentences[0] || article.title;
+  }
 
   const roles = [
     { lens: "If you're a PM leading an AI feature", what: "this changes how you should think about the build/buy decision entirely" },
@@ -194,17 +198,15 @@ function generateArpyLinkedin(article: Article): string {
     s.match(/but|however|despite|yet|although|contrary|instead|rather|not just|beyond|overlooked|missed|wrong/i)
   ) ?? sentences[2] ?? "";
 
-  // Build narrative paragraphs — no lists, flowing prose
   const closingPoints = [
-    "The companies that figure this out first won't just have a competitive advantage — they'll define the next era of product development.",
-    "This is the kind of shift that separates companies that are genuinely AI-native from those that are just adding AI as a feature checkbox.",
-    "The window to act on this is shorter than most product teams realize. The organizations moving now are the ones that will set the standard.",
+    "The companies that figure this out first will define the next era of product development.",
+    "This separates companies that are genuinely AI-native from those just adding AI as a feature checkbox.",
+    "The window to act is shorter than most product teams realize. The organizations moving now will set the standard.",
     "If your AI strategy doesn't account for this, you're building on assumptions that are already outdated.",
-    "This isn't a trend to monitor. It's a structural change in how products get built, deployed, and adopted at scale. Act accordingly.",
-    "The teams that internalize this insight will ship better products, faster. The ones that don't will spend the next two years wondering why their AI features aren't getting adopted.",
+    "This is a structural change in how products get built, deployed, and adopted at scale.",
+    "The teams that internalize this insight will ship better products. The ones that don't will spend years wondering why.",
   ];
 
-  // Gather more article substance to fill the length
   const usedSentences = new Set([strategic, challenge]);
   const impactSentences = sentences
     .filter(s => !usedSentences.has(s))
@@ -214,37 +216,26 @@ function generateArpyLinkedin(article: Article): string {
 
   const parts: string[] = [];
 
-  // Section 1: Punchy opener
-  parts.push(pick(openers));
+  parts.push(generateArpyOpener());
+  parts.push("");
+  parts.push(`${rf.lens}, ${rf.what}.`);
   parts.push("");
 
-  // Section 2: What the article is about (desc or strategic finding)
-  parts.push(desc || strategic);
-  parts.push("");
-
-  // Section 3: The strategic insight, elaborated
-  if (strategic !== desc && strategic) {
+  if (strategic && strategic !== generateArpyOpener()) {
     parts.push(strategic);
     parts.push("");
   }
 
-  // Section 4: Role-specific framing
-  parts.push(`${rf.lens}, ${rf.what}.`);
-  parts.push("");
-
-  // Section 5: Supporting data/evidence (woven into narrative, NOT lists)
-  if (stats[0]) {
-    parts.push(`The number that jumped out at me: ${stats[0]}`);
+  if (stats[1]) {
+    parts.push(stats[1]);
     parts.push("");
   }
 
-  // Section 6: Challenge / contrarian point
   if (challenge && challenge !== strategic) {
-    parts.push(`Here's what most people are getting wrong: ${challenge}`);
+    parts.push(`Here's what most people get wrong: ${challenge}`);
     parts.push("");
   }
 
-  // Section 7: Additional strategic observations — add until we hit minimum length
   let currentLen = parts.join("\n").length;
   const targetMin = Math.floor(LINKEDIN_MAX * 0.50);
   const targetMax = Math.floor(LINKEDIN_MAX * 0.90);
@@ -263,9 +254,8 @@ function generateArpyLinkedin(article: Article): string {
     currentLen += s.length + 2;
   }
 
-  // If still short and we have stats, add more
   if (currentLen < targetMin) {
-    for (const st of stats.slice(1, 4)) {
+    for (const st of stats.slice(2, 5)) {
       if (currentLen >= targetMin) break;
       parts.push(st);
       parts.push("");
@@ -273,11 +263,8 @@ function generateArpyLinkedin(article: Article): string {
     }
   }
 
-  // Section 8: Link
-  parts.push(`I wrote about this in depth on Product Impact: ${link}`);
+  parts.push(`Read the full piece: ${link}`);
   parts.push("");
-
-  // Section 9: Strong closing point (NEVER a question)
   parts.push(pick(closingPoints));
 
   let result = parts.join("\n");
@@ -318,15 +305,20 @@ function generateBrittanyLinkedin(article: Article): string {
   const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
 
-  // Brittany uses a research-framed opening, different from Arpy's personal take
-  const openers = [
-    "From a research perspective, this is significant.",
-    "New research findings that AI product and enterprise teams should know about.",
-    "The gap between perception and reality here is striking.",
-    "The adoption data tells a different story than the headlines.",
-    "This is the kind of evidence-based insight enterprise AI teams need right now.",
-    "The behavioral data on this is really interesting — and underreported.",
-  ];
+  // Generate opening that highlights a key finding and explains why it matters
+  function generateBrittanyOpener(): string {
+    if (!stats[0]) return desc || sentences[0] || article.title;
+
+    const leadStat = stats[0];
+    const whyMatters = sentences.find(s =>
+      s.match(/important|critical|significant|matters|reveals|shows|demonstrates|means|indicates|explains|understand|adoption|impact|decision|strategy/i)
+    );
+
+    if (whyMatters) {
+      return `${leadStat} This is significant because it ${whyMatters.slice(0, 80)}`;
+    }
+    return leadStat;
+  }
 
   // Build numbered list from stats + data sentences
   const dataPoints: string[] = [...stats];
@@ -345,58 +337,42 @@ function generateBrittanyLinkedin(article: Article): string {
   const targetMin = Math.floor(LINKEDIN_MAX * 0.30);
   const targetMax = Math.floor(LINKEDIN_MAX * 0.70);
 
-  // Cap list length based on target
   const maxItems = dataPoints.length > 6 ? 6 : dataPoints.length;
   const numberedList = dataPoints.slice(0, maxItems).map((p, i) => `${i + 1}. ${p}`).join("\n");
 
   const closingQuestions = [
-    "How is your organization measuring the real impact of AI adoption — and are those metrics actually telling you the truth?",
-    "What methodologies are you using to separate AI hype from measurable outcomes in your product decisions?",
-    "Are enterprise teams actually benchmarking AI ROI correctly, or are we all just optimizing for the wrong metrics?",
-    "What's the biggest gap between AI research findings and how your team is actually implementing them?",
-    "I'd love to hear from other researchers and enterprise leads — are you seeing these same patterns in your data?",
-    "For those leading AI initiatives at scale: what surprised you most when you looked at the actual adoption numbers?",
+    "How is your organization measuring the real impact of AI adoption? Are those metrics telling you the truth?",
+    "What methodologies separate AI hype from measurable outcomes in your product decisions?",
+    "Are enterprise teams benchmarking AI ROI correctly, or are we optimizing for the wrong metrics?",
+    "What gaps exist between AI research findings and your team's actual implementation?",
+    "Are you seeing these same patterns in your data?",
+    "What surprised you most when you looked at the actual adoption numbers?",
   ];
 
   const parts: string[] = [];
 
-  // Section 1: Research-framed opener
-  parts.push(pick(openers));
+  parts.push(generateBrittanyOpener());
   parts.push("");
-
-  // Section 2: Context from desc
-  if (desc) {
-    parts.push(desc);
-    parts.push("");
-  }
-
-  // Section 3: Numbered Key Takeaways (Brittany's signature)
   parts.push("Key Takeaways:");
   parts.push(numberedList);
   parts.push("");
 
-  // Section 4: Brief "why it matters" (only add if we need length)
   let currentLen = parts.join("\n").length;
   if (currentLen < targetMin) {
     const contextSentences = sentences
       .filter(s => !dataPoints.includes(s))
       .slice(0, 2);
     if (contextSentences.length > 0) {
-      parts.push("Why this matters for enterprise AI:");
+      parts.push("Why this matters:");
       contextSentences.forEach(s => parts.push(s));
       parts.push("");
     }
   }
 
-  // Section 5: Link
-  parts.push(`Full analysis and methodology: ${link}`);
+  parts.push(`Read full analysis: ${link}`);
   parts.push("");
-
-  // Section 6: Closing question (ALWAYS a question, never a statement)
   parts.push(pick(closingQuestions));
   parts.push("");
-
-  // Section 7: Hashtags
   parts.push("#AIResearch #EnterpriseAI #ProductResearch #DataDriven");
 
   let result = parts.join("\n");
