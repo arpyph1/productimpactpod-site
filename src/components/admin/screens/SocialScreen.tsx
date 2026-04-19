@@ -19,87 +19,18 @@ type Voice = "product-impact" | "arpy" | "brittany";
 
 const SITE = "https://productimpactpod.com";
 
-const VOICE_PROFILES: Record<Voice, {
-  label: string;
-  twitterHandle: string;
-  twitterIntros: string[];
-  linkedinIntros: string[];
-  linkedinSignoffs: string[];
-  tone: string[];
-}> = {
+const VOICE_META: Record<Voice, { label: string; description: string }> = {
   "product-impact": {
     label: "Product Impact",
-    twitterHandle: "@productimpactpod",
-    twitterIntros: [
-      "", "New on Product Impact:", "Just published:", "Our latest analysis:",
-      "Worth reading:", "This week on Product Impact:",
-    ],
-    linkedinIntros: [
-      "We just published a new analysis.",
-      "New on Product Impact — worth a read if you're in AI product leadership.",
-      "Our latest piece digs into something we keep hearing about.",
-      "We've been tracking this. Here's what the data says.",
-    ],
-    linkedinSignoffs: [
-      "#AIProducts #ProductStrategy #ProductImpact",
-      "#AI #ProductManagement",
-      "#AIStrategy #Enterprise #ProductImpact",
-      "#ProductLeadership #AI",
-    ],
-    tone: [
-      "editorial", "analytical", "direct", "matter-of-fact",
-    ],
+    description: "editorial · professional · brand-aligned",
   },
   arpy: {
     label: "Arpy Dragffy",
-    twitterHandle: "@adragffy",
-    twitterIntros: [
-      "Something I've been thinking about —", "This one's important.",
-      "Hot take:", "The data on this is wild —", "I wrote about this:",
-      "Been researching this. Key finding:", "Can't stop thinking about this —",
-    ],
-    linkedinIntros: [
-      "I've been digging into this and the numbers don't lie.",
-      "Something shifted this quarter and I think product leaders need to pay attention.",
-      "I wrote this because I kept hearing the same question from product teams.",
-      "This came up on the podcast and I decided to go deeper.",
-      "A pattern I keep seeing across enterprise AI deployments:",
-    ],
-    linkedinSignoffs: [
-      "What are you seeing on your end?",
-      "Curious what others are experiencing.",
-      "Would love to hear if this matches your experience.",
-      "The full analysis is on Product Impact — link in comments.",
-      "Thoughts?",
-    ],
-    tone: [
-      "personal", "opinionated", "conversational", "provocative",
-    ],
+    description: "strategic insight · role-specific · opinionated",
   },
   brittany: {
     label: "Brittany Hobbs",
-    twitterHandle: "@brittanyhobbs",
-    twitterIntros: [
-      "The research on this is clear —", "New findings:",
-      "As a researcher, this stood out to me:", "Data point worth knowing:",
-      "Important nuance here:", "Here's what the evidence actually says:",
-    ],
-    linkedinIntros: [
-      "From a research perspective, this is significant.",
-      "I've been studying this problem and the gap between perception and reality is striking.",
-      "New research findings that product and UX teams should know about.",
-      "The behavioral science angle on this is really interesting.",
-      "I co-authored this piece because the adoption data tells a different story than the headlines.",
-    ],
-    linkedinSignoffs: [
-      "The methodology and full findings are in the article.",
-      "Happy to discuss the research approach if anyone wants to go deeper.",
-      "What patterns are you seeing in your organization?",
-      "Full analysis on Product Impact.",
-    ],
-    tone: [
-      "research-driven", "evidence-based", "nuanced", "measured",
-    ],
+    description: "data-driven · research · key takeaways",
   },
 };
 
@@ -107,72 +38,300 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function extractInsight(article: Article): string {
-  const desc = article.meta_description ?? "";
-  const html = article.content_html ?? "";
-  const text = html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+// ——— Content helpers ———
 
-  const statMatch = text.match(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?%?\s+(?:of|percent|billion|million|trillion)[^.]{5,60}\.)/i)
-    || text.match(/((?:only|just|over|nearly|almost|more than)\s+\d[^.]{5,60}\.)/i)
-    || desc.match(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?%[^.]{5,50}\.)/i);
-
-  if (statMatch) return statMatch[1].trim();
-
-  const sentences = desc.split(/(?<=[.!?])\s+/).filter(s => s.length > 20);
-  return sentences[0] ?? desc.slice(0, 200);
+function plainText(html: string): string {
+  return (html ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function extractBody(article: Article): string {
-  const html = article.content_html ?? "";
-  const text = html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-  const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 30 && s.length < 200);
-  const picks: string[] = [];
+function extractSentences(html: string, minLen = 30, maxLen = 220): string[] {
+  return plainText(html)
+    .split(/(?<=[.!?])\s+/)
+    .filter(s => s.length >= minLen && s.length <= maxLen);
+}
 
-  for (const s of sentences.slice(0, 20)) {
-    if (picks.length >= 3) break;
-    if (s.match(/\d/) || s.match(/percent|billion|million|key|critical|important|gap|failure|success|shift|change/i)) {
-      picks.push("→ " + s);
+function extractStats(html: string): string[] {
+  const text = plainText(html);
+  const patterns: RegExp[] = [
+    /(\d{1,3}(?:,\d{3})*(?:\.\d+)?%[^.]{5,120}\.)/gi,
+    /((?:only|just|over|nearly|almost|more than|fewer than)\s+\d[^.]{5,120}\.)/gi,
+    /(\d+(?:\.\d+)?\s*(?:billion|million|trillion|x\s|times)[^.]{5,100}\.)/gi,
+    /([A-Z][^.]*\d{2,}[^.]*(?:percent|%)[^.]*\.)/g,
+  ];
+  const stats: string[] = [];
+  for (const p of patterns) {
+    for (const m of text.matchAll(p)) {
+      const s = m[1].trim();
+      if (s.length > 20 && s.length < 160 && !stats.some(e => e.slice(0, 30) === s.slice(0, 30)))
+        stats.push(s);
     }
   }
-
-  return picks.length > 0 ? picks.join("\n") : sentences.slice(1, 4).map(s => "→ " + s).join("\n");
+  return stats.slice(0, 6);
 }
 
-function generateTwitter(article: Article, voice: Voice): string {
-  const v = VOICE_PROFILES[voice];
-  const insight = extractInsight(article);
-  const intro = pick(v.twitterIntros);
+function extractKeyInsight(article: Article): string {
+  const desc = article.meta_description ?? "";
+  const first = desc.split(/(?<=[.!?])\s+/).find(s => s.length > 20);
+  if (first && first.length > 30) return first;
+  return extractSentences(article.content_html)[0] ?? desc.slice(0, 200);
+}
+
+// ——— Product Impact ———
+// Professional, editorial, title + meta_description aligned, no first-person.
+
+function generateProductImpactTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
+  const insight = extractKeyInsight(article);
+
+  const intros = ["", "New on Product Impact:", "Just published:", "This week:", "Worth reading:"];
+  const intro = pick(intros);
 
   const variants = [
-    () => `${intro ? intro + " " : ""}${insight}\n\n${link}`,
-    () => `${intro ? intro + "\n\n" : ""}${article.title}\n\n${insight.slice(0, 120)}\n\n${link}`,
-    () => `${insight}\n\n${intro ? intro + " " : ""}${link}`,
-    () => `"${article.title}"\n\n${insight}\n\n${link}`,
-    () => `${intro ? intro + "\n\n" : ""}${insight}\n\n👇\n${link}`,
+    () => `${intro ? intro + "\n\n" : ""}${article.title}\n\n${insight.slice(0, 150)}\n\n${link}`,
+    () => `${article.title}\n\n${insight.slice(0, 180)}\n\n${link}`,
+    () => `${intro ? intro + " " : ""}${article.title}\n\n${link}`,
+    () => `"${article.title}"\n\n${insight.slice(0, 160)}\n\n${link}`,
   ];
 
   let text = pick(variants)();
-  if (text.length > 280) text = `${insight.slice(0, 220)}\n\n${link}`;
+  if (text.length > 280) text = `${article.title}\n\n${link}`;
   return text;
 }
 
-function generateLinkedin(article: Article, voice: Voice): string {
-  const v = VOICE_PROFILES[voice];
-  const insight = extractInsight(article);
-  const body = extractBody(article);
-  const intro = pick(v.linkedinIntros);
-  const signoff = pick(v.linkedinSignoffs);
+function generateProductImpactLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
+  const desc = article.meta_description ?? "";
+  const sentences = extractSentences(article.content_html, 30, 200);
+
+  const keyPoints = sentences
+    .filter(s => s.match(/\d|key|important|critical|significant|major|primary|core|leading|growing|declining/i))
+    .slice(0, 3)
+    .map(s => "• " + s);
+  const points = keyPoints.length >= 2 ? keyPoints : sentences.slice(1, 4).map(s => "• " + s);
+
+  const intros = [
+    "We just published a new analysis.",
+    "New on Product Impact — worth a read if you're in AI product leadership.",
+    "Our latest piece examines something we keep hearing about.",
+    "We've been tracking this closely. Here's what the data shows.",
+  ];
+  const tags = pick([
+    "#AIProducts #ProductStrategy #ProductImpact",
+    "#AI #ProductManagement #ProductImpact",
+    "#AIStrategy #Enterprise #ProductImpact",
+    "#ProductLeadership #AI #Innovation",
+  ]);
 
   const variants = [
-    () => `${intro}\n\n${insight}\n\n${body}\n\n${article.title}\n${link}\n\n${signoff}`,
-    () => `${insight}\n\n${intro}\n\n${body}\n\nFull analysis → ${link}\n\n${signoff}`,
-    () => `${article.title}\n\n${insight}\n\n${body}\n\n${link}\n\n${signoff}`,
-    () => `${intro}\n\n${insight}\n\nKey findings:\n${body}\n\n👉 ${link}\n\n${signoff}`,
+    () => `${pick(intros)}\n\n${article.title}\n\n${desc ? desc + "\n\n" : ""}${points.join("\n")}\n\n${link}\n\n${tags}`,
+    () => `${article.title}\n\n${desc ? desc + "\n\n" : ""}${points.join("\n")}\n\n${link}\n\n${tags}`,
+    () => `${pick(intros)}\n\n${article.title}\n\n${points.join("\n")}\n\n${desc ? desc + "\n\n" : ""}${link}\n\n${tags}`,
+  ];
+  return pick(variants)();
+}
+
+// ——— Arpy ———
+// Strategic insight distilled into impact. Longer-form. Multi-role framing.
+// First-person. Challenges reader assumptions. Explains why this matters across PM / exec / enterprise roles.
+
+function generateArpyTwitter(article: Article): string {
+  const link = `${SITE}/news/${article.slug}/`;
+  const sentences = extractSentences(article.content_html);
+  const stats = extractStats(article.content_html);
+  const insight = extractKeyInsight(article);
+
+  const bold = stats[0]
+    ?? sentences.find(s => s.match(/should|must|can't|won't|fail|miss|overlook|underestimate|wrong|broken/i))
+    ?? insight;
+
+  const intros = [
+    "Something I keep seeing product teams get wrong —",
+    "This one's worth reading carefully.",
+    "Hot take:",
+    "Been researching this. Key finding:",
+    "Can't stop thinking about this —",
+    "The real story here isn't in the headline:",
+    "Product leaders: pay attention to this.",
   ];
 
-  return pick(variants)();
+  const variants = [
+    () => `${pick(intros)}\n\n${bold.slice(0, 195)}\n\n${link}`,
+    () => `${bold.slice(0, 200)}\n\nMy take on why this matters for product leaders:\n${link}`,
+    () => `${article.title}\n\n${bold.slice(0, 160)}\n\n${link}`,
+    () => `${pick(intros)}\n\n${insight.slice(0, 200)}\n\n👇\n${link}`,
+  ];
+
+  let text = pick(variants)();
+  if (text.length > 280) text = `${bold.slice(0, 210)}\n\n${link}`;
+  return text;
+}
+
+function generateArpyLinkedin(article: Article): string {
+  const link = `${SITE}/news/${article.slug}/`;
+  const desc = article.meta_description ?? "";
+  const sentences = extractSentences(article.content_html, 30, 220);
+  const stats = extractStats(article.content_html);
+
+  const roles = [
+    {
+      audience: "PMs",
+      lens: "If you're a PM leading an AI feature right now",
+      impact: "the build/buy decision looks completely different in this light",
+    },
+    {
+      audience: "product executives",
+      lens: "If you're a product executive setting the AI roadmap",
+      impact: "this reframes where you should actually be investing",
+    },
+    {
+      audience: "enterprise AI leads",
+      lens: "If you're responsible for AI adoption at scale",
+      impact: "this explains exactly why your rollout numbers look the way they do",
+    },
+    {
+      audience: "anyone building AI products",
+      lens: "If you're building an AI-native product",
+      impact: "this is the data point your strategy probably isn't accounting for",
+    },
+  ];
+  const rf = pick(roles);
+
+  const strategic = sentences.find(s =>
+    s.match(/means|indicates|suggests|reveals|shows|demonstrates|impact|implication|consequence|result|shift/i)
+  ) ?? sentences[0] ?? desc;
+
+  const challenge = sentences.find(s =>
+    s.match(/but|however|despite|yet|while|although|contrary|instead|rather|not just|beyond/i)
+  ) ?? sentences[1] ?? strategic;
+
+  const intros = [
+    `I've been digging into this and the implications for ${rf.audience} are significant.`,
+    "Something shifted this quarter and product leaders need to pay attention.",
+    "I wrote this because I kept hearing the same question from product teams.",
+    "A pattern I keep seeing across enterprise AI deployments:",
+    "This came up on the podcast — I decided to go deeper.",
+  ];
+
+  const signoffs = [
+    "What are you seeing on your end?",
+    "Curious what others are experiencing in their orgs.",
+    "Would love to hear if this matches your experience.",
+    "The full analysis is on Product Impact — link in comments.",
+    "Thoughts? Especially from anyone who's navigated this transition.",
+  ];
+
+  const additionalInsights = sentences
+    .filter(s => s !== strategic && s !== challenge)
+    .filter(s => s.match(/\d|key|important|critical|significant|shift|change|trend|adoption|growth|decline|impact/i))
+    .slice(0, 2);
+
+  const parts: string[] = [
+    pick(intros),
+    "",
+    strategic,
+    "",
+    stats[0] ? `The data point that stood out to me: ${stats[0]}` : challenge,
+    "",
+    `${rf.lens}, ${rf.impact}.`,
+    "",
+  ];
+
+  if (additionalInsights.length > 0) {
+    parts.push("What the analysis actually tells us:");
+    additionalInsights.forEach(s => parts.push("→ " + s));
+    parts.push("");
+  }
+
+  parts.push(`Full piece: ${link}`);
+  parts.push("");
+  parts.push(pick(signoffs));
+
+  return parts.join("\n");
+}
+
+// ——— Brittany ———
+// Data points + research. Numbered lists. Key Takeaways format.
+// Audience: researchers and enterprise AI leads.
+
+function generateBrittanyTwitter(article: Article): string {
+  const link = `${SITE}/news/${article.slug}/`;
+  const stats = extractStats(article.content_html);
+  const insight = extractKeyInsight(article);
+  const leadStat = stats[0] ?? insight;
+
+  const intros = [
+    "The research on this is clear —",
+    "New findings:",
+    "Data point worth noting:",
+    "Here's what the evidence actually says:",
+    "The numbers behind this story:",
+    "Research finding:",
+  ];
+
+  const variants = [
+    () => `${pick(intros)}\n\n${leadStat.slice(0, 200)}\n\n${link}`,
+    () => `${article.title}\n\n${leadStat.slice(0, 190)}\n\n${link}`,
+    () => `${pick(intros)} ${leadStat.slice(0, 195)}\n\n${link}`,
+  ];
+
+  let text = pick(variants)();
+  if (text.length > 280) text = `${leadStat.slice(0, 210)}\n\n${link}`;
+  return text;
+}
+
+function generateBrittanyLinkedin(article: Article): string {
+  const link = `${SITE}/news/${article.slug}/`;
+  const desc = article.meta_description ?? "";
+  const sentences = extractSentences(article.content_html, 25, 220);
+  const stats = extractStats(article.content_html);
+
+  const intros = [
+    "From a research perspective, this is significant.",
+    "I've been studying this problem and the gap between perception and reality is striking.",
+    "New research findings that AI product and enterprise teams should know about.",
+    "The behavioral science angle on this is really interesting.",
+    "I co-authored this piece because the adoption data tells a different story than the headlines.",
+  ];
+
+  const signoffs = [
+    "The methodology and full findings are in the article.",
+    "Happy to discuss the research approach if anyone wants to go deeper.",
+    "What patterns are you seeing in your organization?",
+    "Full analysis on Product Impact.",
+    "Tagging researchers and enterprise AI leads who may find this useful.",
+  ];
+
+  const dataPoints: string[] = [...stats];
+
+  sentences
+    .filter(s => !stats.some(st => st.slice(0, 30) === s.slice(0, 30)))
+    .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|adoption|rate|gap|correlation/i))
+    .slice(0, 4)
+    .forEach(s => dataPoints.push(s));
+
+  if (dataPoints.length < 3) {
+    sentences.slice(0, 5).forEach(s => {
+      if (dataPoints.length < 4 && !dataPoints.includes(s)) dataPoints.push(s);
+    });
+  }
+
+  const numberedList = dataPoints.slice(0, 5).map((p, i) => `${i + 1}. ${p}`).join("\n");
+
+  return `${pick(intros)}\n\n${desc ? desc + "\n\n" : ""}Key Takeaways:\n${numberedList}\n\nFull analysis: ${link}\n\n${pick(signoffs)}\n\n#AIResearch #EnterpriseAI #ProductResearch #DataDriven`;
+}
+
+// ——— Dispatchers ———
+
+function generateTwitter(article: Article, voice: Voice): string {
+  if (voice === "product-impact") return generateProductImpactTwitter(article);
+  if (voice === "arpy") return generateArpyTwitter(article);
+  return generateBrittanyTwitter(article);
+}
+
+function generateLinkedin(article: Article, voice: Voice): string {
+  if (voice === "product-impact") return generateProductImpactLinkedin(article);
+  if (voice === "arpy") return generateArpyLinkedin(article);
+  return generateBrittanyLinkedin(article);
 }
 
 function twitterShareUrl(text: string): string {
@@ -200,7 +359,8 @@ export default function SocialScreen({ supabase }: Props) {
   async function loadData() {
     setLoading(true);
     const [artRes, draftsRes] = await Promise.all([
-      supabase.from("articles").select("id, slug, title, subtitle, meta_description, content_html, themes, publish_date, author_slugs, format, hero_image_url")
+      supabase.from("articles")
+        .select("id, slug, title, subtitle, meta_description, content_html, themes, publish_date, author_slugs, format, hero_image_url")
         .eq("published", true).order("publish_date", { ascending: false }).limit(30),
       supabase.from("site_settings").select("value").eq("key", "social_drafts").single(),
     ]);
@@ -252,7 +412,8 @@ export default function SocialScreen({ supabase }: Props) {
       value: { drafts: Array.from(updated.values()) },
       updated_at: new Date().toISOString(),
     }, { onConflict: "key" });
-    setMsg("Draft saved"); setTimeout(() => setMsg(""), 2000);
+    setMsg("Draft saved");
+    setTimeout(() => setMsg(""), 2000);
   }
 
   async function copyText(text: string, platform: string) {
@@ -263,7 +424,11 @@ export default function SocialScreen({ supabase }: Props) {
 
   const selected = articles.find(a => a.id === selectedId);
 
-  if (loading) return <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-16">
+      <div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <div className="grid grid-cols-[340px_1fr] gap-6 max-w-6xl">
@@ -292,7 +457,7 @@ export default function SocialScreen({ supabase }: Props) {
           <div className="flex items-center justify-center h-64 text-[#555]">
             <div className="text-center">
               <p className="text-[16px] mb-2">Select an article to generate social posts</p>
-              <p className="text-[12px] text-[#444]">Choose a voice per platform — each generates different tone and framing</p>
+              <p className="text-[12px] text-[#444]">Each voice produces fundamentally different content — Product Impact (editorial), Arpy (strategic insight + role framing), Brittany (data + research lists)</p>
             </div>
           </div>
         ) : (
@@ -316,7 +481,11 @@ export default function SocialScreen({ supabase }: Props) {
               icon={<svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>}
               label="X / Twitter"
               voice={twitterVoice}
-              onVoiceChange={(v) => { setTwitterVoice(v); }}
+              onVoiceChange={(v) => {
+                setTwitterVoice(v);
+                const article = articles.find(a => a.id === selectedId);
+                if (article) setEditingTwitter(generateTwitter(article, v));
+              }}
               text={editingTwitter}
               onTextChange={setEditingTwitter}
               onRegenerate={regenTwitter}
@@ -334,7 +503,11 @@ export default function SocialScreen({ supabase }: Props) {
               icon={<svg className="w-4 h-4 text-[#0A66C2]" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>}
               label="LinkedIn"
               voice={linkedinVoice}
-              onVoiceChange={(v) => { setLinkedinVoice(v); }}
+              onVoiceChange={(v) => {
+                setLinkedinVoice(v);
+                const article = articles.find(a => a.id === selectedId);
+                if (article) setEditingLinkedin(generateLinkedin(article, v));
+              }}
               text={editingLinkedin}
               onTextChange={setEditingLinkedin}
               onRegenerate={regenLinkedin}
@@ -390,9 +563,9 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
         </div>
       </div>
       <div className="px-4 py-2 bg-[#0a0a0a] border-b border-[#141414]">
-        <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_PROFILES[voice].label}</strong> — {pick(VOICE_PROFILES[voice].tone)}</span>
+        <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_META[voice].label}</strong> — {VOICE_META[voice].description}</span>
       </div>
-      <textarea className={`w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y ${platform === "twitter" ? "h-32" : "h-56"}`}
+      <textarea className={`w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y ${platform === "twitter" ? "h-32" : "h-64"}`}
         value={text} onChange={(e) => onTextChange(e.target.value)} />
     </div>
   );
