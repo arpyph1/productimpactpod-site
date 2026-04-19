@@ -9,6 +9,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { getAllArticles, formatLabel } from "@lib/supabase";
+import EntityHeadline from "@components/EntityHeadline.astro";
 
 const siteUrl = "https://productimpactpod.com";
 const recentArticles = (await getAllArticles()).slice(0, 4);
@@ -112,9 +113,10 @@ const themes = [
                   {formatLabel(article.format)}
                 </span>
               </div>
-              <h3 class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2">
-                {article.title}
-              </h3>
+              <EntityHeadline title={article.title}
+                entities={[...(article.people ?? []), ...(article.organizations ?? []), ...(article.products ?? [])]}
+                tag="h3"
+                class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2" />
               {article.subtitle && (
                 <p class="text-sm text-[#a0a0a0] mt-1 line-clamp-2">
                   {article.subtitle}

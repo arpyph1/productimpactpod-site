@@ -3,6 +3,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { getAllEpisodes, getEpisodeBySlug, getAllArticles, themeLabel } from "@lib/supabase";
+import EntityHeadline from "@components/EntityHeadline.astro";
 
 export async function getStaticPaths() {
   const episodes = await getAllEpisodes();
@@ -257,7 +258,10 @@ const jsonLd = [
               <div class="space-y-3">
                 {relatedArticles.map((a) => (
                   <a href={`/news/${a.slug}/`} class="block group">
-                    <div class="text-[13px] font-semibold text-[#ccc] group-hover:text-white transition-colors leading-snug line-clamp-2 mb-1">{a.title}</div>
+                    <EntityHeadline title={a.title}
+                      entities={[...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])]}
+                      tag="span"
+                      class="text-[13px] font-semibold text-[#ccc] group-hover:text-white transition-colors leading-snug line-clamp-2 mb-1 block" />
                     <div class="text-[11px] text-[#555]">{a.publish_date}</div>
                   </a>
                 ))}
