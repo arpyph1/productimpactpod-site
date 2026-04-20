@@ -174,8 +174,10 @@ def auto_tag_themes(title: str, desc: str) -> list[str]:
 
 def upsert_to_supabase(episodes: list[dict]):
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print("ERROR: PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.")
-        sys.exit(1)
+        print("WARNING: PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY not set.")
+        print("Skipping Supabase upsert. Add these secrets in GitHub repo Settings > Secrets and variables > Actions.")
+        print(f"Parsed {len(episodes)} episodes successfully (dry run).")
+        return
 
     url = f"{SUPABASE_URL}/rest/v1/episode_shownotes"
     headers = {

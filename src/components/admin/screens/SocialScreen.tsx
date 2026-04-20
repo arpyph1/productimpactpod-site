@@ -49,31 +49,39 @@ function plainText(html: string): string {
 function allSentences(html: string): string[] {
   return plainText(html)
     .split(/(?<=[.!?])\s+/)
-    .filter(s => s.length >= 25 && s.length <= 250);
+    .filter(s => s.length >= 30 && s.length <= 300)
+    .filter(s => /^[A-Z\d"']/.test(s))
+    .filter(s => s.split(/\s+/).length >= 5)
+    .filter(s => !/^Sources?:|^\d+\.\s|^[-*]\s/.test(s));
 }
 
 function extractStats(html: string): string[] {
   const text = plainText(html);
   const patterns: RegExp[] = [
-    /(\d{1,3}(?:,\d{3})*(?:\.\d+)?%[^.]{5,120}\.)/gi,
-    /((?:only|just|over|nearly|almost|more than|fewer than)\s+\d[^.]{5,120}\.)/gi,
-    /(\d+(?:\.\d+)?\s*(?:billion|million|trillion|x\s|times)[^.]{5,100}\.)/gi,
+    /(\$\d[\d,.]*[^.]{5,140}\.)/gi,
+    /(\d{1,3}(?:,\d{3})*(?:\.\d+)?%[^.]{5,140}\.)/gi,
+    /((?:only|just|over|nearly|almost|more than|fewer than)\s+\d[^.]{5,140}\.)/gi,
+    /(\d+(?:\.\d+)?\s*(?:billion|million|trillion|x\s|times)[^.]{5,120}\.)/gi,
     /([A-Z][^.]*\d{2,}[^.]*(?:percent|%)[^.]*\.)/g,
   ];
   const stats: string[] = [];
   for (const p of patterns) {
     for (const m of text.matchAll(p)) {
       const s = m[1].trim();
-      if (s.length > 20 && s.length < 160 && !stats.some(e => e.slice(0, 30) === s.slice(0, 30)))
+      if (s.length > 25 && s.length < 220
+          && !stats.some(e => e.slice(0, 30) === s.slice(0, 30))
+          && !/^Sources?:/.test(s)
+          && s.split(/\s+/).length >= 5)
         stats.push(s);
     }
   }
-  return stats.slice(0, 8);
+  return stats.slice(0, 10);
 }
 
 // ——— Product Impact ———
-// Professional, editorial, title + meta_description aligned, no first-person.
-// Target: SHORT. 400-1000 chars (13-33% of LinkedIn max).
+// Professional editorial voice. Uses QUOTES from the article (not attributed).
+// Lists 4-5 key points the article covers with brief context.
+// Target: 800-1800 chars (27-60% of LinkedIn max).
 
 function generateProductImpactTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
@@ -98,12 +106,35 @@ function generateProductImpactLinkedin(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
   const desc = article.meta_description ?? "";
   const sentences = allSentences(article.content_html);
+  const stats = extractStats(article.content_html);
 
-  const keyPoints = sentences
-    .filter(s => s.match(/\d|key|important|critical|significant|major|leading|growing/i))
-    .slice(0, 3)
-    .map(s => "• " + s);
-  const points = keyPoints.length >= 2 ? keyPoints : sentences.slice(1, 4).map(s => "• " + s);
+  // Find a quotable sentence: insightful, declarative, good standalone
+  const quotable = sentences.find(s =>
+    s.match(/the real|what matters|key insight|truth is|reality is|actually|means that|this is why|the reason|important to understand/i)
+    && s.length >= 40 && s.length <= 220
+  ) ?? sentences.find(s =>
+    s.match(/means|reveals|shows|demonstrates|proves/i) && s.length >= 40 && s.length <= 200
+  ) ?? sentences.find(s => s.length >= 50 && s.length <= 200) ?? "";
+
+  // Gather diverse topic-covering sentences for key points
+  const usedSet = new Set([quotable, desc]);
+  const topicPool = sentences.filter(s => !usedSet.has(s) && s.length >= 30 && s.length <= 220);
+  const keyPoints: string[] = [];
+  const coveredWords = new Set<string>();
+  for (const s of topicPool) {
+    if (keyPoints.length >= 5) break;
+    const words = s.toLowerCase().split(/\s+/).filter(w => w.length > 5);
+    const isNew = words.some(w => !coveredWords.has(w));
+    if (isNew || keyPoints.length < 3) {
+      keyPoints.push(s);
+      words.forEach(w => coveredWords.add(w));
+    }
+  }
+  // Supplement with stats if needed
+  for (const st of stats) {
+    if (keyPoints.length >= 5) break;
+    if (!keyPoints.some(p => p.slice(0, 30) === st.slice(0, 30))) keyPoints.push(st);
+  }
 
   const tags = pick([
     "#AIProducts #ProductStrategy #ProductImpact",
@@ -111,27 +142,35 @@ function generateProductImpactLinkedin(article: Article): string {
     "#AIStrategy #Enterprise #ProductImpact",
   ]);
 
-  const parts: string[] = [
-    article.title,
-    "",
-    desc || sentences[0] || "",
-    "",
-    ...points,
-    "",
-    `Read the full article: ${link}`,
-    "",
-    tags,
-  ];
+  const parts: string[] = [];
+  parts.push(article.title);
+  parts.push("");
+  parts.push(desc || sentences[0] || "");
+  parts.push("");
+
+  if (quotable) {
+    parts.push(`"${quotable}"`);
+    parts.push("");
+  }
+
+  if (keyPoints.length >= 2) {
+    parts.push("What this article covers:");
+    keyPoints.forEach((p, i) => parts.push(`${i + 1}. ${p}`));
+    parts.push("");
+  }
+
+  parts.push(`Read the full article: ${link}`);
+  parts.push("");
+  parts.push(tags);
 
   return parts.join("\n");
 }
 
 // ——— Arpy ———
-// Strategic insight distilled into impact. LONG-FORM narrative.
-// First-person, opinionated, no lists. Challenges assumptions.
-// Explains why this matters for PMs / execs / enterprise.
+// Strategic, opinionated, first-person. Builds a THESIS with flowing prose paragraphs.
+// NO bullet lists. NO single-sentence paragraphs (group 2-3 sentences per paragraph).
+// Names the actual topic the article addresses. Explains WHY it matters strategically.
 // Target: 1500-2700 chars (50-90% of LinkedIn max).
-// MUST end with a strong declarative closing point.
 
 function generateArpyTwitter(article: Article): string {
   const link = `${SITE}/news/${article.slug}/`;
@@ -143,17 +182,8 @@ function generateArpyTwitter(article: Article): string {
     ?? sentences.find(s => s.match(/should|must|can't|won't|fail|miss|overlook|underestimate|wrong|broken/i))
     ?? desc.split(/(?<=[.!?])\s+/)[0] ?? article.title;
 
-  const intros = [
-    "Something I keep seeing product teams get wrong —",
-    "This one's worth reading carefully.",
-    "Hot take:",
-    "Been researching this. Key finding:",
-    "The real story here isn't in the headline:",
-    "Product leaders: pay attention to this.",
-  ];
-
-  let text = `${pick(intros)}\n\n${bold.slice(0, 195)}\n\n${link}`;
-  if (text.length > 280) text = `${bold.slice(0, 210)}\n\n${link}`;
+  let text = `${bold.slice(0, 220)}\n\n${link}`;
+  if (text.length > 280) text = `${article.title.slice(0, 220)}\n\n${link}`;
   return text;
 }
 
@@ -163,121 +193,121 @@ function generateArpyLinkedin(article: Article): string {
   const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
 
-  // Arpy uses a punchy opening line, NOT the article title
-  const openers = [
-    "Something shifted this quarter and product leaders need to pay attention.",
-    "I've been digging into this and the implications are bigger than the headline suggests.",
-    "I keep hearing the same question from product teams. This article gets at the answer.",
-    "A pattern I keep seeing across enterprise AI deployments — and it should worry you.",
-    "This came up on the podcast and I decided to go deeper. Glad I did.",
-    "The conventional wisdom on this is wrong. Here's what the data actually shows.",
-    "Most product teams are making the same mistake right now. Here's what it is.",
-    "If you're in AI product leadership, this is the most important thing I've read this month.",
-  ];
+  // Categorize sentences for building argument paragraphs
+  const strategicPool = sentences.filter(s =>
+    s.match(/means|indicates|suggests|reveals|impact|implication|consequence|shift|fundamental|transform|strategy|decision|opportunity/i)
+  );
+  const evidencePool = sentences.filter(s =>
+    s.match(/\d|cost|price|percent|million|billion|growth|decline|increase|decrease|\$/i)
+  );
+  const contrarianPool = sentences.filter(s =>
+    s.match(/but|however|despite|yet|although|contrary|instead|rather|not just|beyond|overlooked|missed|wrong|actually|reality/i)
+  );
+  const contextPool = sentences.filter(s =>
+    !strategicPool.includes(s) && !evidencePool.includes(s) && !contrarianPool.includes(s)
+  );
 
-  const roles = [
-    { lens: "If you're a PM leading an AI feature", what: "this changes how you should think about the build/buy decision entirely" },
-    { lens: "If you're a product exec setting AI roadmap priorities", what: "this should make you reconsider where you're allocating resources" },
-    { lens: "If you're leading AI adoption at scale", what: "this data explains what's actually happening underneath the adoption curves" },
-    { lens: "If you're an engineering leader evaluating AI infrastructure", what: "this reframes the technical debt conversation completely" },
-    { lens: "If you're a founder building in the AI space", what: "this is the market signal your pitch deck needs to address" },
-  ];
-  const rf = pick(roles);
+  // Helper: join sentences into a flowing paragraph
+  function buildParagraph(pool: string[], max: number = 3): string {
+    return pool.slice(0, max).join(" ");
+  }
 
-  // Strategic sentence (implication-focused)
-  const strategic = sentences.find(s =>
-    s.match(/means|indicates|suggests|reveals|demonstrates|impact|implication|consequence|shift|fundamental|transform/i)
-  ) ?? sentences[0] ?? desc;
-
-  // Contrarian/challenge sentence
-  const challenge = sentences.find(s =>
-    s.match(/but|however|despite|yet|although|contrary|instead|rather|not just|beyond|overlooked|missed|wrong/i)
-  ) ?? sentences[2] ?? "";
-
-  // Build narrative paragraphs — no lists, flowing prose
-  const closingPoints = [
-    "The companies that figure this out first won't just have a competitive advantage — they'll define the next era of product development.",
-    "This is the kind of shift that separates companies that are genuinely AI-native from those that are just adding AI as a feature checkbox.",
-    "The window to act on this is shorter than most product teams realize. The organizations moving now are the ones that will set the standard.",
-    "If your AI strategy doesn't account for this, you're building on assumptions that are already outdated.",
-    "This isn't a trend to monitor. It's a structural change in how products get built, deployed, and adopted at scale. Act accordingly.",
-    "The teams that internalize this insight will ship better products, faster. The ones that don't will spend the next two years wondering why their AI features aren't getting adopted.",
-  ];
-
-  // Gather more article substance to fill the length
-  const usedSentences = new Set([strategic, challenge]);
-  const impactSentences = sentences
-    .filter(s => !usedSentences.has(s))
-    .filter(s => s.match(/\d|key|critical|significant|shift|change|trend|adoption|growth|decline|impact|strategy|decision|risk|opportunity|failure|success/i));
-  const contextSentences = sentences
-    .filter(s => !usedSentences.has(s) && !impactSentences.includes(s));
+  const usedSentences = new Set<string>();
+  function takeUnused(pool: string[], count: number): string[] {
+    const result: string[] = [];
+    for (const s of pool) {
+      if (result.length >= count) break;
+      if (!usedSentences.has(s)) {
+        result.push(s);
+        usedSentences.add(s);
+      }
+    }
+    return result;
+  }
 
   const parts: string[] = [];
 
-  // Section 1: Punchy opener
-  parts.push(pick(openers));
+  // Opening paragraph: the article's thesis + Arpy's take (2-3 sentences grouped)
+  const openingSentences: string[] = [];
+  if (desc) openingSentences.push(desc);
+  const takeSentence = takeUnused(strategicPool, 1);
+  if (takeSentence.length > 0 && takeSentence[0] !== desc) {
+    openingSentences.push(takeSentence[0]);
+  }
+  if (openingSentences.length === 0) openingSentences.push(sentences[0] || article.title);
+  parts.push(openingSentences.join(" "));
   parts.push("");
 
-  // Section 2: What the article is about (desc or strategic finding)
-  parts.push(desc || strategic);
-  parts.push("");
-
-  // Section 3: The strategic insight, elaborated
-  if (strategic !== desc && strategic) {
-    parts.push(strategic);
+  // Evidence paragraph: data that supports the argument (2-3 evidence sentences)
+  const evidenceTake = takeUnused(evidencePool, 3);
+  if (evidenceTake.length > 0) {
+    parts.push(buildParagraph(evidenceTake));
     parts.push("");
   }
 
-  // Section 4: Role-specific framing
-  parts.push(`${rf.lens}, ${rf.what}.`);
-  parts.push("");
-
-  // Section 5: Supporting data/evidence (woven into narrative, NOT lists)
-  if (stats[0]) {
-    parts.push(`The number that jumped out at me: ${stats[0]}`);
+  // Strategic implication paragraph: what this means for product leaders
+  const strategicTake = takeUnused(strategicPool, 2);
+  const contextTake = takeUnused(contextPool, 1);
+  const implParagraph = [...strategicTake, ...contextTake];
+  if (implParagraph.length > 0) {
+    parts.push(buildParagraph(implParagraph));
     parts.push("");
   }
 
-  // Section 6: Challenge / contrarian point
-  if (challenge && challenge !== strategic) {
-    parts.push(`Here's what most people are getting wrong: ${challenge}`);
+  // Contrarian/nuance paragraph: challenge assumptions
+  const contrarianTake = takeUnused(contrarianPool, 2);
+  if (contrarianTake.length > 0) {
+    parts.push(buildParagraph(contrarianTake));
     parts.push("");
   }
 
-  // Section 7: Additional strategic observations — add until we hit minimum length
+  // Fill to target with remaining sentences grouped into paragraphs
   let currentLen = parts.join("\n").length;
   const targetMin = Math.floor(LINKEDIN_MAX * 0.50);
   const targetMax = Math.floor(LINKEDIN_MAX * 0.90);
 
-  for (const s of impactSentences) {
+  const allRemaining = [...evidencePool, ...strategicPool, ...contextPool, ...contrarianPool]
+    .filter(s => !usedSentences.has(s));
+  let paraBuffer: string[] = [];
+  for (const s of allRemaining) {
     if (currentLen >= targetMin) break;
-    parts.push(s);
-    parts.push("");
-    currentLen += s.length + 2;
-  }
-
-  for (const s of contextSentences) {
-    if (currentLen >= targetMin) break;
-    parts.push(s);
-    parts.push("");
-    currentLen += s.length + 2;
-  }
-
-  // If still short and we have stats, add more
-  if (currentLen < targetMin) {
-    for (const st of stats.slice(1, 4)) {
-      if (currentLen >= targetMin) break;
-      parts.push(st);
+    paraBuffer.push(s);
+    usedSentences.add(s);
+    if (paraBuffer.length >= 2) {
+      parts.push(buildParagraph(paraBuffer));
       parts.push("");
-      currentLen += st.length + 2;
+      currentLen += paraBuffer.join(" ").length + 2;
+      paraBuffer = [];
+    }
+  }
+  if (paraBuffer.length > 0 && currentLen < targetMin) {
+    parts.push(buildParagraph(paraBuffer));
+    parts.push("");
+    currentLen += paraBuffer.join(" ").length + 2;
+  }
+
+  // Fill with remaining stats if still short
+  if (currentLen < targetMin) {
+    for (const st of stats) {
+      if (currentLen >= targetMin) break;
+      if (!usedSentences.has(st)) {
+        parts.push(st);
+        parts.push("");
+        currentLen += st.length + 2;
+      }
     }
   }
 
-  // Section 8: Link
-  parts.push(`I wrote about this in depth on Product Impact: ${link}`);
+  parts.push(`I wrote about this on Product Impact: ${link}`);
   parts.push("");
 
-  // Section 9: Strong closing point (NEVER a question)
+  const closingPoints = [
+    "The companies that understand this distinction will make better decisions. The rest will learn the hard way.",
+    "This is a structural change in how products get built. The teams that see it clearly will act accordingly.",
+    "The window to act is shorter than most realize. The organizations moving now will set the standard.",
+    "If your strategy doesn't account for this, you're building on assumptions that are already outdated.",
+    "The teams that internalize this will ship better products. The rest will spend years wondering why.",
+  ];
   parts.push(pick(closingPoints));
 
   let result = parts.join("\n");
@@ -288,9 +318,10 @@ function generateArpyLinkedin(article: Article): string {
 }
 
 // ——— Brittany ———
-// Data-driven, research perspective. USES numbered lists.
-// Audience: researchers + enterprise AI leads.
-// Target: 900-2100 chars (30-70% of LinkedIn max).
+// Data analyst voice. Leads with specific numbers. Explains what each finding means.
+// Uses "The data breakdown:" with numbered findings + context for each.
+// Includes a "What to watch:" forward-looking section.
+// Target: 1200-2400 chars (40-80% of LinkedIn max).
 // MUST end with a question.
 
 function generateBrittanyTwitter(article: Article): string {
@@ -299,16 +330,8 @@ function generateBrittanyTwitter(article: Article): string {
   const desc = article.meta_description ?? "";
   const leadStat = stats[0] ?? desc.split(/(?<=[.!?])\s+/)[0] ?? article.title;
 
-  const intros = [
-    "The research on this is clear —",
-    "New findings:",
-    "Data point worth noting:",
-    "Here's what the evidence actually says:",
-    "The numbers behind this story:",
-  ];
-
-  let text = `${pick(intros)}\n\n${leadStat.slice(0, 200)}\n\n${link}`;
-  if (text.length > 280) text = `${leadStat.slice(0, 210)}\n\n${link}`;
+  let text = `${leadStat.slice(0, 220)}\n\n${link}`;
+  if (text.length > 280) text = `${article.title.slice(0, 220)}\n\n${link}`;
   return text;
 }
 
@@ -318,85 +341,118 @@ function generateBrittanyLinkedin(article: Article): string {
   const sentences = allSentences(article.content_html);
   const stats = extractStats(article.content_html);
 
-  // Brittany uses a research-framed opening, different from Arpy's personal take
-  const openers = [
-    "From a research perspective, this is significant.",
-    "New research findings that AI product and enterprise teams should know about.",
-    "The gap between perception and reality here is striking.",
-    "The adoption data tells a different story than the headlines.",
-    "This is the kind of evidence-based insight enterprise AI teams need right now.",
-    "The behavioral data on this is really interesting — and underreported.",
-  ];
+  // Lead with the most concrete stat + an explanatory sentence
+  const explanatory = sentences.find(s =>
+    s.match(/because|this means|which means|the reason|in other words|the implication|this is why|that means/i)
+  );
 
-  // Build numbered list from stats + data sentences
-  const dataPoints: string[] = [...stats];
-  sentences
-    .filter(s => !stats.some(st => st.slice(0, 30) === s.slice(0, 30)))
-    .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|adoption|rate|gap|correlation|percent|growth|decline/i))
-    .slice(0, 6)
-    .forEach(s => dataPoints.push(s));
-
-  if (dataPoints.length < 3) {
-    sentences.slice(0, 5).forEach(s => {
-      if (dataPoints.length < 4 && !dataPoints.includes(s)) dataPoints.push(s);
+  // Build data findings with related context sentences
+  const dataFindings: string[] = [];
+  const usedForFindings = new Set<string>();
+  for (const st of stats.slice(0, 5)) {
+    const stWords = st.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+    const related = sentences.find(s => {
+      if (usedForFindings.has(s) || s === st) return false;
+      return stWords.some(w => s.toLowerCase().includes(w));
     });
+    if (related) {
+      dataFindings.push(`${st} ${related}`);
+      usedForFindings.add(related);
+    } else {
+      dataFindings.push(st);
+    }
+    usedForFindings.add(st);
   }
 
-  const targetMin = Math.floor(LINKEDIN_MAX * 0.30);
-  const targetMax = Math.floor(LINKEDIN_MAX * 0.70);
-
-  // Cap list length based on target
-  const maxItems = dataPoints.length > 6 ? 6 : dataPoints.length;
-  const numberedList = dataPoints.slice(0, maxItems).map((p, i) => `${i + 1}. ${p}`).join("\n");
-
-  const closingQuestions = [
-    "How is your organization measuring the real impact of AI adoption — and are those metrics actually telling you the truth?",
-    "What methodologies are you using to separate AI hype from measurable outcomes in your product decisions?",
-    "Are enterprise teams actually benchmarking AI ROI correctly, or are we all just optimizing for the wrong metrics?",
-    "What's the biggest gap between AI research findings and how your team is actually implementing them?",
-    "I'd love to hear from other researchers and enterprise leads — are you seeing these same patterns in your data?",
-    "For those leading AI initiatives at scale: what surprised you most when you looked at the actual adoption numbers?",
-  ];
-
-  const parts: string[] = [];
-
-  // Section 1: Research-framed opener
-  parts.push(pick(openers));
-  parts.push("");
-
-  // Section 2: Context from desc
-  if (desc) {
-    parts.push(desc);
-    parts.push("");
-  }
-
-  // Section 3: Numbered Key Takeaways (Brittany's signature)
-  parts.push("Key Takeaways:");
-  parts.push(numberedList);
-  parts.push("");
-
-  // Section 4: Brief "why it matters" (only add if we need length)
-  let currentLen = parts.join("\n").length;
-  if (currentLen < targetMin) {
-    const contextSentences = sentences
-      .filter(s => !dataPoints.includes(s))
-      .slice(0, 2);
-    if (contextSentences.length > 0) {
-      parts.push("Why this matters for enterprise AI:");
-      contextSentences.forEach(s => parts.push(s));
-      parts.push("");
+  // Fallback: if no stats, use data-oriented sentences
+  if (dataFindings.length < 2) {
+    const dataSentences = sentences
+      .filter(s => s.match(/\d|research|study|data|evidence|finding|report|analysis|survey|rate|gap|percent|growth|decline/i))
+      .filter(s => !usedForFindings.has(s));
+    for (const s of dataSentences) {
+      if (dataFindings.length >= 4) break;
+      dataFindings.push(s);
     }
   }
 
-  // Section 5: Link
-  parts.push(`Full analysis and methodology: ${link}`);
+  // Implication sentences for bigger-picture paragraph
+  const implicationSentences = sentences.filter(s =>
+    s.match(/means|suggests|indicates|implies|points to|reveals|consequence|therefore|the result/i)
+    && !usedForFindings.has(s)
+  );
+
+  // Extract key topic words from title for "What to watch" section
+  const topicWords = article.title
+    .replace(/[^a-zA-Z\s]/g, "")
+    .split(/\s+/)
+    .filter(w => w.length > 4 && !["about", "their", "these", "those", "which", "where", "would", "could", "should", "being", "other", "every", "matters", "more"].includes(w.toLowerCase()))
+    .slice(0, 4)
+    .join(" ")
+    .toLowerCase();
+
+  const targetMin = Math.floor(LINKEDIN_MAX * 0.40);
+  const targetMax = Math.floor(LINKEDIN_MAX * 0.80);
+
+  const parts: string[] = [];
+
+  // Opening: lead stat with explanation
+  if (stats[0]) {
+    if (explanatory) {
+      parts.push(`${stats[0]} ${explanatory}`);
+    } else {
+      parts.push(stats[0]);
+    }
+  } else {
+    parts.push(desc || sentences[0] || article.title);
+  }
   parts.push("");
 
-  // Section 6: Closing question (ALWAYS a question, never a statement)
+  // Data breakdown with context
+  if (dataFindings.length >= 2) {
+    parts.push("The data breakdown:");
+    dataFindings.slice(0, 5).forEach((f, i) => parts.push(`${i + 1}. ${f}`));
+    parts.push("");
+  }
+
+  // Bigger picture paragraph
+  if (implicationSentences.length > 0) {
+    parts.push(implicationSentences.slice(0, 3).join(" "));
+    parts.push("");
+  }
+
+  // Fill to target if needed
+  let currentLen = parts.join("\n").length;
+  if (currentLen < targetMin) {
+    const remaining = sentences.filter(s => !usedForFindings.has(s) && !implicationSentences.includes(s));
+    for (const s of remaining) {
+      if (currentLen >= targetMin) break;
+      parts.push(s);
+      currentLen += s.length + 1;
+    }
+    parts.push("");
+  }
+
+  // What to watch section
+  parts.push("What to watch:");
+  parts.push(`- How will the economics of ${topicWords || "this space"} change as model costs decrease?`);
+  parts.push(`- What adoption patterns will emerge as more teams evaluate ${topicWords || "these tools"}?`);
+  if (stats.length > 0) {
+    parts.push("- Will these numbers hold as the market matures, or are we in an early-stage anomaly?");
+  }
+  parts.push("");
+
+  parts.push(`Read full analysis: ${link}`);
+  parts.push("");
+
+  const closingQuestions = [
+    "What cost assumptions is your team making? Are you factoring in iteration costs or just first-draft generation?",
+    "How is your organization measuring the real impact? Are those metrics telling you the truth?",
+    "What does your team's data actually show? Are you seeing the same patterns?",
+    "Are enterprise teams benchmarking correctly, or are we optimizing for the wrong metrics?",
+    "What's the biggest gap between these findings and how your team is implementing?",
+  ];
   parts.push(pick(closingQuestions));
   parts.push("");
-
-  // Section 7: Hashtags
   parts.push("#AIResearch #EnterpriseAI #ProductResearch #DataDriven");
 
   let result = parts.join("\n");
