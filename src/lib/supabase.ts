@@ -32,7 +32,7 @@ export type ArticleFormat =
   | "news-analysis"
   | "release-note"
   | "feature"
-  | "interview"
+  | "data-reports"
   | "case-study"
   | "opinion"
   | "explainer"
@@ -468,6 +468,34 @@ export async function getLatestEpisodes(limit = 2): Promise<Episode[]> {
   return (data ?? []) as Episode[];
 }
 
+export async function getEpisodesByTheme(themeSlug: string, limit = 20): Promise<Episode[]> {
+  const { data, error } = await supabase
+    .from("episode_shownotes")
+    .select("*")
+    .eq("published", true)
+    .contains("themes", [themeSlug])
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getEpisodesByTheme error:", error);
+    return [];
+  }
+  return (data ?? []) as Episode[];
+}
+
+export async function getEntitiesByTheme(themeSlug: string): Promise<Entity[]> {
+  const { data, error } = await supabase
+    .from("entities")
+    .select("*")
+    .contains("themes", [themeSlug])
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("getEntitiesByTheme error:", error);
+    return [];
+  }
+  return (data ?? []) as Entity[];
+}
+
 export async function getAllEpisodes(): Promise<Episode[]> {
   const { data, error } = await supabase
     .from("episode_shownotes")
@@ -509,7 +537,7 @@ export function formatLabel(format: ArticleFormat): string {
     "news-analysis": "News Analysis",
     "release-note": "Release",
     feature: "Feature",
-    interview: "Interview",
+    "data-reports": "Data & Reports",
     "case-study": "Case Study",
     opinion: "Opinion",
     explainer: "Explainer",

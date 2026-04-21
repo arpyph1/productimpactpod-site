@@ -3,17 +3,19 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
-import { getLatestShorts } from "@lib/supabase";
+import { getLatestShorts, getSiteSetting } from "@lib/supabase";
 
 const rssEpisodes = await fetchPodcastEpisodes(50);
 const substackEditions = await fetchSubstackEditions(8);
 const siteUrl = "https://productimpactpod.com";
 
+const pc = (await getSiteSetting("podcast")) ?? {};
+
 const show = {
-  spotify: "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf?si=HdJqXcIhQ1qBH0ltXkz3zA",
-  apple: "https://podcasts.apple.com/us/podcast/design-of-ai-build-products-that-customers/id1734499859",
-  youtube: "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
-  substack: "https://productimpactpod.substack.com",
+  spotify: pc.spotify_url ?? "https://open.spotify.com/show/3O11vQKPpKI5ZlJhdRGwnf?si=HdJqXcIhQ1qBH0ltXkz3zA",
+  apple: pc.apple_url ?? "https://podcasts.apple.com/us/podcast/design-of-ai-build-products-that-customers/id1734499859",
+  youtube: pc.youtube_url ?? "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
+  substack: pc.substack_url ?? "https://productimpactpod.substack.com",
   channelId: "UCb1nY02YcJYZZ_XtvcIBcrw",
   heroVideo3Url: "https://www.youtube.com/shorts/-AIs2p6agMw",
 };
@@ -25,7 +27,7 @@ const shortSlots = [
   { short: shortsData.mostWatched ?? null, label: "Most Watched" },
 ];
 
-const hosts = [
+const defaultHosts = [
   {
     name: "Arpy Dragffy",
     role: "Host",
@@ -41,6 +43,10 @@ const hosts = [
     photo: "https://github.com/arpyph1/my-assets/blob/main/brittany%20headshot%20600.JPG?raw=true",
   },
 ];
+const hosts = Array.isArray(pc.hosts) && pc.hosts.length > 0 ? pc.hosts : defaultHosts;
+
+const heroTagline = pc.hero_tagline ?? "Prove impact. Improve impact. Scale impact.";
+const heroDescription = pc.hero_description ?? "Follow the Product Impact Podcast to learn frameworks and strategies to ensure your product is delivering impact to users, teams, businesses, and communities. We investigate enterprise adoption and highlight builders/startups disrupting value creation.";
 
 const sponsors = [
   { name: "PH1", tagline: "Ship products that are proven to deliver impact in the AI era", url: "https://ph1.ca", logoUrl: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true" },
@@ -167,9 +173,9 @@ const jsonLd = [
       </div>
 
       <div class="max-w-[600px] mx-auto px-6">
-        <p class="text-[18px] text-[#aaa] font-light leading-relaxed mb-3">Prove impact. Improve impact. Scale impact.</p>
+        <p class="text-[18px] text-[#aaa] font-light leading-relaxed mb-3">{heroTagline}</p>
         <p class="text-[15px] text-[#777] leading-relaxed">
-          Follow the Product Impact Podcast to learn frameworks and strategies to ensure your product is delivering impact to users, teams, businesses, and communities. We investigate enterprise adoption and highlight builders/startups disrupting value creation.
+          {heroDescription}
         </p>
       </div>
     </section>

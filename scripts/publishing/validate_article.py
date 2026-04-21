@@ -49,7 +49,7 @@ VALID_FORMATS = {
     "news-analysis",
     "release-note",
     "feature",
-    "interview",
+    "data-reports",
     "case-study",
     "opinion",
     "explainer",
