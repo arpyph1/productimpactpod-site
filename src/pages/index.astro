@@ -315,7 +315,8 @@ const jsonLd = {
         ══════════════════════════════════════════════════════════════ */}
     {(() => {
       const c2 = findSection("carousel2");
-      const c2Articles = filterArticles("carousel2");
+      const c2Filtered = filterArticles("carousel2");
+      const c2Articles = c2Filtered.length > 0 ? c2Filtered : articles;
       const c2Label = c2?.label ?? "Carousel 2";
       return sectionEnabled("carousel2") && c2Articles.length > 0 ? (
         <section class="py-10 border-t border-[#141414]">
@@ -504,7 +505,8 @@ const jsonLd = {
         ══════════════════════════════════════════════════════════════ */}
     {(() => {
       const v2 = findSection("vertical2");
-      const v2Articles = filterArticles("vertical2");
+      const v2Filtered = filterArticles("vertical2");
+      const v2Articles = v2Filtered.length > 0 ? v2Filtered : articles;
       const v2Label = v2?.label ?? "Vertical List 2";
       return sectionEnabled("vertical2") && v2Articles.length > 0 ? (
         <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8 border-t border-[#141414]">

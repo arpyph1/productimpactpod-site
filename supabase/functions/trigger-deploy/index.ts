@@ -6,28 +6,40 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const cfApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
+  const cfAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+  const cfProjectName = Deno.env.get("CLOUDFLARE_PROJECT_NAME") ?? "productimpactpod-site";
+
+  if (!cfApiToken) return jsonResponse({ error: "CLOUDFLARE_API_TOKEN not set in Supabase secrets" }, 500);
+  if (!cfAccountId) return jsonResponse({ error: "CLOUDFLARE_ACCOUNT_ID not set in Supabase secrets" }, 500);
+
+  const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}`;
+  const cfHeaders = { "Authorization": `Bearer ${cfApiToken}`, "Content-Type": "application/json" };
+
   try {
-    const cfApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
-    const cfAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
-    const cfProjectName = Deno.env.get("CLOUDFLARE_PROJECT_NAME") ?? "productimpactpod-site";
-
-    if (!cfApiToken || !cfAccountId) {
-      return new Response(
-        JSON.stringify({ error: "CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must be set in Supabase secrets" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Verify project exists
+    const projRes = await fetch(cfBase, { headers: cfHeaders });
+    const projData = await projRes.json();
+    if (!projRes.ok) {
+      return jsonResponse({
+        error: "Cannot access Cloudflare project",
+        status: projRes.status,
+        details: projData.errors ?? projData.messages ?? projData,
+        hint: `Check CLOUDFLARE_ACCOUNT_ID and project name "${cfProjectName}"`,
+      }, 502);
     }
-
-    const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}`;
-    const cfHeaders = {
-      "Authorization": `Bearer ${cfApiToken}`,
-      "Content-Type": "application/json",
-    };
 
     // List existing deploy hooks
     const listRes = await fetch(`${cfBase}/deploy_hooks`, { headers: cfHeaders });
@@ -45,35 +57,30 @@ serve(async (req) => {
         body: JSON.stringify({ branch: "main" }),
       });
       const createData = await createRes.json();
-
       if (createRes.ok && createData.result?.hook_url) {
         hookUrl = createData.result.hook_url;
       } else {
-        return new Response(
-          JSON.stringify({ error: "Failed to create deploy hook", details: createData.errors ?? createData }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({
+          error: "Failed to create deploy hook",
+          status: createRes.status,
+          details: createData.errors ?? createData,
+        }, 502);
       }
     }
 
     // Trigger the deploy hook
     const triggerRes = await fetch(hookUrl!, { method: "POST" });
+    const triggerText = await triggerRes.text();
 
     if (triggerRes.ok) {
-      return new Response(
-        JSON.stringify({ success: true, message: "Build triggered" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ success: true, message: "Build triggered" });
     }
 
-    return new Response(
-      JSON.stringify({ error: `Deploy hook returned ${triggerRes.status}` }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({
+      error: `Deploy hook returned ${triggerRes.status}`,
+      response: triggerText.slice(0, 500),
+    }, 502);
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Deploy trigger failed", message: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ error: "Deploy trigger failed", message: String(err) }, 500);
   }
 });

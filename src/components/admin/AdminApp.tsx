@@ -189,17 +189,19 @@ export default function AdminApp() {
     try {
       const { data, error } = await supabase.functions.invoke("trigger-deploy");
       if (error) {
-        setDeployMsg(`Deploy failed: ${error.message}`);
+        const body = typeof error === "object" ? JSON.stringify(error) : String(error.message ?? error);
+        setDeployMsg(`Deploy failed: ${body}`);
       } else if (data?.success) {
         setDeployMsg("Build triggered! Site will update in ~3 minutes.");
       } else {
-        setDeployMsg(`Deploy error: ${data?.error ?? "Unknown error"}`);
+        const detail = data?.hint ?? data?.details ?? data?.error ?? "Unknown error";
+        setDeployMsg(`Deploy error: ${typeof detail === "object" ? JSON.stringify(detail) : detail}`);
       }
     } catch (e: any) {
       setDeployMsg(`Deploy failed: ${e.message}`);
     }
     setDeploying(false);
-    setTimeout(() => setDeployMsg(""), 8000);
+    setTimeout(() => setDeployMsg(""), 15000);
   }, []);
 
   if (loading) {
