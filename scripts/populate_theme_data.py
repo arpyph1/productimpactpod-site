@@ -99,8 +99,15 @@ def populate_entity_themes():
     entities = supabase_get("entities", "select=id,slug,name,description,themes,type")
     print(f"Fetched {len(entities)} entities")
 
-    articles = supabase_get("articles", "select=slug,themes,people,organizations,products&published=eq.true")
-    article_entities = supabase_get("article_entities", "select=entity_id,article_id")
+    articles = supabase_get("articles", "select=id,slug,themes&published=eq.true")
+    print(f"Fetched {len(articles)} published articles")
+
+    try:
+        article_entities = supabase_get("article_entities", "select=entity_id,article_id")
+        print(f"Fetched {len(article_entities)} article-entity links")
+    except Exception as e:
+        print(f"  WARNING: Could not fetch article_entities: {e}")
+        article_entities = []
 
     article_themes_by_id: dict[str, list[str]] = {}
     for a in articles:
@@ -115,22 +122,6 @@ def populate_entity_themes():
                 entity_article_themes[eid] = set()
             for t in article_themes_by_id.get(aid, []):
                 entity_article_themes[eid].add(t)
-
-    for a in articles:
-        for person_slug in (a.get("people") or []):
-            matching = [e for e in entities if e["slug"] == person_slug and e["type"] == "person"]
-            for e in matching:
-                if e["id"] not in entity_article_themes:
-                    entity_article_themes[e["id"]] = set()
-                for t in (a.get("themes") or []):
-                    entity_article_themes[e["id"]].add(t)
-        for org_slug in (a.get("organizations") or []):
-            matching = [e for e in entities if e["slug"] == org_slug and e["type"] == "organization"]
-            for e in matching:
-                if e["id"] not in entity_article_themes:
-                    entity_article_themes[e["id"]] = set()
-                for t in (a.get("themes") or []):
-                    entity_article_themes[e["id"]].add(t)
 
     updated = 0
     for entity in entities:
