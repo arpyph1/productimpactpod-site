@@ -112,9 +112,10 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
               <tr className="bg-[#0c0c0c] text-[11px] font-semibold text-[#555] uppercase tracking-wider">
                 <th className="text-left px-4 py-3 w-12">Pub</th>
                 <th className="text-left px-4 py-3">Title</th>
-                <th className="text-left px-4 py-3 w-28">Format</th>
-                <th className="text-left px-4 py-3 w-28">Author</th>
-                <th className="text-left px-4 py-3 w-28">Date</th>
+                <th className="text-left px-4 py-3 w-24">Format</th>
+                <th className="text-left px-4 py-3 w-24">Author</th>
+                <th className="text-left px-4 py-3">Themes / Topics</th>
+                <th className="text-left px-4 py-3 w-24">Date</th>
                 <th className="text-left px-4 py-3 w-16"></th>
               </tr>
             </thead>
@@ -146,6 +147,13 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
                       <option value="">—</option>
                       {AUTHOR_OPTIONS.map((au) => <option key={au.slug} value={au.slug}>{au.name}</option>)}
                     </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(a.themes ?? []).map((t: string) => (
+                        <span key={t} className="inline-block text-[9px] font-medium px-1.5 py-0.5 rounded bg-[#ff6b4a]/10 text-[#ff6b4a] border border-[#ff6b4a]/20">{t.replace(/-/g, " ").slice(0, 20)}</span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <input type="date" className="bg-transparent text-[11px] text-[#666] hover:text-white focus:outline-none cursor-pointer"

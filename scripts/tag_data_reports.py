@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Auto-tag articles as 'data-reports' format based on title and content keywords.
+Auto-tag articles as 'data-reports' format based on title keywords.
 
-Articles about research reports, surveys, data analysis, indices, benchmarks,
-and statistical findings should use the 'data-reports' format.
+Only tags articles whose TITLE clearly indicates data/research/report content.
+Content-only matching is intentionally excluded to avoid false positives.
 
 Usage:
   export PUBLIC_SUPABASE_URL=https://xxx.supabase.co
@@ -16,6 +16,7 @@ import sys
 import json
 import re
 from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -30,90 +31,76 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# Keywords that indicate data/research/report content
-# Strong indicators: if title contains these, very likely data-reports
-TITLE_STRONG = [
-    "report", "index", "survey", "study", "findings", "benchmark",
-    "statistics", "census", "forecast", "outlook", "barometer",
-    "scorecard", "tracker", "monitor", "state of", "annual",
+# Only match when the TITLE clearly indicates data/report content.
+# These are phrases/words that signal the article IS a report or data analysis.
+TITLE_INDICATORS = [
+    "report",
+    "index",
+    "survey",
+    "study",
+    "findings",
+    "benchmark",
+    "census",
+    "forecast",
+    "outlook",
+    "state of",
+    "annual ",
+    "research:",
+    "data:",
+    "scorecard",
 ]
 
-# Title patterns with numbers/percentages suggest data-driven content
-TITLE_PATTERNS = [
-    r"\d+\s*%",                    # percentages in title
-    r"\d+\s*percent",
-    r"roi\b",
-    r"\bgap\b.*\d",                # "gap" with numbers
-    r"\bsurge\b",
-    r"\bdecline\b",
-    r"\bgrowth\b.*\d",
-    r"\$\d",                       # dollar amounts
-    r"\d+\s*(?:billion|million|trillion)",
-    r"q[1-4]\s*20\d{2}",          # quarterly references (Q1 2026)
+# Title patterns: percentages or dollar amounts paired with analytical framing
+TITLE_DATA_PATTERNS = [
+    r"\d+\s*(?:%|percent).*(?:gap|decline|surge|drop|rise|growth|adoption|deployment|roi|failure|barrier)",
+    r"(?:gap|decline|surge|drop|rise|growth|adoption|deployment|roi|failure|barrier).*\d+\s*(?:%|percent)",
+    r"\$\d+.*(?:cost|spend|investment|market|revenue|budget)",
+    r"q[1-4]\s*20\d{2}.*(?:data|report|trend|hiring|surge|decline)",
+    r"(?:data|report|trend|hiring|surge|decline).*q[1-4]\s*20\d{2}",
 ]
 
-# Content keywords (need multiple matches to qualify)
-CONTENT_KEYWORDS = [
-    "according to", "research shows", "data shows", "survey found",
-    "study found", "report found", "analysis reveals", "findings suggest",
-    "percent of", "percentage", "year-over-year", "quarter-over-quarter",
-    "growth rate", "adoption rate", "deployment rate", "failure rate",
-    "roi", "return on investment", "cost per", "revenue impact",
-    "benchmark", "measured", "quantif", "correlat", "statistic",
-    "respondents", "sample size", "methodology", "dataset",
-    "stanford", "mckinsey", "gartner", "forrester", "idc",
-    "deloitte", "accenture", "bain", "bcg",
+# Explicit exclusions: topics that aren't data reports even if they contain numbers
+TITLE_EXCLUSIONS = [
+    "how to", "why ", "guide", "playbook", "tutorial",
+    "opinion", "interview", "leaves", "future of",
+    "what is", "introducing", "launch", "announces",
+    "review:", "hands-on", "first look",
 ]
 
 
-def strip_html(html: str) -> str:
-    return re.sub(r"<[^>]*>", " ", html or "").strip().lower()
+def should_tag_as_data_reports(title: str) -> tuple[bool, str]:
+    title_lower = title.lower().strip()
 
-
-def should_tag_as_data_reports(title: str, content_html: str, meta_desc: str) -> tuple[bool, list[str]]:
-    title_lower = title.lower()
-    text = f"{title_lower} {strip_html(content_html)} {(meta_desc or '').lower()}"
-    reasons = []
+    # Check exclusions first
+    for exc in TITLE_EXCLUSIONS:
+        if exc in title_lower:
+            return False, f"excluded by '{exc}'"
 
     # Check strong title indicators
-    for kw in TITLE_STRONG:
+    for kw in TITLE_INDICATORS:
         if kw in title_lower:
-            reasons.append(f"title contains '{kw}'")
+            return True, f"title contains '{kw}'"
 
-    # Check title patterns
-    for pattern in TITLE_PATTERNS:
-        if re.search(pattern, title_lower, re.IGNORECASE):
-            reasons.append(f"title matches pattern '{pattern}'")
+    # Check title data patterns
+    for pattern in TITLE_DATA_PATTERNS:
+        if re.search(pattern, title_lower):
+            return True, f"title matches data pattern"
 
-    # Check content keywords (need 3+ matches)
-    content_matches = []
-    for kw in CONTENT_KEYWORDS:
-        if kw in text:
-            content_matches.append(kw)
-
-    if len(content_matches) >= 3:
-        reasons.append(f"content has {len(content_matches)} data keywords: {', '.join(content_matches[:5])}")
-
-    # Decision: need at least 1 strong title match, or 1 title pattern + 3 content keywords
-    if len(reasons) >= 1 and (
-        any("title contains" in r for r in reasons)
-        or any("title matches" in r for r in reasons)
-        or len(content_matches) >= 5
-    ):
-        return True, reasons
-
-    return False, reasons
+    return False, "no match"
 
 
 def main():
-    print("Data & Reports Auto-Tagger")
+    print("Data & Reports Auto-Tagger (strict title-only matching)")
     print(f"Supabase: {SUPABASE_URL}\n")
 
-    # Fetch all published articles
-    url = f"{SUPABASE_URL}/rest/v1/articles?published=eq.true&select=id,slug,title,format,meta_description,content_html&order=publish_date.desc"
+    url = f"{SUPABASE_URL}/rest/v1/articles?published=eq.true&select=id,slug,title,format&order=publish_date.desc"
     req = Request(url, headers=HEADERS)
-    with urlopen(req, timeout=60) as resp:
-        articles = json.loads(resp.read().decode())
+    try:
+        with urlopen(req, timeout=60) as resp:
+            articles = json.loads(resp.read().decode())
+    except URLError as e:
+        print(f"ERROR fetching articles: {e}")
+        sys.exit(1)
 
     print(f"Fetched {len(articles)} published articles\n")
 
@@ -126,29 +113,24 @@ def main():
             already_tagged += 1
             continue
 
-        should_tag, reasons = should_tag_as_data_reports(
-            a["title"],
-            a.get("content_html", ""),
-            a.get("meta_description", ""),
-        )
+        should_tag, reason = should_tag_as_data_reports(a["title"])
 
         if should_tag:
             print(f"  TAGGING: {a['title'][:70]}")
-            for r in reasons[:3]:
-                print(f"    → {r}")
+            print(f"    reason: {reason}")
 
             patch_url = f"{SUPABASE_URL}/rest/v1/articles?id=eq.{a['id']}"
             body = json.dumps({"format": "data-reports"}).encode()
             patch_req = Request(patch_url, data=body, headers={**HEADERS, "Prefer": "return=minimal"}, method="PATCH")
             try:
-                with urlopen(patch_req, timeout=30) as resp:
+                with urlopen(patch_req, timeout=30):
                     newly_tagged += 1
-            except Exception as e:
+            except URLError as e:
                 print(f"    ERROR: {e}")
         else:
             skipped += 1
 
-    print(f"\nDone:")
+    print(f"\nResults:")
     print(f"  Already tagged: {already_tagged}")
     print(f"  Newly tagged:   {newly_tagged}")
     print(f"  Skipped:        {skipped}")
