@@ -187,14 +187,14 @@ export default function AdminApp() {
     setDeploying(true);
     setDeployMsg("");
     try {
-      const session = (await supabase.auth.getSession()).data.session;
+      const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
       const res = await fetch(
         `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/trigger-deploy`,
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${session?.access_token ?? ""}`,
-            "apikey": import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${anonKey}`,
+            "apikey": anonKey,
             "Content-Type": "application/json",
           },
         }
