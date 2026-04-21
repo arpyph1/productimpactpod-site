@@ -186,19 +186,14 @@ export default function AdminApp() {
   const handleDeploy = useCallback(async () => {
     setDeploying(true);
     setDeployMsg("");
-    const { data } = await supabase.from("site_settings").select("value").eq("key", "deploy_hook").single();
-    const hookUrl = data?.value?.url;
-    if (!hookUrl) {
-      setDeployMsg("No deploy hook configured. Go to Settings and add a Cloudflare Pages deploy hook URL.");
-      setDeploying(false);
-      return;
-    }
     try {
-      const res = await fetch(hookUrl, { method: "POST" });
-      if (res.ok) {
+      const { data, error } = await supabase.functions.invoke("trigger-deploy");
+      if (error) {
+        setDeployMsg(`Deploy failed: ${error.message}`);
+      } else if (data?.success) {
         setDeployMsg("Build triggered! Site will update in ~3 minutes.");
       } else {
-        setDeployMsg(`Deploy hook returned ${res.status}. Check the URL in Settings.`);
+        setDeployMsg(`Deploy error: ${data?.error ?? "Unknown error"}`);
       }
     } catch (e: any) {
       setDeployMsg(`Deploy failed: ${e.message}`);
