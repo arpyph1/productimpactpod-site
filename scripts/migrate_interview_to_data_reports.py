@@ -12,7 +12,12 @@ Usage:
 import os
 import sys
 import json
+from pathlib import Path
 from urllib.request import urlopen, Request
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from load_env import load_env
+load_env()
 
 SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")

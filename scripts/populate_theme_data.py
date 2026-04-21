@@ -16,7 +16,12 @@ Also links entities to themes via their associated articles.
 import os
 import sys
 import json
+from pathlib import Path
 from urllib.request import urlopen, Request
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from load_env import load_env
+load_env()
 from urllib.error import URLError
 
 SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
