@@ -93,6 +93,30 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     setUploading(false);
   }
 
+  async function handleEditorPaste(e: React.ClipboardEvent) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        setMsg("Uploading image...");
+        const ext = file.type.split("/")[1] ?? "png";
+        const path = `content/${form.slug || "article"}-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("article-heroes").upload(path, file, { contentType: file.type, upsert: false });
+        if (upErr) { setMsg(`Image upload error: ${upErr.message}`); return; }
+        const { data: urlData } = supabase.storage.from("article-heroes").getPublicUrl(path);
+        const imgTag = `<img src="${urlData.publicUrl}" alt="" style="max-width:100%;border-radius:8px;margin:1em 0" />`;
+        document.execCommand("insertHTML", false, imgTag);
+        syncFromEditor();
+        setMsg("Image inserted");
+        setTimeout(() => setMsg(""), 2000);
+        return;
+      }
+    }
+  }
+
   async function handleSave() {
     if (!form.title.trim()) { setMsg("Title is required"); return; }
     if (!form.slug.trim()) form.slug = autoSlug(form.title);
@@ -222,6 +246,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                     className="min-h-[400px] bg-[#111] border border-[#222] rounded-b-lg p-6 text-[14px] text-[#ddd] leading-relaxed focus:outline-none prose prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: form.content_html }}
                     onBlur={syncFromEditor}
+                    onPaste={handleEditorPaste}
                   />
                 </div>
               )}

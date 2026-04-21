@@ -23,26 +23,51 @@ serve(async (req) => {
       );
     }
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}/deployments`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${cfApiToken}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}`;
+    const cfHeaders = {
+      "Authorization": `Bearer ${cfApiToken}`,
+      "Content-Type": "application/json",
+    };
 
-    const data = await res.json();
+    // List existing deploy hooks
+    const listRes = await fetch(`${cfBase}/deploy_hooks`, { headers: cfHeaders });
+    const listData = await listRes.json();
 
-    if (res.ok && data.success) {
+    let hookUrl: string | null = null;
+
+    if (listRes.ok && listData.result?.length > 0) {
+      hookUrl = listData.result[0].hook_url;
+    } else {
+      // Create a deploy hook for main branch
+      const createRes = await fetch(`${cfBase}/deploy_hooks`, {
+        method: "POST",
+        headers: cfHeaders,
+        body: JSON.stringify({ branch: "main" }),
+      });
+      const createData = await createRes.json();
+
+      if (createRes.ok && createData.result?.hook_url) {
+        hookUrl = createData.result.hook_url;
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Failed to create deploy hook", details: createData.errors ?? createData }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Trigger the deploy hook
+    const triggerRes = await fetch(hookUrl!, { method: "POST" });
+
+    if (triggerRes.ok) {
       return new Response(
-        JSON.stringify({ success: true, id: data.result?.id, url: data.result?.url }),
+        JSON.stringify({ success: true, message: "Build triggered" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ error: "Cloudflare API error", details: data.errors ?? data }),
+      JSON.stringify({ error: `Deploy hook returned ${triggerRes.status}` }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
