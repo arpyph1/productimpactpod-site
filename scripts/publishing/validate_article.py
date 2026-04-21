@@ -118,6 +118,12 @@ def _check_meta_description(article: dict) -> list[Issue]:
     return []
 
 
+DATA_REPORTS_TITLE_KEYWORDS = [
+    "report", "index", "survey", "study", "findings", "benchmark",
+    "statistics", "census", "forecast", "outlook", "state of", "annual",
+]
+
+
 def _check_format(article: dict) -> list[Issue]:
     fmt = article.get("format", "")
     if not fmt:
@@ -125,7 +131,15 @@ def _check_format(article: dict) -> list[Issue]:
     if fmt not in VALID_FORMATS:
         return [Issue("error", "format",
                       f"{fmt!r} not in canonical set: {sorted(VALID_FORMATS)}")]
-    return []
+    issues: list[Issue] = []
+    if fmt != "data-reports":
+        title = (article.get("title") or "").lower()
+        if any(kw in title for kw in DATA_REPORTS_TITLE_KEYWORDS):
+            issues.append(Issue(
+                "warn", "format",
+                f"title contains data/report keywords — consider using 'data-reports' format instead of '{fmt}'"
+            ))
+    return issues
 
 
 def _check_themes(article: dict) -> list[Issue]:
