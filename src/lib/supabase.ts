@@ -32,7 +32,7 @@ export type ArticleFormat =
   | "news-analysis"
   | "release-note"
   | "feature"
-  | "interview"
+  | "data-reports"
   | "case-study"
   | "opinion"
   | "explainer"
@@ -537,7 +537,7 @@ export function formatLabel(format: ArticleFormat): string {
     "news-analysis": "News Analysis",
     "release-note": "Release",
     feature: "Feature",
-    interview: "Interview",
+    "data-reports": "Data & Reports",
     "case-study": "Case Study",
     opinion: "Opinion",
     explainer: "Explainer",

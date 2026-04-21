@@ -1,23 +1,62 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface Props { supabase: SupabaseClient }
 interface Article { id: string; slug: string; title: string; is_lead_story: boolean; published: boolean; format: string; publish_date: string }
 
-const SECTIONS = [
-  { key: "show_hero", label: "Hero Carousel" },
-  { key: "show_latest", label: "Latest Articles" },
-  { key: "show_podcast", label: "Podcast Episodes" },
-  { key: "show_featured", label: "Featured Reading (Evergreen Carousel)" },
-  { key: "show_resources", label: "AI Strategy Resources" },
-  { key: "show_newsletter", label: "Newsletter / Substack" },
-  { key: "show_partners", label: "Partners" },
+interface SectionConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+  type: "carousel" | "vertical-list" | "special";
+  theme: string;
+  format: string;
+}
+
+const THEMES = [
+  { slug: "", label: "All themes" },
+  { slug: "ai-product-strategy", label: "AI Product Strategy" },
+  { slug: "adoption-organizational-change", label: "Adoption & Organizational Change" },
+  { slug: "agents-agentic-systems", label: "Agents & Agentic Systems" },
+  { slug: "data-semantics-knowledge-foundations", label: "Data, Semantics & Knowledge" },
+  { slug: "evaluation-benchmarking", label: "Evaluation & Benchmarking" },
+  { slug: "go-to-market-distribution", label: "Go-to-Market & Distribution" },
+  { slug: "governance-risk-trust", label: "Governance, Risk & Trust" },
+  { slug: "ux-experience-design-for-ai", label: "UX & Experience Design for AI" },
+];
+
+const FORMATS = [
+  { slug: "", label: "All formats" },
+  { slug: "news-analysis", label: "News Analysis" },
+  { slug: "feature", label: "Feature" },
+  { slug: "data-reports", label: "Data & Reports" },
+  { slug: "case-study", label: "Case Study" },
+  { slug: "release-note", label: "Release" },
+  { slug: "opinion", label: "Opinion" },
+  { slug: "explainer", label: "Explainer" },
+  { slug: "news-brief", label: "News Brief" },
+  { slug: "product-review", label: "Product Review" },
+  { slug: "research-brief", label: "Research Brief" },
+];
+
+const DEFAULT_SECTIONS: SectionConfig[] = [
+  { id: "hero", label: "Hero Carousel", enabled: true, type: "carousel", theme: "", format: "" },
+  { id: "latest", label: "Latest Articles", enabled: true, type: "vertical-list", theme: "", format: "" },
+  { id: "podcast", label: "Podcast Episodes", enabled: true, type: "special", theme: "", format: "" },
+  { id: "carousel2", label: "Carousel 2", enabled: true, type: "carousel", theme: "", format: "" },
+  { id: "vertical2", label: "Vertical List 2", enabled: true, type: "vertical-list", theme: "", format: "" },
+  { id: "featured", label: "Featured Reading", enabled: true, type: "carousel", theme: "", format: "" },
+  { id: "resources", label: "AI Strategy Resources", enabled: true, type: "special", theme: "", format: "" },
+  { id: "newsletter", label: "Newsletter / Substack", enabled: true, type: "special", theme: "", format: "" },
+  { id: "partners", label: "Partners", enabled: true, type: "special", theme: "", format: "" },
 ];
 
 export default function HomepageScreen({ supabase }: Props) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [hp, setHp] = useState<Record<string, any>>({});
   const [msg, setMsg] = useState("");
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -46,8 +85,35 @@ export default function HomepageScreen({ supabase }: Props) {
     loadData();
   }
 
-  function toggleSection(key: string, checked: boolean) {
-    save({ ...hp, [key]: checked });
+  const sections: SectionConfig[] = hp.sections ?? DEFAULT_SECTIONS;
+
+  function updateSection(idx: number, patch: Partial<SectionConfig>) {
+    const updated = sections.map((s, i) => i === idx ? { ...s, ...patch } : s);
+    save({ ...hp, sections: updated });
+  }
+
+  function handleDragStart(idx: number) {
+    setDragIdx(idx);
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    setDragOverIdx(idx);
+  }
+
+  function handleDrop(idx: number) {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const updated = [...sections];
+    const [moved] = updated.splice(dragIdx, 1);
+    updated.splice(idx, 0, moved);
+    save({ ...hp, sections: updated });
+    setDragIdx(null);
+    setDragOverIdx(null);
+  }
+
+  function handleDragEnd() {
+    setDragIdx(null);
+    setDragOverIdx(null);
   }
 
   function toggleEvergreen(slug: string) {
@@ -111,18 +177,76 @@ export default function HomepageScreen({ supabase }: Props) {
         </div>
       </section>
 
-      {/* Section Visibility */}
+      {/* Homepage Sections — drag to reorder */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-1">Homepage Sections</h3>
-        <p className="text-[12px] text-[#555] mb-4">Toggle visibility of each section on the homepage.</p>
+        <p className="text-[12px] text-[#555] mb-4">Drag to reorder. Configure label, theme, and format filters for each section.</p>
         <div className="space-y-2">
-          {SECTIONS.map((s) => (
-            <label key={s.key} className="flex items-center gap-3 p-3 rounded-lg bg-[#111] border border-[#1a1a1a] cursor-pointer hover:bg-[#151515] transition-colors">
-              <input type="checkbox" checked={hp[s.key] !== false}
-                onChange={(e) => toggleSection(s.key, e.target.checked)}
-                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-              <span className={`text-[13px] ${hp[s.key] !== false ? "text-[#ccc]" : "text-[#555]"}`}>{s.label}</span>
-            </label>
+          {sections.map((s, idx) => (
+            <div
+              key={s.id}
+              draggable
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={handleDragEnd}
+              className={`p-4 rounded-xl border transition-all ${
+                dragOverIdx === idx ? "border-[#ff6b4a] bg-[#ff6b4a]/5" :
+                dragIdx === idx ? "opacity-40 border-[#333]" :
+                "border-[#1a1a1a] bg-[#0c0c0c]"
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                {/* Drag handle */}
+                <div className="cursor-grab active:cursor-grabbing text-[#444] hover:text-[#888] select-none" title="Drag to reorder">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                </div>
+                {/* Enabled toggle */}
+                <input
+                  type="checkbox"
+                  checked={s.enabled}
+                  onChange={(e) => updateSection(idx, { enabled: e.target.checked })}
+                  className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]"
+                />
+                {/* Section label (editable) */}
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-1.5 bg-transparent border border-transparent hover:border-[#222] focus:border-[#ff6b4a]/50 rounded-lg text-[14px] font-semibold text-white focus:outline-none"
+                  defaultValue={s.label}
+                  onBlur={(e) => updateSection(idx, { label: e.target.value })}
+                />
+                {/* Type badge */}
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#555] px-2 py-0.5 rounded bg-[#111] border border-[#222]">
+                  {s.type === "carousel" ? "Carousel" : s.type === "vertical-list" ? "List" : "Special"}
+                </span>
+              </div>
+
+              {/* Theme + Format filters (only for carousel and vertical-list) */}
+              {s.type !== "special" && (
+                <div className="flex gap-3 ml-9">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-medium text-[#666] mb-1">Theme filter</label>
+                    <select
+                      className="w-full px-3 py-1.5 bg-[#111] border border-[#222] rounded-lg text-[12px] text-white focus:outline-none"
+                      value={s.theme}
+                      onChange={(e) => updateSection(idx, { theme: e.target.value })}
+                    >
+                      {THEMES.map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-medium text-[#666] mb-1">Format filter</label>
+                    <select
+                      className="w-full px-3 py-1.5 bg-[#111] border border-[#222] rounded-lg text-[12px] text-white focus:outline-none"
+                      value={s.format}
+                      onChange={(e) => updateSection(idx, { format: e.target.value })}
+                    >
+                      {FORMATS.map(f => <option key={f.slug} value={f.slug}>{f.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </section>

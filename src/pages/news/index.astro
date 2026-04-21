@@ -8,7 +8,7 @@ import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } fr
 const articles = await getAllArticles();
 const siteUrl = "https://productimpactpod.com";
 
-const formats: ArticleFormat[] = ["news-analysis", "feature", "interview", "case-study", "release-note", "opinion", "explainer"];
+const formats: ArticleFormat[] = ["news-analysis", "feature", "data-reports", "case-study", "release-note", "opinion", "explainer"];
 
 function timeAgo(d: string): string {
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
