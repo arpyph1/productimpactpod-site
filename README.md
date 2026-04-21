@@ -1,166 +1,267 @@
-# productimpactpod.com — Astro site
+# productimpactpod.com
 
-The new publication platform for Product Impact Podcast. Built on Astro + Tailwind + Supabase + Cloudflare Pages.
+The publication platform for Product Impact Podcast. Built on Astro + Tailwind + Supabase + Cloudflare Pages.
 
-**Why this exists:** this is the replacement for the Lovable-hosted site. Lovable's SPA architecture couldn't serve server-rendered HTML to news aggregators (Google News, Techmeme, Apple News, GPTBot, ClaudeBot) — see `vault/_system/lovable-exit-playbook.md` for the full decision context.
+**Live site:** https://productimpactpod.com  
+**Admin CMS:** https://productimpactpod.com/admin
 
 ## Stack
 
-| Layer | Tool | Why |
-|---|---|---|
-| Framework | Astro 5 | Zero-JS by default, SSG-first, React islands for interactive pieces |
-| Styling | Tailwind CSS 3 | Matches Lovable's existing design tokens |
-| Database | Supabase (unchanged) | Same tables, same edge functions — nothing to migrate |
-| Hosting | Cloudflare Pages | Free, unlimited bandwidth, 300+ edge locations |
-| CI/CD | GitHub Actions | Auto-build on push |
-| Content | Vault markdown → publish_articles.py → Supabase → Astro build → Cloudflare Pages | No manual steps |
+| Layer | Tool |
+|---|---|
+| Framework | Astro 5 (SSG, React islands for admin) |
+| Styling | Tailwind CSS 3 |
+| Database | Supabase (Postgres + Auth + Storage + Edge Functions) |
+| Hosting | Cloudflare Pages |
+| CI/CD | GitHub Actions (typecheck + build on push to main) |
+| Email/Newsletter | Substack (external, form redirects to Substack subscribe) |
+| Podcast RSS | Anchor/Spotify (synced to Supabase every 6 hours) |
+| YouTube Shorts | Supabase Edge Function calling YouTube Data API v3 |
 
 ## Local development
 
 ```bash
-cd site
 cp .env.example .env
-# Fill in any secrets if needed (defaults are safe public values)
+# Edit .env with your Supabase credentials (see .env.example for details)
 npm install
 npm run dev
 ```
 
 Site runs at `http://localhost:4321`.
 
-## Build
+## Environment variables
 
-```bash
-npm run build
-```
+### Required for local dev and build (`.env`)
 
-Output lands in `dist/`. This is the full static site ready to serve from any CDN.
+| Variable | Source | Used by |
+|---|---|---|
+| `PUBLIC_SUPABASE_URL` | Supabase Dashboard > Settings > API | Astro build, all pages |
+| `PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard > Settings > API | Astro build, all pages |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard > Settings > API (Reveal) | Python scripts only |
 
-## Preview the production build locally
+### Required in Cloudflare Pages (production)
 
-```bash
-npm run preview
-```
+Set in Cloudflare Pages > Settings > Variables and Secrets:
 
-## Type checking
+| Variable | Value |
+|---|---|
+| `PUBLIC_SUPABASE_URL` | `https://pgsljoqwfhufubodlqjk.supabase.co` |
+| `PUBLIC_SUPABASE_ANON_KEY` | Your anon key |
 
-```bash
-npm run typecheck
-```
+### Required in GitHub Actions (secrets)
 
-## What gets statically generated
+| Secret | Used by |
+|---|---|
+| `SUPABASE_URL` | sync-episodes.yml, populate_theme_data.py, tag_data_reports.py |
+| `SUPABASE_SERVICE_ROLE_KEY` | All sync/tagging scripts |
+| `PRODUCT_IMPACT_SHOWNOTES_API_KEY` | sync_episodes_to_supabase.py (optional) |
 
-Astro queries Supabase at build time and generates one HTML file per article, entity page, theme hub, and episode. Every generated page has:
+### Required in Supabase Edge Function Secrets
 
-- Full `<title>`, `<meta description>`, `<link rel="canonical">` in the initial HTML response (not set by client-side JavaScript)
-- Full Open Graph `article:*` tags with `og:type=article`, `og:published_time`, `article:section`, `article:tag`, `article:author`
-- Twitter Card `summary_large_image` with per-article image
-- NewsArticle JSON-LD schema in `<head>`
-- BreadcrumbList JSON-LD
-- `<meta name="robots" content="max-image-preview:large">` for Google Discover
-- Fully server-rendered article body (Googlebot sees the complete content on first fetch)
+| Secret | Used by |
+|---|---|
+| `YOUTUBE_API_KEY` | get-latest-short edge function |
+| `CLOUDFLARE_API_TOKEN` | trigger-deploy edge function |
+| `CLOUDFLARE_ACCOUNT_ID` | trigger-deploy edge function |
 
 ## Route structure
 
 ```
-/                              Homepage (hero + 2×2 grid + episodes + themes)
-/news                          News index, paginated + filterable
-/news/[slug]                   Canonical article URL
-/news/format/[format]          Filtered news index by format
-/themes                        Themes grid index
-/themes/[slug]                 Theme hub page (long-form intro + articles)
-/podcast                       Current podcast homepage content
-/episodes                      Episode browser
-/episodes/[slug]               Individual episode page
+/                              Homepage (configurable sections via admin)
+/news                          News index with format filter tabs
+/news/[slug]                   Article page (canonical URL)
+/news/format/[format]          Filtered by format (feature, data-reports, etc.)
+/news/page/[page]              Paginated news
+/news/archive                  Date-based archive
+/themes                        Themes grid
+/themes/[slug]                 Theme hub (articles, episodes, entities, related themes)
+/podcast                       Podcast homepage (episodes, YouTube Shorts, hosts, sponsors)
+/episodes                      Episode browser with theme/focus filters
+/episodes/[slug]               Episode detail page
 /partnerships                  Sponsor portal
+/admin                         CMS (auth via Supabase Magic Link)
+/about                         Editorial standards, masthead, policies
+/contact                       Contact channels
+/privacy                       Privacy policy
+/terms                         Terms of service
 /concepts/[slug]               Concept entity page
 /people/[slug]                 Person entity page
 /organizations/[slug]          Organization entity page
 /products/[slug]               Product entity page
 /frameworks/[slug]             Framework entity page
 /sources/[slug]                Source entity page
-/sitemap.xml                   Auto-generated by @astrojs/sitemap
-/news-sitemap.xml              Google News sitemap (48-hour rolling window)
-/rss.xml                       Main RSS feed
-/news/rss.xml                  News RSS feed with full content
-/robots.txt                    Crawler allow-list
-/llms.txt                      LLM crawler hints
+/sitemap.xml                   Sitemap index (wraps sitemap-0.xml + news-sitemap.xml)
+/news-sitemap.xml              Google News sitemap (30-day rolling window)
+/rss.xml                       Main RSS feed (excerpts, last 50 articles)
+/news/rss.xml                  Full-content RSS feed (all articles, media tags)
+/podcast/rss.xml               Redirect to Anchor RSS
+/robots.txt                    Crawler allow-list (all major bots + LLM crawlers)
+/llms.txt                      LLM crawler hints and feed discovery
 ```
 
-Phase 1 (initial scaffold) ships: `/`, `/news`, `/news/[slug]`, robots.txt, llms.txt. Everything else lands in Phase 2.
+## Article formats
+
+| Slug | Label | Description |
+|---|---|---|
+| `news-brief` | News Brief | Short news items |
+| `news-analysis` | News Analysis | In-depth news analysis |
+| `release-note` | Release | Product releases and launches |
+| `feature` | Feature | Long-form feature stories |
+| `data-reports` | Data & Reports | Research reports, surveys, benchmarks, statistical analysis |
+| `case-study` | Case Study | Implementation case studies |
+| `opinion` | Opinion | Opinion and commentary |
+| `explainer` | Explainer | Definitional "What is X" articles |
+| `product-review` | Product Review | Hands-on product reviews |
+| `research-brief` | Research Brief | Academic/research summaries |
+
+## Themes (8 canonical)
+
+| Slug | Name |
+|---|---|
+| `ai-product-strategy` | AI Product Strategy |
+| `adoption-organizational-change` | Adoption & Organizational Change |
+| `agents-agentic-systems` | Agents & Agentic Systems |
+| `data-semantics-knowledge-foundations` | Data, Semantics & Knowledge Foundations |
+| `evaluation-benchmarking` | Evaluation & Benchmarking |
+| `go-to-market-distribution` | Go-to-Market & Distribution |
+| `governance-risk-trust` | Governance, Risk & Trust |
+| `ux-experience-design-for-ai` | UX & Experience Design for AI |
+
+## Admin CMS (`/admin`)
+
+Accessible to `@ph1.ca` and `@productimpactpod.com` email addresses via Supabase Magic Link.
+
+| Tab | Features |
+|---|---|
+| **Settings** | Site identity, nav items, platform links, custom CSS/HTML |
+| **SEO** | Google/Bing verification codes, default meta tags |
+| **Homepage** | Hero carousel config, lead stories, section ordering with drag-to-reorder, theme/format filters per section, evergreen carousel, copy editing |
+| **Articles** | Full article CRUD with WYSIWYG editor, image paste upload, format/theme/topic management, publish/draft toggle |
+| **Resources** | Downloadable reports and guides |
+| **Podcast** | Hero tagline/description, host bios, platform URLs, episode management |
+| **Partners** | Sponsor management |
+| **Social** | AI-generated LinkedIn/Twitter posts per article with three voice options (Product Impact, Arpy, Brittany) |
+
+### Homepage sections (admin-configurable)
+
+| Section | Type | Configurable |
+|---|---|---|
+| Hero Carousel | Carousel | Mode (latest/lead/manual), interval, max slides |
+| Latest Articles | Vertical list | Theme filter, format filter |
+| Podcast Episodes | Special | Fixed data source (RSS) |
+| Carousel 2 | Carousel | Label, theme filter, format filter |
+| Vertical List 2 | Vertical list | Label, theme filter, format filter |
+| Featured Reading | Carousel | Label, manually selected articles |
+| AI Strategy Resources | Special | Fixed (CMS resources) |
+| Newsletter / Substack | Special | Heading text, Substack editions |
+| Partners | Special | Fixed (partner data) |
+
+All sections can be toggled on/off and reordered via drag-and-drop.
+
+## Scripts
+
+All scripts auto-load credentials from `.env` in the project root.
+
+| Script | Purpose | Schedule |
+|---|---|---|
+| `scripts/sync_episodes_to_supabase.py` | Sync podcast RSS feed to Supabase | Every 6 hours (GitHub Action) |
+| `scripts/populate_theme_data.py` | Auto-tag entities and episodes with themes | Every 6 hours (GitHub Action) |
+| `scripts/tag_data_reports.py` | Auto-tag articles as "Data & Reports" format | Every 6 hours (GitHub Action) |
+| `scripts/migrate_interview_to_data_reports.py` | One-time migration from interview to data-reports format | Manual |
+| `scripts/publishing/validate_article.py` | Pre-publish validation (SEO, format, themes) | Called by publish pipeline |
+| `scripts/publishing/generate_hero_image.py` | AI hero image generation via Flux | Manual |
+| `scripts/publishing/dispatch_rebuild.py` | Trigger Cloudflare rebuild via GitHub dispatch | Manual |
+
+### Running scripts locally
+
+```bash
+# One-time setup
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
+# Then run any script directly — no exports needed
+python3 scripts/tag_data_reports.py
+python3 scripts/populate_theme_data.py
+python3 scripts/sync_episodes_to_supabase.py
+```
+
+## Supabase Edge Functions
+
+| Function | Purpose | Secrets needed |
+|---|---|---|
+| `get-latest-short` | Fetch latest YouTube Shorts for /podcast page | `YOUTUBE_API_KEY` |
+| `trigger-deploy` | Trigger Cloudflare Pages rebuild from admin | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
+
+Deploy with:
+```bash
+supabase login
+supabase link --project-ref pgsljoqwfhufubodlqjk
+supabase functions deploy get-latest-short
+supabase functions deploy trigger-deploy
+```
+
+## GitHub Actions workflows
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | Push to main, PRs | Typecheck + build verification |
+| `sync-episodes.yml` | Every 6 hours + manual | Sync RSS, populate themes, tag data-reports |
+| `scheduled-rebuild.yml` | Every 6 hours | Trigger Cloudflare Pages rebuild |
+| `publish-trigger.yml` | Repository dispatch | Trigger rebuild after article publish |
+
+## SEO and indexing
+
+Every page includes:
+- Server-rendered `<title>`, `<meta description>`, `<link rel="canonical">`
+- Open Graph tags (`og:type`, `og:title`, `og:description`, `og:image`, `article:*`)
+- Twitter Card (`summary_large_image`)
+- NewsArticle JSON-LD + BreadcrumbList JSON-LD
+- NewsMediaOrganization schema (editorial policies, contact points)
+- Google/Bing verification meta tags (configured in admin SEO screen)
+
+### Aggregator submissions
+
+| Platform | Status | Feed |
+|---|---|---|
+| Google News | Submitted via Publisher Center | `/news-sitemap.xml` |
+| Bing News | Submit via Bing PubHub | `/news/rss.xml` |
+| Flipboard | Submit at flipboard.com/publishers | `/news/rss.xml` |
+| Apple News | Requires Apple Developer Program ($99/year) | `/news/rss.xml` |
+| Techmeme | Manual pitch to tips@techmeme.com | Organic crawling |
+
+### Crawler access
+
+`robots.txt` explicitly allows: Googlebot, Bingbot, DuckDuckBot, GPTBot, ClaudeBot, PerplexityBot, Applebot, Amazonbot, CCBot, Bytespider, FacebookBot, Twitterbot, LinkedInBot, Slackbot, Discordbot, TelegramBot, WhatsApp.
 
 ## Deployment — Cloudflare Pages
 
-### First-time setup
+**Project:** `productimpactpod-site` on Cloudflare Pages  
+**Production branch:** `main`  
+**Build command:** `npm install && npm run build`  
+**Build output:** `dist`  
+**Domains:** `productimpactpod.com`, `www.productimpactpod.com`, `productimpactpod-site.pages.dev`
 
-1. Create a free Cloudflare account at https://dash.cloudflare.com/sign-up
-2. In Cloudflare, go to **Workers & Pages → Create application → Pages → Connect to Git**
-3. Connect the `arpyph1/vault-system` GitHub repo
-4. Set build settings:
-   - **Framework preset:** Astro
-   - **Build command:** `npm install && npm run build`
-   - **Build output directory:** `dist`
-   - **Root directory:** `/` (repository root)
-   - **Environment variables:** none required for build (Supabase anon key is public)
-5. Click **Save and Deploy**
-6. First build takes ~2 minutes. Cloudflare gives you a `*.pages.dev` preview URL.
-
-### Staging verification (before pointing productimpactpod.com)
-
-1. Visit the `*.pages.dev` URL
-2. Navigate to `/news/anthropic-claude-managed-agents-platform-shift`
-3. Run the Googlebot test:
-   ```bash
-   curl -A "Googlebot/2.1" https://your-site.pages.dev/news/anthropic-claude-managed-agents-platform-shift | head -100
-   ```
-4. Verify you see: the correct `<title>`, full `<meta description>`, `og:type=article`, the NewsArticle JSON-LD, and the article body text in the HTML (thousands of characters, not 8).
-
-### Custom domain cutover
-
-1. In Cloudflare Pages → your project → **Custom domains**
-2. Add `productimpactpod.com` and `www.productimpactpod.com`
-3. Cloudflare shows you the DNS records to add. If the domain is already on Cloudflare DNS, this is a one-click operation. If it's on another registrar, update the DNS records at the registrar.
-4. DNS propagation: 5 min to 1 hour typically.
-5. Cloudflare provisions an SSL cert automatically (Let's Encrypt).
-
-### Rollback plan
-
-If anything goes wrong after the cutover:
-1. In Cloudflare Pages → Custom domains → remove `productimpactpod.com`
-2. Re-add the old DNS records pointing back to Lovable's infrastructure at your registrar (or Cloudflare DNS if you already moved DNS)
-3. DNS rollback propagates in 5 min to 1 hour
-4. Lovable's subdomain `product-impact-podcast-web.lovable.app` remains available as a fallback.
-
-## Publishing content
-
-Content publishing is unchanged from the Lovable era. The existing `vault/product-impact/scripts/publish_articles.py` still writes to the same Supabase `articles` table. After each publish:
-
-1. Publisher writes to Supabase
-2. A GitHub Actions workflow (`TODO: add`) triggers a Cloudflare Pages rebuild via webhook
-3. Astro queries Supabase and generates fresh static HTML
-4. Cloudflare Pages serves the new HTML from the edge network
-5. New content is live in ~60 seconds
-
-## Admin surface (Phase 2)
-
-Minimal `/admin` page with auth via Supabase Magic Link. Covers:
-
-- Article edits (title, meta_description, hero image upload, featured flag)
-- Homepage curation (lead story pin, 2×2 grid pins)
-- Sponsor CRUD
-- Theme hub long-form intro editor
-
-Rich content editing stays in the vault — this admin is for CMS-level overrides only.
+Pushes to `main` auto-trigger Cloudflare Pages builds. The admin "Rebuild & Deploy" button triggers builds via the `trigger-deploy` Supabase edge function.
 
 ## Troubleshooting
 
 **Build fails with "Could not find Supabase URL"**  
-Copy `.env.example` to `.env` and ensure `PUBLIC_SUPABASE_URL` is set.
+Copy `.env.example` to `.env` and fill in `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY`.
 
-**Build succeeds but articles are empty**  
-Run the curl GET probe to verify the Supabase edge function is still live and the RLS policies allow anonymous reads on the articles table.
+**Scripts fail with HTTP 401**  
+Check that `SUPABASE_SERVICE_ROLE_KEY` in `.env` is the service_role key (not the anon key). Get it from Supabase Dashboard > Settings > API > Reveal.
 
-**Article body renders but typography looks wrong**  
-Check that `src/styles/global.css` is imported by `BaseLayout.astro` and that the `article-prose` class is applied to the content container.
+**"Rebuild & Deploy" fails in admin**  
+Verify `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set in Supabase Edge Function Secrets. Verify the `trigger-deploy` function is deployed (`supabase functions deploy trigger-deploy`).
 
-**Meta tags missing in generated HTML**  
-Open `dist/news/{slug}/index.html` directly after a build — the meta tags should be in `<head>`. If they're missing, verify the page template passes props to `BaseLayout`.
+**YouTube Shorts not updating on /podcast**  
+Verify `YOUTUBE_API_KEY` is set in Supabase Edge Function Secrets. Verify the `get-latest-short` function is deployed. Shorts refresh on every site rebuild.
+
+**GitHub Action sync fails**  
+Check that `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` secrets are set in GitHub repo Settings > Secrets and variables > Actions. Note: the GitHub secret is `SUPABASE_URL` (not `PUBLIC_SUPABASE_URL`).
+
+**Theme pages show placeholder text**  
+Run `python3 scripts/populate_theme_data.py` to tag entities and episodes with themes. Placeholder text in `long_form_intro` is stripped automatically at build time.
+
+**Data & Reports page is empty**  
+Run `python3 scripts/tag_data_reports.py` to auto-tag qualifying articles. Then trigger a site rebuild.
