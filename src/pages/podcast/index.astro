@@ -258,7 +258,7 @@ const jsonLd = [
     <section class="py-16 border-t border-[#1c1c1c]">
       <div class="max-w-[900px] mx-auto px-4 md:px-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {hosts.map((host, i) => (
+          {hosts.map((host: any, i: number) => (
             <div class={`text-center md:text-left ${i === 1 ? 'md:mt-16' : ''}`}>
               <div class="w-[260px] h-[340px] rounded-xl overflow-hidden mx-auto md:mx-0 mb-5 border border-[#1c1c1c]">
                 <img src={host.photo} alt={host.name} class="w-full h-full object-cover" loading="lazy" />
