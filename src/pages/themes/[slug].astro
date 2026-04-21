@@ -43,7 +43,7 @@ const canonicalUrl = `${siteUrl}/themes/${theme.slug}`;
 function stripPlaceholders(text: string | null | undefined): string {
   if (!text) return "";
   return text
-    .replace(/\([^)]*(?:compounds|widget|scoped to|auto[- ]?generat|placeholder|auto[- ]?populat)[^)]*\)/gi, "")
+    .replace(/\([^)]*(?:Populated|compounds|widget|scoped to|auto[- ]?generat|placeholder|auto[- ]?populat|entities\.yaml|existing theme|episodes in this|episodes tagged)[^)]*\)/gi, "")
     .trim();
 }
 
@@ -96,14 +96,12 @@ const color = themeColors[theme.slug] ?? "#ff6b4a";
     {/* Long-form intro (if exists) — strip parenthetical placeholders */}
     {theme.long_form_intro && (() => {
       const cleaned = theme.long_form_intro
-        .replace(/\(This list compounds[^)]*\)/gi, "")
-        .replace(/\(Semantic search widget[^)]*\)/gi, "")
-        .replace(/\(Auto-populated[^)]*\)/gi, "")
-        .replace(/\(Placeholder[^)]*\)/gi, "")
-        .replace(/\([^)]*widget[^)]*\)/gi, "")
-        .replace(/\([^)]*scoped to[^)]*\)/gi, "")
-        .replace(/\([^)]*auto[- ]?generat[^)]*\)/gi, "")
-        .replace(/<p>\s*<\/p>/g, "")
+        .replace(/<p[^>]*>\s*\([^)]*(?:Populated|compounds|widget|scoped to|auto[- ]?generat|placeholder|auto[- ]?populat|entities\.yaml|existing theme|episodes in this|episodes tagged)[^)]*\)\s*<\/p>/gi, "")
+        .replace(/\([^)]*(?:Populated|compounds|widget|scoped to|auto[- ]?generat|placeholder|auto[- ]?populat|entities\.yaml|existing theme|episodes in this|episodes tagged)[^)]*\)/gi, "")
+        .replace(/<h[2-4][^>]*>\s*(?:Canonical Concepts|Featured People|Key Quotes|Ask the Podcast|Related Themes)\s*<\/h[2-4]>/gi, "")
+        .replace(/<h[2-4][^>]*>\s*Episodes Tagged:[^<]*<\/h[2-4]>/gi, "")
+        .replace(/<(p|div|section)[^>]*>\s*<\/\1>/g, "")
+        .replace(/\n{3,}/g, "\n\n")
         .trim();
       return cleaned ? <div class="article-prose mb-12 max-w-[680px]" set:html={cleaned}></div> : null;
     })()}

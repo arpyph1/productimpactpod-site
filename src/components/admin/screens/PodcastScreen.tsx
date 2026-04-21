@@ -119,6 +119,58 @@ export default function PodcastScreen({ supabase }: Props) {
         </div>
       </section>
 
+      {/* Host Bios */}
+      <section className="max-w-3xl">
+        <h3 className="text-[16px] font-bold text-white mb-4">Host Bios</h3>
+        <p className="text-[12px] text-[#555] mb-4">Edit host information displayed on the /podcast page. Changes take effect on next site rebuild.</p>
+        {[0, 1].map((idx) => {
+          const defaults = [
+            { name: "Arpy Dragffy", role: "Host", bio: "", linkedin: "https://www.linkedin.com/in/adragffy/", photo: "" },
+            { name: "Brittany Hobbs", role: "Host", bio: "", linkedin: "https://www.linkedin.com/in/brittanyhobbs/", photo: "" },
+          ];
+          const hostArr = pc.hosts ?? [];
+          const host = hostArr[idx] ?? defaults[idx];
+          const updateHost = (field: string, value: string) => {
+            const hosts = [...(pc.hosts ?? defaults)];
+            hosts[idx] = { ...hosts[idx], [field]: value };
+            saveSetting("podcast", { ...pc, hosts });
+          };
+          return (
+            <div key={idx} className="mb-6 p-4 bg-[#0c0c0c] border border-[#1a1a1a] rounded-xl space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-[#888] mb-1">Name</label>
+                  <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                    defaultValue={host.name} onBlur={(e) => updateHost("name", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-[#888] mb-1">Role</label>
+                  <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                    defaultValue={host.role} onBlur={(e) => updateHost("role", e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-[#888] mb-1">Bio</label>
+                <textarea className="w-full h-20 bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+                  defaultValue={host.bio} onBlur={(e) => updateHost("bio", e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-medium text-[#888] mb-1">LinkedIn URL</label>
+                  <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                    defaultValue={host.linkedin} onBlur={(e) => updateHost("linkedin", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-medium text-[#888] mb-1">Photo URL</label>
+                  <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                    defaultValue={host.photo} onBlur={(e) => updateHost("photo", e.target.value)} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
       {/* Episodes */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-4">Episodes (Supabase)</h3>
