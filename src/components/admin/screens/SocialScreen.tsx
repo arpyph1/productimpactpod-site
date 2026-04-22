@@ -12,7 +12,7 @@ interface Article {
 
 interface SocialDraft {
   articleId: string; articleTitle: string; articleSlug: string;
-  twitter: string; linkedin: string; generatedAt: string;
+  twitter: string; linkedin: string; instagram?: string; generatedAt: string;
 }
 
 type Voice = "product-impact" | "arpy" | "brittany";
@@ -476,6 +476,118 @@ function generateLinkedin(article: Article, voice: Voice): string {
   return generateBrittanyLinkedin(article);
 }
 
+function generateInstagram(article: Article, voice: Voice): string {
+  if (voice === "product-impact") return generateProductImpactInstagram(article);
+  if (voice === "arpy") return generateArpyInstagram(article);
+  return generateBrittanyInstagram(article);
+}
+
+function generateProductImpactInstagram(article: Article): string {
+  const link = `${SITE}/news/${article.slug}/`;
+  const sentences = allSentences(article.content_html);
+  const stats = extractStats(article.content_html);
+
+  const hook = stats.length > 0
+    ? stats[0]
+    : sentences.length > 0 ? sentences[0] : (article.meta_description ?? article.title);
+
+  const keyPoints = sentences
+    .filter(s => s !== hook && s.length < 160)
+    .slice(0, 4)
+    .map(s => `→ ${s}`);
+
+  const themes = (article.themes ?? [])
+    .map(t => `#${t.replace(/-/g, "").replace(/\s+/g, "")}`)
+    .slice(0, 3);
+
+  const hashtags = [
+    "#AI", "#ProductManagement", "#AIStrategy",
+    ...themes,
+    "#ProductImpact",
+  ].slice(0, 8).join(" ");
+
+  return [
+    hook,
+    "",
+    keyPoints.length > 0 ? keyPoints.join("\n") : "",
+    "",
+    `Read the full article — link in bio`,
+    "",
+    hashtags,
+  ].filter(l => l !== undefined).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function generateArpyInstagram(article: Article): string {
+  const sentences = allSentences(article.content_html);
+  const stats = extractStats(article.content_html);
+
+  const openers = [
+    "Here's what most product leaders miss:",
+    "This changes how we think about AI products:",
+    "The real story behind the headline:",
+    "Something worth paying attention to:",
+  ];
+  const opener = pick(openers);
+
+  const insight = sentences.find(s => s.length > 60 && s.length < 200) ?? article.meta_description ?? article.title;
+
+  const supporting = sentences
+    .filter(s => s !== insight && s.length < 150)
+    .slice(0, 3)
+    .map(s => `• ${s}`);
+
+  const themes = (article.themes ?? [])
+    .map(t => `#${t.replace(/-/g, "").replace(/\s+/g, "")}`)
+    .slice(0, 3);
+
+  return [
+    opener,
+    "",
+    insight,
+    "",
+    supporting.length > 0 ? supporting.join("\n") : "",
+    "",
+    stats.length > 0 ? `📊 ${stats[0]}` : "",
+    "",
+    `Full breakdown — link in bio`,
+    "",
+    ["#AI", "#ProductStrategy", "#AIProducts", ...themes, "#ProductImpact"].slice(0, 8).join(" "),
+  ].filter(l => l !== undefined).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function generateBrittanyInstagram(article: Article): string {
+  const stats = extractStats(article.content_html);
+  const sentences = allSentences(article.content_html);
+
+  const leadStat = stats.length > 0 ? stats[0] : null;
+  const leadSentence = sentences.find(s => s.length > 50 && s.length < 180) ?? article.meta_description ?? article.title;
+
+  const dataPoints = stats
+    .slice(1, 4)
+    .map(s => `📊 ${s}`);
+
+  const context = sentences
+    .filter(s => !stats.includes(s) && s.length < 150)
+    .slice(0, 2)
+    .map(s => `→ ${s}`);
+
+  const themes = (article.themes ?? [])
+    .map(t => `#${t.replace(/-/g, "").replace(/\s+/g, "")}`)
+    .slice(0, 3);
+
+  return [
+    leadStat ? `📊 ${leadStat}` : leadSentence,
+    "",
+    dataPoints.length > 0 ? dataPoints.join("\n") : "",
+    "",
+    context.length > 0 ? "What to watch:\n" + context.join("\n") : "",
+    "",
+    `Research + analysis — link in bio`,
+    "",
+    ["#AI", "#Data", "#AIResearch", ...themes, "#ProductImpact"].slice(0, 8).join(" "),
+  ].filter(l => l !== undefined).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function twitterShareUrl(text: string): string {
   return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
 }
@@ -493,6 +605,9 @@ export default function SocialScreen({ supabase }: Props) {
   const [linkedinVoice, setLinkedinVoice] = useState<Voice>("arpy");
   const [editingTwitter, setEditingTwitter] = useState("");
   const [editingLinkedin, setEditingLinkedin] = useState("");
+  const [instagramVoice, setInstagramVoice] = useState<Voice>("product-impact");
+  const [editingInstagram, setEditingInstagram] = useState("");
+  const [igPublishing, setIgPublishing] = useState(false);
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState("");
 
@@ -522,9 +637,11 @@ export default function SocialScreen({ supabase }: Props) {
     if (existing) {
       setEditingTwitter(existing.twitter);
       setEditingLinkedin(existing.linkedin);
+      setEditingInstagram(existing.instagram ?? generateInstagram(article, instagramVoice));
     } else {
       setEditingTwitter(generateTwitter(article, twitterVoice));
       setEditingLinkedin(generateLinkedin(article, linkedinVoice));
+      setEditingInstagram(generateInstagram(article, instagramVoice));
     }
   }
 
@@ -538,12 +655,17 @@ export default function SocialScreen({ supabase }: Props) {
     if (article) setEditingLinkedin(generateLinkedin(article, linkedinVoice));
   }
 
+  function regenInstagram() {
+    const article = articles.find(a => a.id === selectedId);
+    if (article) setEditingInstagram(generateInstagram(article, instagramVoice));
+  }
+
   async function saveDraft() {
     const article = articles.find(a => a.id === selectedId);
     if (!article) return;
     const draft: SocialDraft = {
       articleId: article.id, articleTitle: article.title, articleSlug: article.slug,
-      twitter: editingTwitter, linkedin: editingLinkedin,
+      twitter: editingTwitter, linkedin: editingLinkedin, instagram: editingInstagram,
       generatedAt: new Date().toISOString(),
     };
     const updated = new Map(drafts);
@@ -661,6 +783,30 @@ export default function SocialScreen({ supabase }: Props) {
               shareUrl={linkedinShareUrl(`${SITE}/news/${selected.slug}/`)}
               shareLabel="Share on LinkedIn →"
               shareClass="bg-[#0A66C2]/20 text-[#0A66C2] hover:bg-[#0A66C2]/30"
+            />
+
+            {/* Instagram */}
+            <InstagramCard
+              article={selected}
+              voice={instagramVoice}
+              onVoiceChange={(v) => {
+                setInstagramVoice(v);
+                const article = articles.find(a => a.id === selectedId);
+                if (article) setEditingInstagram(generateInstagram(article, v));
+              }}
+              text={editingInstagram}
+              onTextChange={setEditingInstagram}
+              onRegenerate={regenInstagram}
+              onCopy={() => copyText(editingInstagram, "instagram")}
+              copied={copied === "instagram"}
+              publishing={igPublishing}
+              supabase={supabase}
+              onPublishStart={() => setIgPublishing(true)}
+              onPublishEnd={(ok, msg) => {
+                setIgPublishing(false);
+                setMsg(ok ? "Published to Instagram!" : `IG error: ${msg}`);
+                setTimeout(() => setMsg(""), 4000);
+              }}
             />
           </div>
         )}
@@ -891,6 +1037,163 @@ function ShareImageGenerator({ article }: { article: Article }) {
         )}
         <canvas ref={landscapeRef} className={`w-full rounded-lg ${generated && tab === "landscape" ? "" : "hidden"}`} style={{ maxWidth: 600 }} />
         <canvas ref={squareRef} className={`w-full rounded-lg ${generated && tab === "square" ? "" : "hidden"}`} style={{ maxWidth: 400 }} />
+      </div>
+    </div>
+  );
+}
+
+function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onRegenerate, onCopy, copied, publishing, supabase, onPublishStart, onPublishEnd }: {
+  article: Article;
+  voice: Voice; onVoiceChange: (v: Voice) => void;
+  text: string; onTextChange: (t: string) => void;
+  onRegenerate: () => void; onCopy: () => void; copied: boolean;
+  publishing: boolean; supabase: SupabaseClient;
+  onPublishStart: () => void; onPublishEnd: (ok: boolean, msg: string) => void;
+}) {
+  const [metaToken, setMetaToken] = React.useState("");
+  const [igAccountId, setIgAccountId] = React.useState("");
+  const [showSettings, setShowSettings] = React.useState(false);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    if (settingsLoaded) return;
+    supabase.from("site_settings").select("value").eq("key", "instagram_api").single()
+      .then(({ data }) => {
+        if (data?.value) {
+          setMetaToken(data.value.access_token ?? "");
+          setIgAccountId(data.value.ig_account_id ?? "");
+        }
+        setSettingsLoaded(true);
+      });
+  }, [settingsLoaded]);
+
+  async function saveSettings() {
+    await supabase.from("site_settings").upsert({
+      key: "instagram_api",
+      value: { access_token: metaToken, ig_account_id: igAccountId },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "key" });
+  }
+
+  async function publishToInstagram() {
+    if (!metaToken || !igAccountId || !article.hero_image_url) return;
+    onPublishStart();
+    try {
+      const createRes = await fetch(
+        `https://graph.facebook.com/v21.0/${igAccountId}/media`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_url: article.hero_image_url,
+            caption: text,
+            access_token: metaToken,
+          }),
+        }
+      );
+      const createData = await createRes.json();
+      if (createData.error) { onPublishEnd(false, createData.error.message); return; }
+
+      const publishRes = await fetch(
+        `https://graph.facebook.com/v21.0/${igAccountId}/media_publish`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            creation_id: createData.id,
+            access_token: metaToken,
+          }),
+        }
+      );
+      const publishData = await publishRes.json();
+      if (publishData.error) { onPublishEnd(false, publishData.error.message); return; }
+      onPublishEnd(true, "");
+    } catch (e: any) {
+      onPublishEnd(false, e.message ?? "Network error");
+    }
+  }
+
+  const hasApi = metaToken && igAccountId;
+
+  return (
+    <div className="rounded-xl border border-[#1a1a1a] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
+        <div className="flex items-center gap-3">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#feda75"/><stop offset=".25" stopColor="#fa7e1e"/><stop offset=".5" stopColor="#d62976"/><stop offset=".75" stopColor="#962fbf"/><stop offset="1" stopColor="#4f5bd5"/></linearGradient></defs>
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig)" strokeWidth="2"/>
+            <circle cx="12" cy="12" r="5" stroke="url(#ig)" strokeWidth="2"/>
+            <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig)"/>
+          </svg>
+          <span className="text-[13px] font-semibold text-white">Instagram</span>
+          <span className="text-[10px] text-[#555]">{text.length} chars</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {(["product-impact", "arpy", "brittany"] as Voice[]).map(v => (
+            <button key={v} onClick={() => onVoiceChange(v)}
+              className={`px-2 py-1 rounded text-[10px] font-semibold transition-colors ${v === voice ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}>
+              {VOICE_META[v].label.split(" ")[0]}
+            </button>
+          ))}
+          <button onClick={onRegenerate} className="ml-1 px-2 py-1 rounded text-[10px] font-semibold text-[#555] hover:text-white transition-colors" title="Regenerate">↻</button>
+        </div>
+      </div>
+
+      <textarea className="w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y h-64"
+        value={text} onChange={(e) => onTextChange(e.target.value)} />
+
+      <div className="flex items-center justify-between px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a]">
+        <div className="flex items-center gap-2">
+          <button onClick={onCopy}
+            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/10 text-white hover:bg-white/20 transition-colors">
+            {copied ? "Copied!" : "Copy Caption"}
+          </button>
+          <button onClick={() => setShowSettings(!showSettings)}
+            className="px-2 py-1.5 rounded-lg text-[11px] text-[#555] hover:text-white transition-colors" title="API Settings">
+            ⚙
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasApi && (
+            <button
+              onClick={publishToInstagram}
+              disabled={publishing || !article.hero_image_url}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {publishing ? "Publishing…" : "Publish to Instagram"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showSettings && (
+        <div className="px-4 py-3 bg-[#060606] border-t border-[#1a1a1a] space-y-3">
+          <p className="text-[11px] text-[#555]">
+            Meta Graph API credentials for direct publishing. Requires a{" "}
+            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" className="text-[#ff6b4a] hover:underline">Meta App</a>
+            {" "}with <code className="text-[#888]">instagram_content_publish</code> permission.
+          </p>
+          <div>
+            <label className="block text-[10px] font-medium text-[#666] mb-1">Instagram Account ID</label>
+            <input type="text" value={igAccountId} onChange={e => setIgAccountId(e.target.value)}
+              className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded text-[12px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              placeholder="17841400..." />
+          </div>
+          <div>
+            <label className="block text-[10px] font-medium text-[#666] mb-1">Long-Lived Access Token</label>
+            <input type="password" value={metaToken} onChange={e => setMetaToken(e.target.value)}
+              className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded text-[12px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              placeholder="EAAG..." />
+          </div>
+          <button onClick={saveSettings}
+            className="px-3 py-1.5 rounded text-[11px] font-semibold bg-white/10 text-white hover:bg-white/20 transition-colors">
+            Save API Settings
+          </button>
+        </div>
+      )}
+
+      <div className="px-4 py-2 bg-[#060606] border-t border-[#1a1a1a]">
+        <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_META[voice].label}</strong> — {VOICE_META[voice].description}</span>
       </div>
     </div>
   );
