@@ -95,11 +95,24 @@ export default function SEOScreen({ supabase }: Props) {
       {/* Verification */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-1">Site Verification</h3>
-        <p className="text-[12px] text-[#555] mb-4">Verification codes for search consoles.</p>
+        <p className="text-[12px] text-[#555] mb-4">Verification codes for search consoles. Paste only the code value, not the full meta tag.</p>
         <div className="space-y-4">
-          <FieldRow label="Google Search Console" defaultValue={seo.google_verification ?? ""} onSave={(v) => save("seo", { ...seo, google_verification: v })} placeholder="google-site-verification=..." />
-          <FieldRow label="Bing Webmaster Tools" defaultValue={seo.bing_verification ?? ""} onSave={(v) => save("seo", { ...seo, bing_verification: v })} placeholder="msvalidate.01=..." />
+          <FieldRow label="Google Search Console" defaultValue={seo.google_verification ?? ""} onSave={(v) => save("seo", { ...seo, google_verification: v })} placeholder="e.g. dGhpcyBpcyBhbiBleGFtcGxl" />
+          <FieldRow label="Bing Webmaster Tools" defaultValue={seo.bing_verification ?? ""} onSave={(v) => save("seo", { ...seo, bing_verification: v })} placeholder="e.g. 1234567890ABCDEF" />
+          <FieldRow label="Yandex Webmaster" defaultValue={seo.yandex_verification ?? ""} onSave={(v) => save("seo", { ...seo, yandex_verification: v })} placeholder="e.g. a1b2c3d4e5f6" />
+          <FieldRow label="Pinterest" defaultValue={seo.pinterest_verification ?? ""} onSave={(v) => save("seo", { ...seo, pinterest_verification: v })} placeholder="e.g. abc123def456" />
         </div>
+      </section>
+
+      {/* IndexNow */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">IndexNow (Bing Instant Indexing)</h3>
+        <p className="text-[12px] text-[#555] mb-4">
+          IndexNow notifies Bing, Yandex, and other engines instantly when new content is published.{" "}
+          <a href="https://www.bing.com/indexnow" target="_blank" rel="noopener" className="text-[#ff6b4a] hover:underline">Generate a key</a> and paste it below.
+          The key file will be served at <code className="text-[#888]">/&#123;key&#125;.txt</code> automatically.
+        </p>
+        <FieldRow label="IndexNow API Key" defaultValue={seo.indexnow_key ?? ""} onSave={(v) => save("seo", { ...seo, indexnow_key: v })} placeholder="e.g. a1b2c3d4e5f6g7h8" />
       </section>
     </div>
   );

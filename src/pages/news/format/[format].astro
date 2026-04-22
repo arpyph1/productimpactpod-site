@@ -79,7 +79,7 @@ function timeAgo(d: string): string {
             <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
               <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
                 {a.hero_image_url ? (
-                  <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                  <img src={a.hero_image_url} alt={a.title} class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
                 ) : (
                   <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
                 )}

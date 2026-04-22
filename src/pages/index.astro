@@ -31,7 +31,7 @@ function filterArticles(sectionId: string): typeof articles {
   let filtered = articles;
   if (s.theme) filtered = filtered.filter((a: any) => a.themes?.includes(s.theme));
   if (s.format) filtered = filtered.filter((a: any) => a.format === s.format);
-  return filtered;
+  return filtered.length > 0 ? filtered : articles;
 }
 
 const leadStories = articles.filter((a) => a.is_lead_story);
@@ -119,9 +119,9 @@ const jsonLd = {
                 const author = authorDisplayName(a.author_slugs?.[0] ?? "");
                 const time = timeAgo(a.publish_date);
                 return (
-                  <a href={`/news/${a.slug}/`} class="hero-slide group block relative flex-shrink-0 w-full" style="min-height: 500px;" data-slide={i}>
+                  <a href={`/news/${a.slug}/`} class="hero-slide group block relative flex-shrink-0 w-full" style="min-height: 500px; aspect-ratio: 12/5;" data-slide={i}>
                     {a.hero_image_url ? (
-                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} fetchpriority={i === 0 ? "high" : "auto"} decoding={i === 0 ? "sync" : "async"} width="1200" height="500" />
                     ) : (
                       <div class="absolute inset-0 bg-gradient-to-br from-[#2a1008] via-[#140808] to-[#080808]"></div>
                     )}
@@ -205,7 +205,7 @@ const jsonLd = {
                   <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
                     <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
                       {a.hero_image_url ? (
-                        <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                        <img src={a.hero_image_url} alt={a.title} class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
                       ) : (
                         <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
                       )}
@@ -316,9 +316,8 @@ const jsonLd = {
     {(() => {
       const c2 = findSection("carousel2");
       const c2Filtered = filterArticles("carousel2");
-      const c2Articles = c2Filtered.length > 0 ? c2Filtered : articles;
       const c2Label = c2?.label ?? "Carousel 2";
-      return sectionEnabled("carousel2") && c2Articles.length > 0 ? (
+      return sectionEnabled("carousel2") && c2Filtered.length > 0 ? (
         <section class="py-10 border-t border-[#141414]">
           <div class="max-w-[1200px] mx-auto px-4 md:px-6">
             <div class="flex items-center justify-between mb-5">
@@ -328,14 +327,14 @@ const jsonLd = {
               <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {c2Articles.slice(0, 4).map((a) => {
+              {c2Filtered.slice(0, 4).map((a) => {
                 const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
                 const author = authorDisplayName(a.author_slugs?.[0] ?? "");
                 return (
                   <a href={`/news/${a.slug}/`} class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
                     <div class="relative aspect-[16/10] overflow-hidden">
                       {a.hero_image_url ? (
-                        <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+                        <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
                       ) : (
                         <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#0c0c0c]"></div>
                       )}
@@ -526,7 +525,7 @@ const jsonLd = {
                   <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
                     <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
                       {a.hero_image_url ? (
-                        <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                        <img src={a.hero_image_url} alt={a.title} class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
                       ) : (
                         <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
                       )}
