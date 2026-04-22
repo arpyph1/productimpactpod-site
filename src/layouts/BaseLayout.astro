@@ -6,6 +6,9 @@
 
 import "../styles/global.css";
 import { publisherSchema, websiteSchema } from "@lib/publisher";
+import { getSiteSetting } from "@lib/supabase";
+
+const seo = (await getSiteSetting("seo")) ?? {};
 
 export interface Props {
   title: string;
@@ -62,6 +65,11 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
+
+    {seo.google_verification && <meta name="google-site-verification" content={seo.google_verification} />}
+    {seo.bing_verification && <meta name="msvalidate.01" content={seo.bing_verification} />}
+    {seo.yandex_verification && <meta name="yandex-verification" content={seo.yandex_verification} />}
+    {seo.pinterest_verification && <meta name="p:domain_verify" content={seo.pinterest_verification} />}
 
     {/* Google Analytics (gtag.js) */}
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-5XKLYD86P7"></script>

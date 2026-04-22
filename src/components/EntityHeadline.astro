@@ -142,24 +142,70 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Build highlighted HTML
-function highlightEntities(text: string, names: string[]): string {
-  if (!names.length) return escapeHtml(text);
+const STOP_WORDS = new Set([
+  "a","an","the","and","or","but","in","on","at","to","for","of","with","by",
+  "from","is","are","was","were","be","been","being","has","have","had","do",
+  "does","did","will","would","could","should","may","might","can","shall",
+  "not","no","nor","so","if","then","than","that","this","these","those",
+  "it","its","how","what","when","where","who","why","which","your","our",
+  "their","my","his","her","we","you","they","he","she","us","them","me",
+  "all","each","every","both","few","more","most","much","many","some","any",
+  "new","just","also","very","about","into","over","after","before","between",
+  "under","up","out","off","down","through","during","now","here","there",
+]);
 
+// Build highlighted HTML — guarantees at least 2 highlighted words
+function highlightEntities(text: string, names: string[]): string {
   let result = text;
-  const replacements: Array<{ placeholder: string; html: string }> = [];
+  const replacements: Array<{ placeholder: string; html: string; wordCount: number }> = [];
+  let highlightedWordCount = 0;
 
   names.forEach((name, i) => {
     const regex = new RegExp(`\\b${escapeRegex(name)}\\b`, "gi");
-    if (!regex.test(result)) return; // skip if not in title
+    if (!regex.test(result)) return;
     regex.lastIndex = 0;
     const placeholder = `\x00ENT${i}\x00`;
     result = result.replace(regex, placeholder);
+    const wc = name.trim().split(/\s+/).length;
+    highlightedWordCount += wc;
     replacements.push({
       placeholder,
       html: `<span style="color:#ff6b4a">${escapeHtml(name)}</span>`,
+      wordCount: wc,
     });
   });
+
+  // Fallback: if fewer than 2 words highlighted, pick key words from the title
+  if (highlightedWordCount < 2) {
+    const remaining = result.replace(/\x00ENT\d+\x00/g, "");
+    const words = remaining.match(/[A-Za-z0-9][\w'-]*/g) ?? [];
+    const candidates = words
+      .filter((w) => w.length >= 2 && !STOP_WORDS.has(w.toLowerCase()))
+      .map((w) => ({
+        word: w,
+        score: (w === w.toUpperCase() && w.length >= 2 ? 50 : 0) // acronyms
+             + (w[0] === w[0].toUpperCase() ? 20 : 0) // capitalized
+             + w.length, // longer = more important
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const needed = 2 - highlightedWordCount;
+    const picked = new Set<string>();
+    for (const c of candidates) {
+      if (picked.size >= needed) break;
+      if (picked.has(c.word.toLowerCase())) continue;
+      picked.add(c.word.toLowerCase());
+      const idx = replacements.length;
+      const regex = new RegExp(`\\b${escapeRegex(c.word)}\\b`);
+      const placeholder = `\x00ENT${idx}\x00`;
+      result = result.replace(regex, placeholder);
+      replacements.push({
+        placeholder,
+        html: `<span style="color:#ff6b4a">${escapeHtml(c.word)}</span>`,
+        wordCount: 1,
+      });
+    }
+  }
 
   let escaped = escapeHtml(result);
   replacements.forEach(({ placeholder, html }) => {
