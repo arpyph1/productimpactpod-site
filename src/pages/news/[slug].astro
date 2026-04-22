@@ -186,7 +186,7 @@ const bcJsonLd = {
             <img
               src={article.hero_image_url}
               alt={article.hero_image_alt ?? article.title}
-              width="1200" height="628" loading="eager"
+              width="1200" height="628" loading="eager" fetchpriority="high" decoding="sync"
               class="w-full rounded-none md:rounded-xl aspect-[1.91/1] object-cover"
             />
             {article.hero_image_credit && (

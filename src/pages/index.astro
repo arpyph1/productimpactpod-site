@@ -126,9 +126,9 @@ const jsonLd = {
                 const author = authorDisplayName(a.author_slugs?.[0] ?? "");
                 const time = timeAgo(a.publish_date);
                 return (
-                  <a href={`/news/${a.slug}/`} class="hero-slide group block relative flex-shrink-0 w-full" style="min-height: 500px;" data-slide={i}>
+                  <a href={`/news/${a.slug}/`} class="hero-slide group block relative flex-shrink-0 w-full" style="min-height: 500px; aspect-ratio: 12/5;" data-slide={i}>
                     {a.hero_image_url ? (
-                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? ""} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
+                      <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} fetchpriority={i === 0 ? "high" : "auto"} decoding={i === 0 ? "sync" : "async"} width="1200" height="500" />
                     ) : (
                       <div class="absolute inset-0 bg-gradient-to-br from-[#2a1008] via-[#140808] to-[#080808]"></div>
                     )}
