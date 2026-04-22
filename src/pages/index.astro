@@ -16,13 +16,30 @@ const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
 const hp = (await getSiteSetting("homepage")) ?? {};
-const showHero = hp.show_hero !== false;
-const showLatest = hp.show_latest !== false;
-const showPodcast = hp.show_podcast !== false;
-const showFeatured = hp.show_featured !== false;
-const showResources = hp.show_resources !== false;
-const showNewsletter = hp.show_newsletter !== false;
-const showPartners = hp.show_partners !== false;
+const sections = hp.sections ?? [];
+const findSection = (id: string) => sections.find((s: any) => s.id === id);
+const sectionEnabled = (id: string, fallbackKey?: string) => {
+  const s = findSection(id);
+  if (s) return s.enabled !== false;
+  if (fallbackKey) return hp[fallbackKey] !== false;
+  return true;
+};
+function filterArticles(sectionId: string): typeof articles {
+  const s = findSection(sectionId);
+  if (!s) return articles;
+  let filtered = articles;
+  if (s.theme) filtered = filtered.filter((a: any) => a.themes?.includes(s.theme));
+  if (s.format) filtered = filtered.filter((a: any) => a.format === s.format);
+  return filtered.length > 0 ? filtered : articles;
+}
+
+const showHero = sectionEnabled("hero", "show_hero");
+const showLatest = sectionEnabled("latest", "show_latest");
+const showPodcast = sectionEnabled("podcast", "show_podcast");
+const showFeatured = sectionEnabled("featured", "show_featured");
+const showResources = sectionEnabled("resources", "show_resources");
+const showNewsletter = sectionEnabled("newsletter", "show_newsletter");
+const showPartners = sectionEnabled("partners", "show_partners");
 
 const leadStories = articles.filter((a) => a.is_lead_story);
 const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
@@ -195,7 +212,7 @@ const jsonLd = {
                   <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
                     <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
                       {a.hero_image_url ? (
-                        <img src={a.hero_image_url} alt="" class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                        <img src={a.hero_image_url} alt={a.title} class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
                       ) : (
                         <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
                       )}
@@ -298,6 +315,54 @@ const jsonLd = {
       </div>
     </section>
     )}
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        CAROUSEL 2 — CMS-configured theme/format filter
+        ══════════════════════════════════════════════════════════════ */}
+    {(() => {
+      const c2 = findSection("carousel2");
+      const c2Filtered = filterArticles("carousel2");
+      const c2Label = c2?.label ?? "Carousel 2";
+      return sectionEnabled("carousel2") && c2Filtered.length > 0 ? (
+        <section class="py-10 border-t border-[#141414]">
+          <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+            <div class="flex items-center justify-between mb-5">
+              <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
+                {c2Label} <span class="text-[#ff6b4a]">&#8250;</span>
+              </h2>
+              <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {c2Filtered.slice(0, 4).map((a) => {
+                const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+                const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+                return (
+                  <a href={`/news/${a.slug}/`} class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+                    <div class="relative aspect-[16/10] overflow-hidden">
+                      {a.hero_image_url ? (
+                        <img src={a.hero_image_url} alt={a.hero_image_alt ?? a.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
+                      ) : (
+                        <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#0c0c0c]"></div>
+                      )}
+                      <div class="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-transparent"></div>
+                      <div class="absolute top-2 left-2">
+                        <span class="text-[9px] font-bold uppercase tracking-wider text-[#ff6b4a] bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded">{formatLabel(a.format)}</span>
+                      </div>
+                    </div>
+                    <div class="p-3.5">
+                      <EntityHeadline title={a.title} entities={entities} tag="h3"
+                        class="text-[14px] font-bold text-[#e5e5e5] leading-[1.3] mb-1.5 group-hover:text-white transition-colors line-clamp-2" />
+                      <div class="text-[11px] text-[#555]"><span class="text-[#888]">{author}</span></div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null;
+    })()}
 
 
     {/* ══════════════════════════════════════════════════════════════
@@ -439,6 +504,57 @@ const jsonLd = {
       </div>
     </section>
     )}
+
+
+    {/* ══════════════════════════════════════════════════════════════
+        VERTICAL LIST 2 — CMS-configured theme/format filter
+        ══════════════════════════════════════════════════════════════ */}
+    {(() => {
+      const v2 = findSection("vertical2");
+      const v2Filtered = filterArticles("vertical2");
+      const v2Articles = v2Filtered.length > 0 ? v2Filtered : articles;
+      const v2Label = v2?.label ?? "Vertical List 2";
+      return sectionEnabled("vertical2") && v2Articles.length > 0 ? (
+        <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8 border-t border-[#141414]">
+          <div class="pl-4 md:pl-8">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
+                {v2Label} <span class="text-[#ff6b4a]">&#8250;</span>
+              </h2>
+              <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
+            </div>
+            <div class="divide-y divide-[#161616]">
+              {v2Articles.slice(0, 5).map((a) => {
+                const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
+                const author = authorDisplayName(a.author_slugs?.[0] ?? "");
+                const time = timeAgo(a.publish_date);
+                return (
+                  <a href={`/news/${a.slug}/`} class="group flex gap-4 py-4 items-start">
+                    <div class="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-lg overflow-hidden flex-shrink-0 bg-[#111]">
+                      {a.hero_image_url ? (
+                        <img src={a.hero_image_url} alt={a.title} class="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500" loading="lazy" />
+                      ) : (
+                        <div class="w-full h-full bg-gradient-to-br from-[#1a0e08] to-[#111]"></div>
+                      )}
+                    </div>
+                    <div class="flex-1 min-w-0 pt-0.5">
+                      <EntityHeadline title={a.title} entities={entities} tag="h3"
+                        class="text-[15px] md:text-[17px] font-bold text-[#e5e5e5] leading-[1.3] group-hover:text-white transition-colors inline" />
+                      {a.subtitle && <span class="hidden md:inline text-[14px] md:text-[16px] text-[#666]"> / {a.subtitle}</span>}
+                      <div class="flex items-center gap-2 mt-1.5 text-[11px]">
+                        <span class="font-semibold text-[#ff6b4a] uppercase tracking-wide">{author}</span>
+                        <span class="text-[#333]">|</span>
+                        <span class="text-[#555]">{time}</span>
+                      </div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null;
+    })()}
 
 
     {/* ══════════════════════════════════════════════════════════════
