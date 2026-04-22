@@ -13,7 +13,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   name: "Terms of Service | Product Impact",
-  url: `${siteUrl}/terms`,
+  url: `${siteUrl}/terms/`,
   isPartOf: { "@type": "WebSite", name: "Product Impact", url: siteUrl },
   dateModified: lastUpdated,
 };
@@ -22,7 +22,7 @@ const jsonLd = {
 <BaseLayout
   title="Terms of Service | Product Impact"
   description="Terms governing use of the Product Impact website, newsletter, and podcast."
-  canonicalUrl={`${siteUrl}/terms`}
+  canonicalUrl={`${siteUrl}/terms/`}
   jsonLd={jsonLd}
 >
   <Nav />
@@ -45,7 +45,7 @@ const jsonLd = {
         <p>
           By accessing or using productimpactpod.com, subscribing to the
           newsletter, or listening to the podcast, you agree to these Terms of
-          Service and our <a href="/privacy">Privacy Policy</a>. If you don't
+          Service and our <a href="/privacy/">Privacy Policy</a>. If you don't
           agree, please don't use the site or services.
         </p>
       </section>
@@ -206,7 +206,7 @@ const jsonLd = {
           Sponsored content is clearly labelled. Sponsorships do not
           influence editorial coverage. See the{" "}
           <a href="/about#editorial-standards">editorial standards</a> and{" "}
-          <a href="/partnerships">partnerships page</a> for details.
+          <a href="/partnerships/">partnerships page</a> for details.
         </p>
       </section>
 

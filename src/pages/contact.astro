@@ -15,7 +15,7 @@ const contactPageJsonLd = {
   "@context": "https://schema.org",
   "@type": "ContactPage",
   name: "Contact | Product Impact",
-  url: `${siteUrl}/contact`,
+  url: `${siteUrl}/contact/`,
   isPartOf: { "@id": `${siteUrl}/#website` },
   mainEntity: { "@id": `${siteUrl}/#organization` },
 };
@@ -73,7 +73,7 @@ const socialLinks = [
 <BaseLayout
   title="Contact | Product Impact"
   description="Editorial, corrections, tips, and partnerships contacts for Product Impact. How to reach us and what to expect."
-  canonicalUrl={`${siteUrl}/contact`}
+  canonicalUrl={`${siteUrl}/contact/`}
   jsonLd={contactPageJsonLd}
 >
   <Nav />
@@ -163,16 +163,16 @@ const socialLinks = [
       <h2 class="text-2xl font-bold text-white mb-4">See also</h2>
       <ul class="space-y-2 text-[#d4d4d4]">
         <li>
-          <a href="/about" class="text-accent hover:text-accent-hover">About &amp; editorial standards</a>
+          <a href="/about/" class="text-accent hover:text-accent-hover">About &amp; editorial standards</a>
         </li>
         <li>
-          <a href="/partnerships" class="text-accent hover:text-accent-hover">Partnerships &amp; sponsorships</a>
+          <a href="/partnerships/" class="text-accent hover:text-accent-hover">Partnerships &amp; sponsorships</a>
         </li>
         <li>
-          <a href="/privacy" class="text-accent hover:text-accent-hover">Privacy Policy</a>
+          <a href="/privacy/" class="text-accent hover:text-accent-hover">Privacy Policy</a>
         </li>
         <li>
-          <a href="/terms" class="text-accent hover:text-accent-hover">Terms of Service</a>
+          <a href="/terms/" class="text-accent hover:text-accent-hover">Terms of Service</a>
         </li>
         <li>
           <a href="/rss.xml" class="text-accent hover:text-accent-hover">RSS feed</a> ·{" "}

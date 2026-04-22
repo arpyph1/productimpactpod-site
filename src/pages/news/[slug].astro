@@ -61,13 +61,23 @@ const jsonLd = article.schema_jsonld ?? {
   dateModified: article.last_updated ? new Date(article.last_updated).toISOString() : pubISO,
   image: article.hero_image_url ? [article.hero_image_url] : undefined,
   author: authorNames.map((n, i) => ({
-    "@type": "Person", name: n, url: `${siteUrl}/people/${article.author_slugs[i]}`,
+    "@type": "Person", name: n, url: `${siteUrl}/people/${article.author_slugs[i]}/`,
+    sameAs: article.author_slugs[i] === "arpy-dragffy"
+      ? ["https://www.linkedin.com/in/arpydragffy/", "https://ph1.ca"]
+      : article.author_slugs[i] === "brittany-hobbs"
+      ? ["https://www.linkedin.com/in/brittanyhobbs/"]
+      : undefined,
   })),
   publisher: {
-    "@type": "Organization",
+    "@type": "NewsMediaOrganization",
     name: "Product Impact",
     url: siteUrl,
     logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png`, width: 600, height: 600 },
+    sameAs: [
+      "https://www.linkedin.com/company/product-impact-podcast",
+      "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
+      "https://productimpactpod.substack.com",
+    ],
   },
   mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
   wordCount: article.word_count ?? undefined,
@@ -75,6 +85,12 @@ const jsonLd = article.schema_jsonld ?? {
   keywords: [...(article.themes ?? []), ...(article.topics ?? [])].join(", ") || undefined,
   isAccessibleForFree: true,
   inLanguage: "en",
+  speakable: {
+    "@type": "SpeakableSpecification",
+    cssSelector: ["h1", ".article-prose p:first-of-type"],
+  },
+  copyrightHolder: { "@type": "Organization", name: "Product Impact" },
+  copyrightYear: pubDate.getFullYear(),
 };
 
 const bcJsonLd = {
