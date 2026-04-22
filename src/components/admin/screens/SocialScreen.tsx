@@ -731,9 +731,11 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
 }
 
 function ShareImageGenerator({ article }: { article: Article }) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const landscapeRef = React.useRef<HTMLCanvasElement>(null);
+  const squareRef = React.useRef<HTMLCanvasElement>(null);
   const [generating, setGenerating] = React.useState(false);
   const [generated, setGenerated] = React.useState(false);
+  const [tab, setTab] = React.useState<"landscape" | "square">("landscape");
 
   function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, fontSize: number): string[] {
     ctx.font = `800 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
@@ -753,82 +755,88 @@ function ShareImageGenerator({ article }: { article: Article }) {
     return lines;
   }
 
-  async function generate() {
-    if (!article.hero_image_url) return;
-    setGenerating(true);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function renderCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, W: number, H: number, maxLines: number) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const W = 1200, H = 628;
     canvas.width = W;
     canvas.height = H;
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = article.hero_image_url;
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Image failed to load"));
-    });
-
-    // Draw hero image scaled to fill
     const scale = Math.max(W / img.width, H / img.height);
     const sw = img.width * scale, sh = img.height * scale;
     ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
 
-    // Dark gradient overlay — heavier at bottom for text legibility
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, "rgba(0,0,0,0.15)");
-    grad.addColorStop(0.5, "rgba(0,0,0,0.35)");
-    grad.addColorStop(0.75, "rgba(0,0,0,0.7)");
+    grad.addColorStop(0, "rgba(0,0,0,0.1)");
+    grad.addColorStop(0.45, "rgba(0,0,0,0.3)");
+    grad.addColorStop(0.7, "rgba(0,0,0,0.65)");
     grad.addColorStop(1, "rgba(0,0,0,0.88)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Warm accent line
-    ctx.fillStyle = "#ff6b4a";
-    ctx.fillRect(48, H - 180, 4, 60);
+    const pad = Math.round(W * 0.05);
 
-    // Title text — left-aligned, bottom-left, across 2-3 lines
-    const maxTextWidth = W - 120;
-    let fontSize = 52;
+    ctx.fillStyle = "#ff6b4a";
+    const barH = Math.round(H * 0.08);
+    ctx.fillRect(pad, H - pad - barH - Math.round(H * 0.15), 4, barH);
+
+    const maxTextWidth = W - pad * 2 - 20;
+    let fontSize = Math.round(W * 0.044);
     let lines = wrapText(ctx, article.title, maxTextWidth, fontSize);
-    if (lines.length > 3) {
-      fontSize = 42;
+    if (lines.length > maxLines) {
+      fontSize = Math.round(W * 0.035);
       lines = wrapText(ctx, article.title, maxTextWidth, fontSize);
     }
-    if (lines.length > 3) lines = lines.slice(0, 3);
+    if (lines.length > maxLines) lines = lines.slice(0, maxLines);
 
     ctx.font = `800 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "left";
 
-    const lineHeight = fontSize * 1.15;
+    const lineHeight = fontSize * 1.18;
     const textBlockHeight = lines.length * lineHeight;
-    const startY = H - 40 - textBlockHeight;
+    const startY = H - pad - textBlockHeight;
 
     lines.forEach((line, i) => {
-      ctx.fillText(line, 60, startY + i * lineHeight + fontSize * 0.85);
+      ctx.fillText(line, pad + 10, startY + i * lineHeight + fontSize * 0.85);
     });
 
-    // Brand mark — top-left
-    ctx.font = "bold 13px Inter, Helvetica Neue, Arial, sans-serif";
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fillText("productimpactpod.com", 60, 40);
-
-    setGenerating(false);
-    setGenerated(true);
+    ctx.font = `bold ${Math.round(W * 0.012)}px Inter, Helvetica Neue, Arial, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillText("productimpactpod.com", pad + 10, pad + Math.round(W * 0.015));
   }
 
-  function download() {
-    const canvas = canvasRef.current;
+  async function generate() {
+    if (!article.hero_image_url) return;
+    setGenerating(true);
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = article.hero_image_url;
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Image failed to load"));
+      });
+
+      if (landscapeRef.current) renderCanvas(landscapeRef.current, img, 1200, 628, 3);
+      if (squareRef.current) renderCanvas(squareRef.current, img, 1080, 1080, 4);
+
+      setGenerated(true);
+    } catch (e) {
+      console.error(e);
+    }
+    setGenerating(false);
+  }
+
+  function download(format: "landscape" | "square") {
+    const canvas = format === "landscape" ? landscapeRef.current : squareRef.current;
     if (!canvas) return;
+    const ext = format === "square" ? "jpg" : "png";
+    const mime = format === "square" ? "image/jpeg" : "image/png";
     const link = document.createElement("a");
-    link.download = `${article.slug}-social.png`;
-    link.href = canvas.toDataURL("image/png");
+    link.download = `${article.slug}-${format === "square" ? "1x1" : "social"}.${ext}`;
+    link.href = canvas.toDataURL(mime, 0.92);
     link.click();
   }
 
@@ -839,38 +847,50 @@ function ShareImageGenerator({ article }: { article: Article }) {
           <svg className="w-4 h-4 text-[#ff6b4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21"/></svg>
           <span className="text-[13px] font-semibold text-white">Social Share Image</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={generate}
-            disabled={!article.hero_image_url || generating}
-            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#ff6b4a] text-white hover:bg-[#ff8566] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {generating ? "Generating…" : "Generate Image"}
-          </button>
-          {generated && (
-            <button
-              onClick={download}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/10 text-white hover:bg-white/20 transition-colors"
-            >
-              Download PNG
-            </button>
-          )}
-        </div>
+        <button
+          onClick={generate}
+          disabled={!article.hero_image_url || generating}
+          className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#ff6b4a] text-white hover:bg-[#ff8566] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {generating ? "Generating…" : generated ? "Regenerate" : "Generate Images"}
+        </button>
       </div>
       <div className="bg-[#080808] p-4">
         {!article.hero_image_url ? (
           <p className="text-[12px] text-[#555] text-center py-8">No hero image available for this article.</p>
         ) : !generated ? (
           <div className="text-center py-8">
-            <p className="text-[12px] text-[#555] mb-2">Generates a 1200×628 image with the article title overlaid on the hero image.</p>
-            <p className="text-[11px] text-[#444]">Optimized for LinkedIn and Twitter/X sharing.</p>
+            <p className="text-[12px] text-[#555] mb-2">Generates two images with the article title overlaid on the hero image.</p>
+            <p className="text-[11px] text-[#444]">1200×628 for LinkedIn/Twitter · 1080×1080 for Instagram/social</p>
           </div>
-        ) : null}
-        <canvas
-          ref={canvasRef}
-          className={`w-full rounded-lg ${generated ? "" : "hidden"}`}
-          style={{ maxWidth: 600, aspectRatio: "1200/628" }}
-        />
+        ) : (
+          <>
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => setTab("landscape")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${tab === "landscape" ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}
+              >
+                Landscape 1200×628
+              </button>
+              <button
+                onClick={() => setTab("square")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${tab === "square" ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}
+              >
+                Square 1080×1080
+              </button>
+            </div>
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => download(tab)}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/10 text-white hover:bg-white/20 transition-colors"
+              >
+                Download {tab === "square" ? "JPG" : "PNG"}
+              </button>
+            </div>
+          </>
+        )}
+        <canvas ref={landscapeRef} className={`w-full rounded-lg ${generated && tab === "landscape" ? "" : "hidden"}`} style={{ maxWidth: 600 }} />
+        <canvas ref={squareRef} className={`w-full rounded-lg ${generated && tab === "square" ? "" : "hidden"}`} style={{ maxWidth: 400 }} />
       </div>
     </div>
   );

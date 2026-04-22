@@ -382,22 +382,36 @@ const jsonLd = [
   var SUPABASE_ANON = container ? container.getAttribute('data-sb-key') : '';
   var CHANNEL_ID = 'UCb1nY02YcJYZZ_XtvcIBcrw';
 
-  function makeCard(short, isDesktop) {
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    console.error('Shorts: missing Supabase credentials');
+    return;
+  }
+
+  function makeCard(short, isDesktop, label) {
     var playSize = isDesktop ? 'w-14 h-14' : 'w-10 h-10';
     var iconSize = isDesktop ? 'w-5 h-5' : 'w-4 h-4';
     var titleSize = isDesktop ? 'text-[11px] p-3' : 'text-[10px] p-2';
+    var labelSize = isDesktop ? 'text-[9px] px-2 py-0.5' : 'text-[8px] px-1.5 py-0.5';
+    var safeTitle = (short.title || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     return '<div class="short-card relative rounded-xl overflow-hidden border border-[#1c1c1c] shadow-xl group cursor-pointer" style="aspect-ratio:9/16;" data-video-id="' + short.videoId + '">'
-      + '<img src="' + short.thumbnail + '" alt="' + short.title.replace(/"/g,'&quot;') + '" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />'
+      + '<img src="' + short.thumbnail + '" alt="' + safeTitle + '" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />'
       + '<div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-500"></div>'
-      + '<button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer" aria-label="Play: ' + short.title.replace(/"/g,'&quot;') + '">'
+      + '<div class="absolute top-2 right-2 z-10"><span class="' + labelSize + ' font-bold uppercase tracking-wider text-white/80 bg-black/60 backdrop-blur-sm rounded">' + label + '</span></div>'
+      + '<button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer" aria-label="Play: ' + safeTitle + '">'
       + '<div class="' + playSize + ' rounded-full bg-white/95 flex items-center justify-center shadow-xl hover:scale-110 transition-transform"><svg class="' + iconSize + ' text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>'
       + '</button>'
-      + '<div class="absolute bottom-0 inset-x-0 ' + titleSize + ' bg-gradient-to-t from-black/80 to-transparent pointer-events-none"><span class="font-medium text-white/90 line-clamp-2">' + short.title + '</span></div>'
+      + '<div class="absolute bottom-0 inset-x-0 ' + titleSize + ' bg-gradient-to-t from-black/80 to-transparent pointer-events-none"><span class="font-medium text-white/90 line-clamp-2">' + safeTitle + '</span></div>'
       + '</div>';
   }
 
-  function bindPlay(container) {
-    container.querySelectorAll('.short-card').forEach(function(card) {
+  function unavailableCard(label, isDesktop) {
+    var sz = isDesktop ? 'text-xs' : 'text-[10px]';
+    var pad = isDesktop ? 'p-4' : 'p-3';
+    return '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center ' + pad + ' text-center"><span class="' + sz + ' text-[#555]">' + label + ' unavailable</span></div></div>';
+  }
+
+  function bindPlay(el) {
+    el.querySelectorAll('.short-card').forEach(function(card) {
       var vid = card.getAttribute('data-video-id');
       if (!vid) return;
       card.querySelector('.short-play-btn').addEventListener('click', function() {
@@ -414,23 +428,27 @@ const jsonLd = [
   }
 
   function renderSlots(data) {
-    var slots = [data.shorts[0] || null, data.shorts[1] || null, data.mostWatched || null];
-    var labels = ['Latest Short', '2nd Latest', 'Most Watched'];
-    // Desktop
+    var slots = [
+      { short: data.shorts && data.shorts[0] ? data.shorts[0] : null, label: 'Latest' },
+      { short: data.shorts && data.shorts[1] ? data.shorts[1] : null, label: '2nd Latest' },
+      { short: data.mostWatched || null, label: 'Most Played' }
+    ];
     for (var i = 0; i < 3; i++) {
       var el = document.querySelector('[data-short-slot="' + i + '"]');
-      if (!el) continue;
-      if (slots[i]) { el.innerHTML = makeCard(slots[i], true); }
-      else { el.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-4 text-center"><span class="text-xs text-[#555]">' + labels[i] + ' unavailable</span></div></div>'; }
-    }
-    // Mobile
-    for (var j = 0; j < 3; j++) {
-      var mel = document.querySelector('[data-short-slot-m="' + j + '"]');
-      if (!mel) continue;
-      if (slots[j]) { mel.innerHTML = makeCard(slots[j], false); }
-      else { mel.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-3 text-center"><span class="text-[10px] text-[#555]">' + labels[j] + ' unavailable</span></div></div>'; }
+      if (el) el.innerHTML = slots[i].short ? makeCard(slots[i].short, true, slots[i].label) : unavailableCard(slots[i].label, true);
+      var mel = document.querySelector('[data-short-slot-m="' + i + '"]');
+      if (mel) mel.innerHTML = slots[i].short ? makeCard(slots[i].short, false, slots[i].label) : unavailableCard(slots[i].label, false);
     }
     bindPlay(document);
+  }
+
+  function showError(msg) {
+    for (var i = 0; i < 3; i++) {
+      var el = document.querySelector('[data-short-slot="' + i + '"]');
+      if (el) el.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-red-900/30" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-4 text-center"><span class="text-xs text-red-400/60">' + msg + '</span></div></div>';
+      var mel = document.querySelector('[data-short-slot-m="' + i + '"]');
+      if (mel) mel.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-red-900/30" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-3 text-center"><span class="text-[10px] text-red-400/60">' + msg + '</span></div></div>';
+    }
   }
 
   fetch(SUPABASE_URL + '/functions/v1/get-latest-short', {
@@ -438,9 +456,18 @@ const jsonLd = [
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON, 'apikey': SUPABASE_ANON },
     body: JSON.stringify({ channelId: CHANNEL_ID, count: 2 })
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) { if (data && data.shorts) renderSlots(data); })
-  .catch(function(err) { console.error('Shorts fetch failed:', err); });
+  .then(function(r) {
+    if (!r.ok) return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t); });
+    return r.json();
+  })
+  .then(function(data) {
+    if (data.error) { showError(data.error); return; }
+    renderSlots(data);
+  })
+  .catch(function(err) {
+    console.error('Shorts fetch failed:', err);
+    showError('Failed to load shorts');
+  });
 })();
 </script>
 </BaseLayout>
