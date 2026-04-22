@@ -3,7 +3,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
-import { getLatestShorts, getSiteSetting } from "@lib/supabase";
+import { getSiteSetting } from "@lib/supabase";
 
 const rssEpisodes = await fetchPodcastEpisodes(50);
 const substackEditions = await fetchSubstackEditions(8);
@@ -20,12 +20,7 @@ const show = {
   heroVideo3Url: "https://www.youtube.com/shorts/-AIs2p6agMw",
 };
 
-const shortsData = await getLatestShorts(show.channelId, 2);
-const shortSlots = [
-  { short: shortsData.shorts[0] ?? null,   label: "Latest Short" },
-  { short: shortsData.shorts[1] ?? null,   label: "2nd Latest"  },
-  { short: shortsData.mostWatched ?? null, label: "Most Watched" },
-];
+const shortLabels = ["Latest Short", "2nd Latest", "Most Watched"];
 
 const defaultHosts = [
   {
@@ -117,56 +112,30 @@ const jsonLd = [
         </div>
       </div>
 
-      {/* 3 staircase vertical video cards */}
-      <div class="max-w-[700px] mx-auto px-6 mb-8">
-        <div class="hidden md:grid md:grid-cols-3 gap-5 items-start">
-          {shortSlots.map((slot, i) => (
-            <div style={`margin-top: ${i * 2.5}rem;`}>
-              {slot.short ? (
-                <div class="short-card relative rounded-xl overflow-hidden border border-[#1c1c1c] shadow-xl group" style="aspect-ratio: 9/16;" data-video-id={slot.short.videoId}>
-                  <img src={slot.short.thumbnail} alt={slot.short.title} class="absolute inset-0 w-full h-full object-cover" loading={i === 0 ? "eager" : "lazy"} />
-                  <div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-500"></div>
-                  <button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer" aria-label={`Play: ${slot.short.title}`}>
-                    <div class="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-xl hover:scale-110 transition-transform">
-                      <svg class="w-5 h-5 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    </div>
-                  </button>
-                  <div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
-                    <span class="text-[11px] font-medium text-white/90 line-clamp-2">{slot.short.title}</span>
-                  </div>
+      {/* 3 staircase vertical video cards — loaded client-side for fresh data */}
+      <div class="max-w-[700px] mx-auto px-6 mb-8"
+        data-sb-url={import.meta.env.PUBLIC_SUPABASE_URL}
+        data-sb-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
+        id="shorts-container">
+        <div class="hidden md:grid md:grid-cols-3 gap-5 items-start" id="shorts-desktop">
+          {shortLabels.map((label, i) => (
+            <div style={`margin-top: ${i * 2.5}rem;`} data-short-slot={i}>
+              <div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c] animate-pulse" style="aspect-ratio: 9/16;">
+                <div class="absolute inset-0 flex items-center justify-center p-4 text-center">
+                  <span class="text-xs text-[#555]">Loading {label}…</span>
                 </div>
-              ) : (
-                <div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio: 9/16;">
-                  <div class="absolute inset-0 flex items-center justify-center p-4 text-center">
-                    <span class="text-xs text-[#555]">{slot.label} unavailable</span>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
-        {/* Mobile: horizontal scroll */}
-        <div class="md:hidden flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6">
-          {shortSlots.map((slot) => (
-            <div class="snap-center shrink-0" style="width: 55vw; max-width: 220px;">
-              {slot.short ? (
-                <div class="short-card relative rounded-xl overflow-hidden border border-[#1c1c1c] group" style="aspect-ratio: 9/16;" data-video-id={slot.short.videoId}>
-                  <img src={slot.short.thumbnail} alt={slot.short.title} class="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                  <div class="absolute inset-0 bg-black/50"></div>
-                  <button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center" aria-label={`Play: ${slot.short.title}`}>
-                    <div class="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center"><svg class="w-4 h-4 text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
-                  </button>
-                  <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
-                    <span class="text-[10px] font-medium text-white/90 line-clamp-2">{slot.short.title}</span>
-                  </div>
+        <div class="md:hidden flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6" id="shorts-mobile">
+          {shortLabels.map((label, i) => (
+            <div class="snap-center shrink-0" style="width: 55vw; max-width: 220px;" data-short-slot-m={i}>
+              <div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c] animate-pulse" style="aspect-ratio: 9/16;">
+                <div class="absolute inset-0 flex items-center justify-center p-3 text-center">
+                  <span class="text-[10px] text-[#555]">Loading…</span>
                 </div>
-              ) : (
-                <div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio: 9/16;">
-                  <div class="absolute inset-0 flex items-center justify-center p-3 text-center">
-                    <span class="text-[10px] text-[#555]">{slot.label} unavailable</span>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
@@ -408,22 +377,70 @@ const jsonLd = [
 
 <script is:inline>
 (function() {
-  document.querySelectorAll('.short-card').forEach(function(card) {
-    var videoId = card.getAttribute('data-video-id');
-    if (!videoId) return;
-    var playBtn = card.querySelector('.short-play-btn');
-    if (!playBtn) return;
-    playBtn.addEventListener('click', function() {
-      var iframe = document.createElement('iframe');
-      iframe.src = 'https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1';
-      iframe.title = playBtn.getAttribute('aria-label') || 'YouTube Short';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-      iframe.allowFullscreen = true;
-      iframe.className = 'absolute inset-0 w-full h-full';
-      card.innerHTML = '';
-      card.appendChild(iframe);
+  var container = document.getElementById('shorts-container');
+  var SUPABASE_URL = container ? container.getAttribute('data-sb-url') : '';
+  var SUPABASE_ANON = container ? container.getAttribute('data-sb-key') : '';
+  var CHANNEL_ID = 'UCb1nY02YcJYZZ_XtvcIBcrw';
+
+  function makeCard(short, isDesktop) {
+    var playSize = isDesktop ? 'w-14 h-14' : 'w-10 h-10';
+    var iconSize = isDesktop ? 'w-5 h-5' : 'w-4 h-4';
+    var titleSize = isDesktop ? 'text-[11px] p-3' : 'text-[10px] p-2';
+    return '<div class="short-card relative rounded-xl overflow-hidden border border-[#1c1c1c] shadow-xl group cursor-pointer" style="aspect-ratio:9/16;" data-video-id="' + short.videoId + '">'
+      + '<img src="' + short.thumbnail + '" alt="' + short.title.replace(/"/g,'&quot;') + '" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />'
+      + '<div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-500"></div>'
+      + '<button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer" aria-label="Play: ' + short.title.replace(/"/g,'&quot;') + '">'
+      + '<div class="' + playSize + ' rounded-full bg-white/95 flex items-center justify-center shadow-xl hover:scale-110 transition-transform"><svg class="' + iconSize + ' text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>'
+      + '</button>'
+      + '<div class="absolute bottom-0 inset-x-0 ' + titleSize + ' bg-gradient-to-t from-black/80 to-transparent pointer-events-none"><span class="font-medium text-white/90 line-clamp-2">' + short.title + '</span></div>'
+      + '</div>';
+  }
+
+  function bindPlay(container) {
+    container.querySelectorAll('.short-card').forEach(function(card) {
+      var vid = card.getAttribute('data-video-id');
+      if (!vid) return;
+      card.querySelector('.short-play-btn').addEventListener('click', function() {
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + vid + '?autoplay=1&rel=0&modestbranding=1';
+        iframe.title = 'YouTube Short';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        iframe.allowFullscreen = true;
+        iframe.className = 'absolute inset-0 w-full h-full';
+        card.innerHTML = '';
+        card.appendChild(iframe);
+      });
     });
-  });
+  }
+
+  function renderSlots(data) {
+    var slots = [data.shorts[0] || null, data.shorts[1] || null, data.mostWatched || null];
+    var labels = ['Latest Short', '2nd Latest', 'Most Watched'];
+    // Desktop
+    for (var i = 0; i < 3; i++) {
+      var el = document.querySelector('[data-short-slot="' + i + '"]');
+      if (!el) continue;
+      if (slots[i]) { el.innerHTML = makeCard(slots[i], true); }
+      else { el.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-4 text-center"><span class="text-xs text-[#555]">' + labels[i] + ' unavailable</span></div></div>'; }
+    }
+    // Mobile
+    for (var j = 0; j < 3; j++) {
+      var mel = document.querySelector('[data-short-slot-m="' + j + '"]');
+      if (!mel) continue;
+      if (slots[j]) { mel.innerHTML = makeCard(slots[j], false); }
+      else { mel.innerHTML = '<div class="relative rounded-xl overflow-hidden bg-[#111] border border-dashed border-[#1c1c1c]" style="aspect-ratio:9/16;"><div class="absolute inset-0 flex items-center justify-center p-3 text-center"><span class="text-[10px] text-[#555]">' + labels[j] + ' unavailable</span></div></div>'; }
+    }
+    bindPlay(document);
+  }
+
+  fetch(SUPABASE_URL + '/functions/v1/get-latest-short', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON, 'apikey': SUPABASE_ANON },
+    body: JSON.stringify({ channelId: CHANNEL_ID, count: 2 })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) { if (data && data.shorts) renderSlots(data); })
+  .catch(function(err) { console.error('Shorts fetch failed:', err); });
 })();
 </script>
 </BaseLayout>

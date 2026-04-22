@@ -613,6 +613,9 @@ export default function SocialScreen({ supabase }: Props) {
               </div>
             </div>
 
+            {/* Social Share Image Generator */}
+            <ShareImageGenerator article={selected} />
+
             <button onClick={saveDraft} className="px-4 py-2 bg-[#ff6b4a] text-white rounded-lg text-[12px] font-semibold hover:bg-[#ff8566] transition-colors">
               Save All Drafts
             </button>
@@ -723,6 +726,152 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
       </div>
       <textarea className={`w-full bg-[#080808] p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none resize-y ${platform === "twitter" ? "h-32" : "h-96"}`}
         value={text} onChange={(e) => onTextChange(e.target.value)} />
+    </div>
+  );
+}
+
+function ShareImageGenerator({ article }: { article: Article }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [generating, setGenerating] = React.useState(false);
+  const [generated, setGenerated] = React.useState(false);
+
+  function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, fontSize: number): string[] {
+    ctx.font = `800 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? current + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  async function generate() {
+    if (!article.hero_image_url) return;
+    setGenerating(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 1200, H = 628;
+    canvas.width = W;
+    canvas.height = H;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = article.hero_image_url;
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Image failed to load"));
+    });
+
+    // Draw hero image scaled to fill
+    const scale = Math.max(W / img.width, H / img.height);
+    const sw = img.width * scale, sh = img.height * scale;
+    ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+
+    // Dark gradient overlay — heavier at bottom for text legibility
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0.15)");
+    grad.addColorStop(0.5, "rgba(0,0,0,0.35)");
+    grad.addColorStop(0.75, "rgba(0,0,0,0.7)");
+    grad.addColorStop(1, "rgba(0,0,0,0.88)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Warm accent line
+    ctx.fillStyle = "#ff6b4a";
+    ctx.fillRect(48, H - 180, 4, 60);
+
+    // Title text — left-aligned, bottom-left, across 2-3 lines
+    const maxTextWidth = W - 120;
+    let fontSize = 52;
+    let lines = wrapText(ctx, article.title, maxTextWidth, fontSize);
+    if (lines.length > 3) {
+      fontSize = 42;
+      lines = wrapText(ctx, article.title, maxTextWidth, fontSize);
+    }
+    if (lines.length > 3) lines = lines.slice(0, 3);
+
+    ctx.font = `800 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+
+    const lineHeight = fontSize * 1.15;
+    const textBlockHeight = lines.length * lineHeight;
+    const startY = H - 40 - textBlockHeight;
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, 60, startY + i * lineHeight + fontSize * 0.85);
+    });
+
+    // Brand mark — top-left
+    ctx.font = "bold 13px Inter, Helvetica Neue, Arial, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillText("productimpactpod.com", 60, 40);
+
+    setGenerating(false);
+    setGenerated(true);
+  }
+
+  function download() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `${article.slug}-social.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
+  return (
+    <div className="rounded-xl border border-[#1a1a1a] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
+        <div className="flex items-center gap-3">
+          <svg className="w-4 h-4 text-[#ff6b4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21"/></svg>
+          <span className="text-[13px] font-semibold text-white">Social Share Image</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generate}
+            disabled={!article.hero_image_url || generating}
+            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-[#ff6b4a] text-white hover:bg-[#ff8566] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {generating ? "Generating…" : "Generate Image"}
+          </button>
+          {generated && (
+            <button
+              onClick={download}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/10 text-white hover:bg-white/20 transition-colors"
+            >
+              Download PNG
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="bg-[#080808] p-4">
+        {!article.hero_image_url ? (
+          <p className="text-[12px] text-[#555] text-center py-8">No hero image available for this article.</p>
+        ) : !generated ? (
+          <div className="text-center py-8">
+            <p className="text-[12px] text-[#555] mb-2">Generates a 1200×628 image with the article title overlaid on the hero image.</p>
+            <p className="text-[11px] text-[#444]">Optimized for LinkedIn and Twitter/X sharing.</p>
+          </div>
+        ) : null}
+        <canvas
+          ref={canvasRef}
+          className={`w-full rounded-lg ${generated ? "" : "hidden"}`}
+          style={{ maxWidth: 600, aspectRatio: "1200/628" }}
+        />
+      </div>
     </div>
   );
 }
