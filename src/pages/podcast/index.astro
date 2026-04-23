@@ -393,10 +393,12 @@ const jsonLd = [
     var titleSize = isDesktop ? 'text-[11px] p-3' : 'text-[10px] p-2';
     var labelSize = isDesktop ? 'text-[9px] px-2 py-0.5' : 'text-[8px] px-1.5 py-0.5';
     var safeTitle = (short.title || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    var debugId = short.videoId ? short.videoId.substring(0, 5) : '';
     return '<div class="short-card relative rounded-xl overflow-hidden border border-[#1c1c1c] shadow-xl group cursor-pointer" style="aspect-ratio:9/16;" data-video-id="' + short.videoId + '">'
       + '<img src="' + short.thumbnail + '" alt="' + safeTitle + '" class="absolute inset-0 w-full h-full object-cover" loading="lazy" />'
       + '<div class="absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-500"></div>'
-      + '<div class="absolute top-2 right-2 z-10"><span class="' + labelSize + ' font-bold uppercase tracking-wider text-white/80 bg-black/60 backdrop-blur-sm rounded">' + label + '</span></div>'
+      + '<div class="absolute top-2 right-2 z-10"><span class="' + labelSize + ' font-bold uppercase tracking-wider text-white bg-black/70 backdrop-blur-sm rounded px-1.5 py-0.5">' + label + '</span></div>'
+      + '<div class="absolute top-2 left-2 z-10"><span class="text-[8px] text-white/50 bg-black/50 rounded px-1 py-0.5">' + debugId + '</span></div>'
       + '<button type="button" class="short-play-btn absolute inset-0 flex items-center justify-center cursor-pointer" aria-label="Play: ' + safeTitle + '">'
       + '<div class="' + playSize + ' rounded-full bg-white/95 flex items-center justify-center shadow-xl hover:scale-110 transition-transform"><svg class="' + iconSize + ' text-black ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>'
       + '</button>'
