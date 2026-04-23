@@ -42,21 +42,22 @@ serve(async (req) => {
       );
     }
 
-    const uploadsPlaylistId = channelId.replace(/^UC/, "UU");
+    // Use Search API — reliably returns all videos including Shorts
+    // that the playlistItems endpoint sometimes misses.
+    // Costs 100 quota units (vs 1 for playlistItems) but within daily 10k limit.
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(channelId)}&type=video&order=date&maxResults=50&key=${apiKey}`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
 
-    const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(uploadsPlaylistId)}&maxResults=50&key=${apiKey}`;
-    const playlistRes = await fetch(playlistUrl);
-    const playlistData = await playlistRes.json();
-
-    if (!playlistRes.ok) {
-      console.error("YouTube PlaylistItems API error:", JSON.stringify(playlistData));
+    if (!searchRes.ok) {
+      console.error("YouTube Search API error:", JSON.stringify(searchData));
       return new Response(
-        JSON.stringify({ error: "YouTube API error", details: playlistData.error?.message || "Unknown error" }),
+        JSON.stringify({ error: "YouTube API error", details: searchData.error?.message || "Unknown error" }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const items = playlistData.items || [];
+    const items = searchData.items || [];
     if (items.length === 0) {
       return new Response(
         JSON.stringify({ error: "No videos found", shorts: [], mostWatched: null }),
@@ -64,8 +65,8 @@ serve(async (req) => {
       );
     }
 
-    // Get video details including statistics for view counts
-    const videoIds = items.map((item: any) => item.snippet?.resourceId?.videoId).filter(Boolean);
+    // Get video details (duration + statistics) for all found videos
+    const videoIds = items.map((item: any) => item.id?.videoId).filter(Boolean);
     const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${videoIds.join(",")}&key=${apiKey}`;
     const detailsRes = await fetch(detailsUrl);
     const detailsData = await detailsRes.json();
@@ -83,11 +84,11 @@ serve(async (req) => {
       detailsMap.set(v.id, v);
     }
 
-    // Collect ALL shorts (≤180s / 3min) for both recency and view-count sorting
+    // Collect Shorts (≤180s / 3min)
     const allShorts: ShortInfo[] = [];
 
     for (const item of items) {
-      const vid = item.snippet?.resourceId?.videoId;
+      const vid = item.id?.videoId;
       const detail = detailsMap.get(vid);
       if (!detail) continue;
       const duration = parseDuration(detail.contentDetails?.duration || "");
@@ -109,7 +110,7 @@ serve(async (req) => {
       );
     }
 
-    // Latest shorts by publish date (sorted explicitly — playlist order not guaranteed)
+    // Latest shorts by publish date
     allShorts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     const shorts = allShorts.slice(0, count).map(({ viewCount, ...s }) => s);
 
