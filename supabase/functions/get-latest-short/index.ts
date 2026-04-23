@@ -83,7 +83,7 @@ serve(async (req) => {
       detailsMap.set(v.id, v);
     }
 
-    // Collect ALL shorts (≤120s) for both recency and view-count sorting
+    // Collect ALL shorts (≤180s / 3min) for both recency and view-count sorting
     const allShorts: ShortInfo[] = [];
 
     for (const item of items) {
