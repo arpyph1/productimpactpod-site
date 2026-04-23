@@ -901,7 +901,7 @@ function ShareImageGenerator({ article }: { article: Article }) {
     return lines;
   }
 
-  function renderCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, W: number, H: number, maxLines: number) {
+  function renderCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement, logo: HTMLImageElement, W: number, H: number, maxLines: number) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     canvas.width = W;
@@ -921,9 +921,11 @@ function ShareImageGenerator({ article }: { article: Article }) {
 
     const pad = Math.round(W * 0.05);
 
-    ctx.fillStyle = "#ff6b4a";
-    const barH = Math.round(H * 0.08);
-    ctx.fillRect(pad, H - pad - barH - Math.round(H * 0.15), 4, barH);
+    // Logo watermark — top-right
+    const logoSize = Math.round(W * 0.07);
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(logo, W - pad - logoSize, pad, logoSize, logoSize);
+    ctx.globalAlpha = 1;
 
     const maxTextWidth = W - pad * 2 - 20;
     let fontSize = Math.round(W * 0.044);
@@ -945,10 +947,6 @@ function ShareImageGenerator({ article }: { article: Article }) {
     lines.forEach((line, i) => {
       ctx.fillText(line, pad + 10, startY + i * lineHeight + fontSize * 0.85);
     });
-
-    ctx.font = `bold ${Math.round(W * 0.012)}px Inter, Helvetica Neue, Arial, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillText("productimpactpod.com", pad + 10, pad + Math.round(W * 0.015));
   }
 
   async function generate() {
@@ -959,14 +957,17 @@ function ShareImageGenerator({ article }: { article: Article }) {
     img.crossOrigin = "anonymous";
     img.src = article.hero_image_url;
 
-    try {
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Image failed to load"));
-      });
+    const logo = new Image();
+    logo.src = "/favicon-192.png";
 
-      if (landscapeRef.current) renderCanvas(landscapeRef.current, img, 1200, 628, 3);
-      if (squareRef.current) renderCanvas(squareRef.current, img, 1080, 1080, 4);
+    try {
+      await Promise.all([
+        new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(new Error("Hero image failed")); }),
+        new Promise<void>((resolve, reject) => { logo.onload = () => resolve(); logo.onerror = () => reject(new Error("Logo failed")); }),
+      ]);
+
+      if (landscapeRef.current) renderCanvas(landscapeRef.current, img, logo, 1200, 628, 3);
+      if (squareRef.current) renderCanvas(squareRef.current, img, logo, 1080, 1080, 4);
 
       setGenerated(true);
     } catch (e) {
