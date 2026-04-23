@@ -237,8 +237,37 @@ const bcJsonLd = {
         {/* ── Article body ── */}
         <div class="article-prose" set:html={cleanedHtml}></div>
 
+        {/* ── Heart reactions ── */}
+        <div class="mt-12 pt-8 border-t border-[#1a1a1a]"
+          data-article-id={article.id}
+          data-sb-url={import.meta.env.PUBLIC_SUPABASE_URL}
+          data-sb-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
+          id="engagement-container">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-[14px] font-bold text-white">How much did you love this article?</p>
+            <span id="heart-count" class="text-[14px] font-semibold text-[#ff6b4a]"></span>
+          </div>
+          <div class="flex gap-3">
+            <button type="button" data-hearts="1"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️</span>
+              <span class="text-[14px] font-semibold">Good</span>
+            </button>
+            <button type="button" data-hearts="2"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️❤️</span>
+              <span class="text-[14px] font-semibold">Great</span>
+            </button>
+            <button type="button" data-hearts="3"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️❤️❤️</span>
+              <span class="text-[14px] font-semibold">Must read</span>
+            </button>
+          </div>
+        </div>
+
         {/* ── Social sharing — large buttons ── */}
-        <div class="mt-12 pt-8 border-t border-[#1a1a1a]">
+        <div class="mt-10 pt-8 border-t border-[#1a1a1a]">
           <p class="text-[11px] font-bold uppercase tracking-wider text-[#555] mb-4">Share this article</p>
           <div class="flex flex-wrap gap-3">
             <a href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(article.title)}&summary=${encodeURIComponent(linkedinSummary)}&source=Product+Impact`} target="_blank" rel="noopener"
@@ -264,35 +293,6 @@ const bcJsonLd = {
             <button id="copy-link-bottom" class="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-[#111] border border-[#222] text-[#888] hover:text-white hover:border-[#444] transition-colors">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
               <span class="text-[14px] font-semibold">Copy Link</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── Heart reactions ── */}
-        <div class="mt-10 pt-8 border-t border-[#1a1a1a]"
-          data-article-id={article.id}
-          data-sb-url={import.meta.env.PUBLIC_SUPABASE_URL}
-          data-sb-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
-          id="engagement-container">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-[#555]">How much did you love this article?</p>
-            <span id="heart-count" class="text-[12px] text-[#555]"></span>
-          </div>
-          <div class="flex gap-3">
-            <button type="button" data-hearts="1"
-              class="heart-btn flex items-center gap-2 px-5 py-3 rounded-xl bg-[#111] border border-[#222] text-[#888] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 hover:bg-[#ff6b4a]/5 transition-all group">
-              <span class="text-[18px] group-hover:scale-110 transition-transform">❤️</span>
-              <span class="text-[13px] font-medium">Good</span>
-            </button>
-            <button type="button" data-hearts="2"
-              class="heart-btn flex items-center gap-2 px-5 py-3 rounded-xl bg-[#111] border border-[#222] text-[#888] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 hover:bg-[#ff6b4a]/5 transition-all group">
-              <span class="text-[18px] group-hover:scale-110 transition-transform">❤️❤️</span>
-              <span class="text-[13px] font-medium">Great</span>
-            </button>
-            <button type="button" data-hearts="3"
-              class="heart-btn flex items-center gap-2 px-5 py-3 rounded-xl bg-[#111] border border-[#222] text-[#888] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 hover:bg-[#ff6b4a]/5 transition-all group">
-              <span class="text-[18px] group-hover:scale-110 transition-transform">❤️❤️❤️</span>
-              <span class="text-[13px] font-medium">Must read</span>
             </button>
           </div>
         </div>
