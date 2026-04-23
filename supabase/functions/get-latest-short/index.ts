@@ -91,7 +91,7 @@ serve(async (req) => {
       const detail = detailsMap.get(vid);
       if (!detail) continue;
       const duration = parseDuration(detail.contentDetails?.duration || "");
-      if (duration <= 120) {
+      if (duration <= 180) {
         allShorts.push({
           videoId: vid,
           title: detail.snippet?.title || "",
@@ -104,12 +104,13 @@ serve(async (req) => {
 
     if (allShorts.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No Shorts found (videos ≤2min) in the latest uploads", shorts: [], mostWatched: null }),
+        JSON.stringify({ error: "No Shorts found (videos ≤3min) in the latest uploads", shorts: [], mostWatched: null }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Latest shorts by date (already in playlist order = newest first)
+    // Latest shorts by publish date (sorted explicitly — playlist order not guaranteed)
+    allShorts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     const shorts = allShorts.slice(0, count).map(({ viewCount, ...s }) => s);
 
     // Most watched short by view count
