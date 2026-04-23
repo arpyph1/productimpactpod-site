@@ -453,7 +453,7 @@ const jsonLd = [
     }
   }
 
-  fetch(SUPABASE_URL + '/functions/v1/get-latest-short?t=' + Date.now(), {
+  fetch(SUPABASE_URL + '/functions/v1/get-shorts?t=' + Date.now(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON, 'apikey': SUPABASE_ANON },
     body: JSON.stringify({ channelId: CHANNEL_ID, count: 2 }),
