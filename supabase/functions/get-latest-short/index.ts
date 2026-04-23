@@ -121,7 +121,7 @@ serve(async (req) => {
       : null;
 
     return new Response(
-      JSON.stringify({ shorts, mostWatched: mostWatchedResult }),
+      JSON.stringify({ shorts, mostWatched: mostWatchedResult, _version: "v3-search-api", _totalFound: allShorts.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   } catch (err) {
