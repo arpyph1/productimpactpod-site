@@ -121,7 +121,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ shorts, mostWatched: mostWatchedResult }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   } catch (err) {
     console.error("Edge function error:", err);

@@ -453,14 +453,16 @@ const jsonLd = [
 
   fetch(SUPABASE_URL + '/functions/v1/get-latest-short', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON, 'apikey': SUPABASE_ANON },
-    body: JSON.stringify({ channelId: CHANNEL_ID, count: 2 })
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON, 'apikey': SUPABASE_ANON, 'Cache-Control': 'no-cache' },
+    body: JSON.stringify({ channelId: CHANNEL_ID, count: 2 }),
+    cache: 'no-store'
   })
   .then(function(r) {
     if (!r.ok) return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t); });
     return r.json();
   })
   .then(function(data) {
+    console.log('[Shorts API response]', JSON.stringify(data, null, 2));
     if (data.error) { showError(data.error); return; }
     renderSlots(data);
   })
