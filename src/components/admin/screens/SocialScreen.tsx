@@ -919,10 +919,12 @@ function ShareImageGenerator({ article }: { article: Article }) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    const pad = Math.round(W * 0.05);
+    const isSquare = W === H;
+    // Square (Instagram) gets extra padding so title doesn't crowd edges
+    const pad = Math.round(W * (isSquare ? 0.08 : 0.05));
 
-    // Logo watermark — top-right
-    const logoSize = Math.round(W * 0.07);
+    // Logo watermark — top-right (25% larger than original)
+    const logoSize = Math.round(W * 0.0875);
     ctx.globalAlpha = 0.85;
     ctx.drawImage(logo, W - pad - logoSize, pad, logoSize, logoSize);
     ctx.globalAlpha = 1;
@@ -941,8 +943,11 @@ function ShareImageGenerator({ article }: { article: Article }) {
     ctx.textAlign = "left";
 
     const lineHeight = fontSize * 1.18;
-    const textBlockHeight = lines.length * lineHeight;
-    const startY = H - pad - textBlockHeight;
+    // Square: fixed vertical start so all images in a mosaic align consistently.
+    // Landscape: bottom-justified (text anchors to the bottom edge).
+    const startY = isSquare
+      ? Math.round(H * 0.60)
+      : H - pad - lines.length * lineHeight;
 
     lines.forEach((line, i) => {
       ctx.fillText(line, pad + 10, startY + i * lineHeight + fontSize * 0.85);
