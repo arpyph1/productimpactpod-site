@@ -61,13 +61,23 @@ const jsonLd = article.schema_jsonld ?? {
   dateModified: article.last_updated ? new Date(article.last_updated).toISOString() : pubISO,
   image: article.hero_image_url ? [article.hero_image_url] : undefined,
   author: authorNames.map((n, i) => ({
-    "@type": "Person", name: n, url: `${siteUrl}/people/${article.author_slugs[i]}`,
+    "@type": "Person", name: n, url: `${siteUrl}/people/${article.author_slugs[i]}/`,
+    sameAs: article.author_slugs[i] === "arpy-dragffy"
+      ? ["https://www.linkedin.com/in/arpydragffy/", "https://ph1.ca"]
+      : article.author_slugs[i] === "brittany-hobbs"
+      ? ["https://www.linkedin.com/in/brittanyhobbs/"]
+      : undefined,
   })),
   publisher: {
-    "@type": "Organization",
+    "@type": "NewsMediaOrganization",
     name: "Product Impact",
     url: siteUrl,
     logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png`, width: 600, height: 600 },
+    sameAs: [
+      "https://www.linkedin.com/company/product-impact-podcast",
+      "https://www.youtube.com/channel/UCb1nY02YcJYZZ_XtvcIBcrw",
+      "https://productimpactpod.substack.com",
+    ],
   },
   mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
   wordCount: article.word_count ?? undefined,
@@ -75,6 +85,12 @@ const jsonLd = article.schema_jsonld ?? {
   keywords: [...(article.themes ?? []), ...(article.topics ?? [])].join(", ") || undefined,
   isAccessibleForFree: true,
   inLanguage: "en",
+  speakable: {
+    "@type": "SpeakableSpecification",
+    cssSelector: ["h1", ".article-prose p:first-of-type"],
+  },
+  copyrightHolder: { "@type": "Organization", name: "Product Impact" },
+  copyrightYear: pubDate.getFullYear(),
 };
 
 const bcJsonLd = {
@@ -182,13 +198,17 @@ const bcJsonLd = {
 
         {/* Hero image (if exists) */}
         {article.hero_image_url && (
-          <figure class="mb-8 -mx-4 md:mx-0">
+          <figure class="mb-8 -mx-4 md:mx-0 relative">
             <img
               src={article.hero_image_url}
               alt={article.hero_image_alt ?? article.title}
               width="1200" height="628" loading="eager" fetchpriority="high" decoding="sync"
               class="w-full rounded-none md:rounded-xl aspect-[1.91/1] object-cover"
             />
+            <button id="hero-fav-btn" type="button" title="Favourite this article"
+              class="absolute top-4 right-4 md:top-5 md:right-5 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 transition-all group">
+              <svg class="w-5 h-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            </button>
             {article.hero_image_credit && (
               <figcaption class="text-[11px] text-[#555] mt-2 px-4 md:px-0">
                 Photo: {article.hero_image_credit}
@@ -217,8 +237,37 @@ const bcJsonLd = {
         {/* ── Article body ── */}
         <div class="article-prose" set:html={cleanedHtml}></div>
 
+        {/* ── Heart reactions ── */}
+        <div class="mt-12 pt-8 border-t border-[#1a1a1a]"
+          data-article-id={article.id}
+          data-sb-url={import.meta.env.PUBLIC_SUPABASE_URL}
+          data-sb-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
+          id="engagement-container">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-[14px] font-bold text-white">How helpful was this article?</p>
+            <span id="heart-count" class="text-[14px] font-semibold text-[#ff6b4a]"></span>
+          </div>
+          <div class="flex gap-3">
+            <button type="button" data-hearts="1"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️</span>
+              <span class="text-[14px] font-semibold">Good</span>
+            </button>
+            <button type="button" data-hearts="2"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️❤️</span>
+              <span class="text-[14px] font-semibold">Great</span>
+            </button>
+            <button type="button" data-hearts="3"
+              class="heart-btn flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/10 transition-all group">
+              <span class="text-[20px] group-hover:scale-110 transition-transform">❤️❤️❤️</span>
+              <span class="text-[14px] font-semibold">Must read</span>
+            </button>
+          </div>
+        </div>
+
         {/* ── Social sharing — large buttons ── */}
-        <div class="mt-12 pt-8 border-t border-[#1a1a1a]">
+        <div class="mt-10 pt-8 border-t border-[#1a1a1a]">
           <p class="text-[11px] font-bold uppercase tracking-wider text-[#555] mb-4">Share this article</p>
           <div class="flex flex-wrap gap-3">
             <a href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(article.title)}&summary=${encodeURIComponent(linkedinSummary)}&source=Product+Impact`} target="_blank" rel="noopener"
@@ -412,6 +461,109 @@ const bcJsonLd = {
       e.preventDefault();
       var val = email.value.trim();
       if (val) { window.open('https://productimpactpod.substack.com/subscribe?email=' + encodeURIComponent(val), '_blank'); email.value = ''; }
+    });
+  }
+})();
+</script>
+
+<script is:inline>
+(function() {
+  var ec = document.getElementById('engagement-container');
+  if (!ec) return;
+  var articleId = ec.getAttribute('data-article-id');
+  var sbUrl = ec.getAttribute('data-sb-url');
+  var sbKey = ec.getAttribute('data-sb-key');
+  if (!articleId || !sbUrl || !sbKey) return;
+
+  var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sbKey, 'apikey': sbKey };
+
+  function rpc(fn, params) {
+    return fetch(sbUrl + '/rest/v1/rpc/' + fn, {
+      method: 'POST', headers: headers, body: JSON.stringify(params)
+    });
+  }
+
+  // Track unique view
+  var viewKey = 'pi_viewed_' + articleId;
+  if (!localStorage.getItem(viewKey)) {
+    rpc('increment_view', { p_article_id: articleId });
+    localStorage.setItem(viewKey, '1');
+  }
+
+  // Track shares — attach to all share links in the article
+  var shareKey = 'pi_shared_' + articleId;
+  document.querySelectorAll('a[target="_blank"][href*="linkedin.com/share"], a[target="_blank"][href*="twitter.com/intent"], a[target="_blank"][href*="facebook.com/sharer"]').forEach(function(link) {
+    link.addEventListener('click', function() {
+      if (!localStorage.getItem(shareKey)) {
+        rpc('increment_share', { p_article_id: articleId });
+        localStorage.setItem(shareKey, '1');
+      }
+    });
+  });
+
+  // Heart buttons
+  var heartKey = 'pi_hearted_' + articleId;
+  var heartCount = document.getElementById('heart-count');
+  var hearted = localStorage.getItem(heartKey);
+
+  // Load current heart count
+  fetch(sbUrl + '/rest/v1/article_engagement?article_id=eq.' + articleId + '&select=hearts', { headers: headers })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data[0] && heartCount) {
+        heartCount.textContent = data[0].hearts > 0 ? data[0].hearts + ' ❤️' : '';
+      }
+    }).catch(function() {});
+
+  document.querySelectorAll('.heart-btn').forEach(function(btn) {
+    if (hearted) {
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+    }
+    btn.addEventListener('click', function() {
+      if (localStorage.getItem(heartKey)) return;
+      var amount = parseInt(btn.getAttribute('data-hearts') || '1');
+      rpc('add_hearts', { p_article_id: articleId, p_amount: amount });
+      localStorage.setItem(heartKey, String(amount));
+
+      // Visual feedback
+      btn.style.borderColor = '#ff6b4a';
+      btn.style.background = 'rgba(255,107,74,0.1)';
+      btn.style.color = '#ff6b4a';
+      document.querySelectorAll('.heart-btn').forEach(function(b) {
+        if (b !== btn) { b.style.opacity = '0.3'; b.style.pointerEvents = 'none'; }
+      });
+      btn.style.pointerEvents = 'none';
+
+      if (heartCount) {
+        var cur = parseInt(heartCount.textContent) || 0;
+        heartCount.textContent = (cur + amount) + ' ❤️';
+      }
+    });
+  });
+
+  // Hero fav button — same as 1 heart
+  var heroFav = document.getElementById('hero-fav-btn');
+  if (heroFav) {
+    if (hearted) {
+      heroFav.querySelector('svg').setAttribute('fill', '#ff6b4a');
+      heroFav.querySelector('svg').setAttribute('stroke', '#ff6b4a');
+      heroFav.classList.add('text-[#ff6b4a]');
+    }
+    heroFav.addEventListener('click', function() {
+      if (localStorage.getItem(heartKey)) return;
+      rpc('add_hearts', { p_article_id: articleId, p_amount: 1 });
+      localStorage.setItem(heartKey, '1');
+      heroFav.querySelector('svg').setAttribute('fill', '#ff6b4a');
+      heroFav.querySelector('svg').setAttribute('stroke', '#ff6b4a');
+      heroFav.classList.add('text-[#ff6b4a]');
+      document.querySelectorAll('.heart-btn').forEach(function(b) {
+        b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
+      });
+      if (heartCount) {
+        var cur = parseInt(heartCount.textContent) || 0;
+        heartCount.textContent = (cur + 1) + ' ❤️';
+      }
     });
   }
 })();

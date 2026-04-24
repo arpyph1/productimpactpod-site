@@ -24,6 +24,7 @@ const sectionEnabled = (id: string, fallbackKey?: string) => {
   if (fallbackKey) return hp[fallbackKey] !== false;
   return true;
 };
+
 function filterArticles(sectionId: string): typeof articles {
   const s = findSection(sectionId);
   if (!s) return articles;
@@ -32,14 +33,6 @@ function filterArticles(sectionId: string): typeof articles {
   if (s.format) filtered = filtered.filter((a: any) => a.format === s.format);
   return filtered.length > 0 ? filtered : articles;
 }
-
-const showHero = sectionEnabled("hero", "show_hero");
-const showLatest = sectionEnabled("latest", "show_latest");
-const showPodcast = sectionEnabled("podcast", "show_podcast");
-const showFeatured = sectionEnabled("featured", "show_featured");
-const showResources = sectionEnabled("resources", "show_resources");
-const showNewsletter = sectionEnabled("newsletter", "show_newsletter");
-const showPartners = sectionEnabled("partners", "show_partners");
 
 const leadStories = articles.filter((a) => a.is_lead_story);
 const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
@@ -116,7 +109,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         HERO CAROUSEL — full-bleed cards with Particle warm gradients
         ══════════════════════════════════════════════════════════════ */}
-    {showHero && carouselArticles.length > 0 && (
+    {sectionEnabled("hero", "show_hero") && carouselArticles.length > 0 && (
       <section class="relative pt-4 pb-6">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="relative overflow-hidden rounded-2xl" id="hero-carousel">
@@ -192,7 +185,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         LATEST ARTICLES — left column with ad slot on right
         ══════════════════════════════════════════════════════════════ */}
-    {showLatest && articles.length > 1 && (
+    {sectionEnabled("latest", "show_latest") && articles.length > 1 && (
       <section class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           {/* Left: article list */}
@@ -251,7 +244,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         PODCAST — last 3 episodes prominently
         ══════════════════════════════════════════════════════════════ */}
-    {showPodcast && (
+    {sectionEnabled("podcast", "show_podcast") && (
     <section class="py-12 border-t border-[#141414] relative">
       <div class="absolute inset-0 bg-gradient-to-b from-[#0c0808] via-[#080808] to-[#080810]"></div>
       <div class="relative max-w-[1200px] mx-auto px-4 md:px-6">
@@ -368,7 +361,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         FEATURED / EVERGREEN ARTICLES — 4 cards (CMS-selected in future)
         ══════════════════════════════════════════════════════════════ */}
-    {showFeatured && articles.length > 2 && (
+    {sectionEnabled("featured", "show_featured") && articles.length > 2 && (
       <section class="py-10 border-t border-[#141414]">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
@@ -412,7 +405,7 @@ const jsonLd = {
         AI STRATEGY RESOURCES — CMS-managed reports and long-form docs
         PDF previews in large format carousel. Placeholder until CMS populated.
         ══════════════════════════════════════════════════════════════ */}
-    {showResources && (
+    {sectionEnabled("resources", "show_resources") && (
     <section class="py-10 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-center justify-between mb-5">
@@ -458,7 +451,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         SUBSTACK — newsletter subscribe + 3 latest editions
         ══════════════════════════════════════════════════════════════ */}
-    {showNewsletter && (
+    {sectionEnabled("newsletter", "show_newsletter") && (
     <section class="py-12 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-8">
@@ -560,7 +553,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         PARTNERS
         ══════════════════════════════════════════════════════════════ */}
-    {showPartners && (
+    {sectionEnabled("partners", "show_partners") && (
     <section class="py-10 border-t border-[#141414]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-center justify-between mb-6">

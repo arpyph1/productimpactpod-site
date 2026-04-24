@@ -8,10 +8,15 @@ import sys
 import json
 import re
 import html
+from pathlib import Path
 from datetime import datetime
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 from xml.etree import ElementTree as ET
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from load_env import load_env
+load_env()
 
 FEED_URL = os.environ.get(
     "PUBLIC_PODCAST_RSS_URL",

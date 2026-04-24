@@ -6,13 +6,13 @@ import EntityHeadline from "@components/EntityHeadline.astro";
 import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
 
 const validFormats: ArticleFormat[] = [
-  "news-brief", "news-analysis", "release-note", "feature", "interview",
+  "news-brief", "news-analysis", "release-note", "feature", "data-reports",
   "case-study", "opinion", "explainer", "product-review", "research-brief",
 ];
 
 export async function getStaticPaths() {
   return [
-    "news-brief", "news-analysis", "release-note", "feature", "interview",
+    "news-brief", "news-analysis", "release-note", "feature", "data-reports",
     "case-study", "opinion", "explainer", "product-review", "research-brief",
   ].map((f) => ({ params: { format: f } }));
 }
@@ -23,7 +23,7 @@ const articles = allArticles.filter((a) => a.format === format);
 const siteUrl = "https://productimpactpod.com";
 const label = formatLabel(format as ArticleFormat);
 
-const formats: ArticleFormat[] = ["news-analysis", "feature", "interview", "case-study", "release-note", "opinion", "explainer"];
+const formats: ArticleFormat[] = ["news-analysis", "feature", "data-reports", "case-study", "release-note", "opinion", "explainer"];
 
 function timeAgo(d: string): string {
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
