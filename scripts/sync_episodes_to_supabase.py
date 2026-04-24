@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Sync podcast RSS episodes to Supabase episode_shownotes table.
-AI-generated show notes are optional — runs without PRODUCT_IMPACT_SHOWNOTES_API_KEY.
 """
 
 import os
@@ -20,7 +19,6 @@ FEED_URL = os.environ.get(
 )
 SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-SHOWNOTES_API_KEY = os.environ.get("PRODUCT_IMPACT_SHOWNOTES_API_KEY", "")
 
 NS = {
     "itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd",
@@ -213,11 +211,6 @@ def main():
     if not episodes:
         print("No episodes found. Exiting.")
         sys.exit(1)
-
-    if SHOWNOTES_API_KEY:
-        print(f"PRODUCT_IMPACT_SHOWNOTES_API_KEY is set — AI show notes generation available.")
-    else:
-        print("PRODUCT_IMPACT_SHOWNOTES_API_KEY not set — syncing RSS metadata only (this is fine).")
 
     upsert_to_supabase(episodes)
 
