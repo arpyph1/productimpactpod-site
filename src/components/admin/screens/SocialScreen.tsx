@@ -921,7 +921,7 @@ function ShareImageGenerator({ article }: { article: Article }) {
 
     const isSquare = W === H;
     // Square (Instagram) gets extra padding so title doesn't crowd edges
-    const pad = Math.round(W * (isSquare ? 0.08 : 0.05));
+    const pad = Math.round(W * (isSquare ? 0.12 : 0.05));
 
     // Logo watermark — top-right (25% larger than original)
     const logoSize = Math.round(W * 0.0875);
