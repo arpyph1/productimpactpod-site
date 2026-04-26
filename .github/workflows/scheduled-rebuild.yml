@@ -18,9 +18,25 @@ on:
 
 jobs:
   trigger-rebuild:
-    name: Ping Cloudflare deploy hook
+    name: Publish scheduled articles & rebuild
     runs-on: ubuntu-latest
     steps:
+      - name: Publish scheduled articles
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "Supabase secrets not set — skipping auto-publish"
+          else
+            RESULT=$(curl -s -X POST "${SUPABASE_URL}/rest/v1/rpc/publish_scheduled_articles" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{}')
+            echo "Auto-published ${RESULT} scheduled article(s)"
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Hit deploy hook
         run: |
           if [ -z "${CF_DEPLOY_HOOK_URL}" ]; then

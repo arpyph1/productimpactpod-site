@@ -9,6 +9,7 @@ interface Props {
 interface Article {
   id: string; slug: string; title: string; subtitle: string | null; format: string;
   author_slugs: string[] | null; publish_date: string; published: boolean;
+  scheduled_at: string | null;
   is_lead_story: boolean; hero_image_url: string | null; themes: string[] | null;
   meta_description: string | null; read_time_minutes: number | null;
 }
@@ -30,19 +31,20 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [search, setSearch] = useState("");
   const [filterFormat, setFilterFormat] = useState("");
-  const [filterPub, setFilterPub] = useState<"all" | "published" | "draft">("all");
+  const [filterPub, setFilterPub] = useState<"all" | "published" | "draft" | "scheduled">("all");
   const [loading, setLoading] = useState(true);
 
   const loadArticles = useCallback(async () => {
     setLoading(true);
     let q = supabase.from("articles")
-      .select("id, slug, title, subtitle, format, author_slugs, publish_date, published, is_lead_story, hero_image_url, themes, meta_description, read_time_minutes")
+      .select("id, slug, title, subtitle, format, author_slugs, publish_date, published, scheduled_at, is_lead_story, hero_image_url, themes, meta_description, read_time_minutes")
       .order("publish_date", { ascending: false })
       .limit(200);
 
     if (filterFormat) q = q.eq("format", filterFormat);
     if (filterPub === "published") q = q.eq("published", true);
-    if (filterPub === "draft") q = q.eq("published", false);
+    if (filterPub === "draft") q = q.eq("published", false).is("scheduled_at", null);
+    if (filterPub === "scheduled") q = q.eq("published", false).not("scheduled_at", "is", null);
 
     const { data } = await q;
     setArticles(data ?? []);
@@ -92,6 +94,7 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
           value={filterPub} onChange={(e) => setFilterPub(e.target.value as any)}>
           <option value="all">All status</option>
           <option value="published">Published</option>
+          <option value="scheduled">Scheduled</option>
           <option value="draft">Draft</option>
         </select>
         <button onClick={() => openArticle(null)}
@@ -124,8 +127,8 @@ export default function ArticlesScreen({ supabase, onEditArticle }: Props) {
                 <tr key={a.id} className="hover:bg-[#0c0c0c] transition-colors">
                   <td className="px-4 py-3">
                     <button onClick={() => togglePublished(a.id, a.published)}
-                      className={`w-3 h-3 rounded-full ${a.published ? "bg-green-500" : "bg-[#333]"}`}
-                      title={a.published ? "Published — click to unpublish" : "Draft — click to publish"} />
+                      className={`w-3 h-3 rounded-full ${a.published ? "bg-green-500" : a.scheduled_at ? "bg-amber-500" : "bg-[#333]"}`}
+                      title={a.published ? "Published — click to unpublish" : a.scheduled_at ? `Scheduled: ${new Date(a.scheduled_at).toLocaleString()}` : "Draft — click to publish"} />
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => openArticle(a)} className="text-left group">

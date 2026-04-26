@@ -22,6 +22,27 @@ const THEMES = [
 const LENSES = ["business", "product", "societal", "technical"];
 
 type Tab = "edit" | "html" | "preview";
+type ArticleStatus = "draft" | "published" | "scheduled";
+
+function toLocalDatetime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const TIMEZONE_OPTIONS = [
+  { label: "Eastern (ET)", value: "America/New_York" },
+  { label: "Central (CT)", value: "America/Chicago" },
+  { label: "Mountain (MT)", value: "America/Denver" },
+  { label: "Pacific (PT)", value: "America/Los_Angeles" },
+  { label: "UTC", value: "UTC" },
+  { label: "London (GMT/BST)", value: "Europe/London" },
+  { label: "Central Europe (CET)", value: "Europe/Berlin" },
+  { label: "India (IST)", value: "Asia/Kolkata" },
+  { label: "Tokyo (JST)", value: "Asia/Tokyo" },
+  { label: "Sydney (AEST)", value: "Australia/Sydney" },
+];
 
 export default function ArticleModal({ supabase, article, onClose, onSaved }: Props) {
   const isNew = !article?.id;
@@ -37,6 +58,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     author_slugs: article?.author_slugs ?? ["arpy-dragffy"],
     publish_date: article?.publish_date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
     published: article?.published ?? false,
+    scheduled_at: article?.scheduled_at ?? null as string | null,
     meta_description: article?.meta_description ?? "",
     hero_image_url: article?.hero_image_url ?? "",
     hero_image_alt: article?.hero_image_alt ?? "",
@@ -48,6 +70,15 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     is_lead_story: article?.is_lead_story ?? false,
     read_time_minutes: article?.read_time_minutes ?? 5,
   });
+
+  const deriveStatus = (): ArticleStatus => {
+    if (form.published) return "published";
+    if (form.scheduled_at) return "scheduled";
+    return "draft";
+  };
+  const [status, setStatus] = useState<ArticleStatus>(deriveStatus());
+  const [scheduleTz, setScheduleTz] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York");
+  const [scheduleLocal, setScheduleLocal] = useState(toLocalDatetime(form.scheduled_at));
 
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,11 +152,31 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     if (!form.title.trim()) { setMsg("Title is required"); return; }
     if (!form.slug.trim()) form.slug = autoSlug(form.title);
 
+    if (status === "scheduled" && !scheduleLocal) {
+      setMsg("Select a date and time for scheduling");
+      return;
+    }
+
     setSaving(true);
     setMsg("");
 
+    let published = false;
+    let scheduled_at: string | null = null;
+
+    if (status === "published") {
+      published = true;
+    } else if (status === "scheduled" && scheduleLocal) {
+      const asUtc = new Date(scheduleLocal + ":00Z");
+      const inTzStr = asUtc.toLocaleString("sv-SE", { timeZone: scheduleTz });
+      const inTzDate = new Date(inTzStr.replace(" ", "T") + "Z");
+      const offsetMs = asUtc.getTime() - inTzDate.getTime();
+      scheduled_at = new Date(asUtc.getTime() + offsetMs).toISOString();
+    }
+
     const payload = {
       ...form,
+      published,
+      scheduled_at,
       word_count: form.content_html.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length,
       read_time_minutes: Math.max(1, Math.ceil(form.content_html.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length / 250)),
       updated_at: new Date().toISOString(),
@@ -278,11 +329,48 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Status</label>
               <select className="w-full px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
-                value={form.published ? "published" : "draft"} onChange={(e) => update("published", e.target.value === "published")}>
+                value={status} onChange={(e) => {
+                  const v = e.target.value as ArticleStatus;
+                  setStatus(v);
+                  if (v === "published") { update("published", true); update("scheduled_at", null); }
+                  else if (v === "draft") { update("published", false); update("scheduled_at", null); }
+                  else { update("published", false); }
+                }}>
                 <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
                 <option value="published">Published</option>
               </select>
             </div>
+
+            {/* Schedule datetime — shown only when status is "scheduled" */}
+            {status === "scheduled" && (
+              <div className="space-y-2 p-3 bg-[#111] border border-[#222] rounded-lg">
+                <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider">Publish at</label>
+                <input type="datetime-local"
+                  className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                  value={scheduleLocal}
+                  onChange={(e) => setScheduleLocal(e.target.value)} />
+                <select className="w-full px-3 py-2 bg-[#0a0a0a] border border-[#222] rounded-lg text-[12px] text-[#ccc] focus:outline-none"
+                  value={scheduleTz} onChange={(e) => setScheduleTz(e.target.value)}>
+                  {TIMEZONE_OPTIONS.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                </select>
+                {scheduleLocal && (
+                  <div className="text-[10px] text-[#666]">
+                    UTC: {(() => {
+                      try {
+                        const asUtc = new Date(scheduleLocal + ":00Z");
+                        const inTzStr = asUtc.toLocaleString("sv-SE", { timeZone: scheduleTz });
+                        const inTzDate = new Date(inTzStr.replace(" ", "T") + "Z");
+                        const offsetMs = asUtc.getTime() - inTzDate.getTime();
+                        return new Date(asUtc.getTime() + offsetMs).toISOString().replace("T", " ").slice(0, 16);
+                      } catch { return "—"; }
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Slug */}
             <div>
