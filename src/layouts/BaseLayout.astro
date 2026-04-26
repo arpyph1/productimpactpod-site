@@ -1,14 +1,12 @@
 ---
-// BaseLayout.astro — renders the HTML shell with full server-side meta tags.
-// Every page gets the site-wide publisher (NewsMediaOrganization) and
-// WebSite schemas emitted as JSON-LD, plus its page-specific schema stacks
-// on top.
-
 import "../styles/global.css";
-import { publisherSchema, websiteSchema } from "@lib/publisher";
+import { getSiteConfig } from "@lib/config";
+import { buildPublisherSchema, buildWebsiteSchema } from "@lib/publisher";
 import { getSiteSetting } from "@lib/supabase";
 
+const cfg = await getSiteConfig();
 const seo = (await getSiteSetting("seo")) ?? {};
+const gaId = seo.ga_id || cfg.analytics.gaId;
 
 export interface Props {
   title: string;
@@ -39,16 +37,19 @@ const {
   articleSection,
   articleTags = [],
   articleAuthor,
-  twitterSite = "@productimpactpod",
+  twitterSite = cfg.social.twitter,
   jsonLd,
   noindex = false,
 } = Astro.props;
 
-const siteUrl = "https://productimpactpod.com";
-const fullOgImage = ogImage ?? `${siteUrl}/og-default.png`;
+const fullOgImage = ogImage ?? `${cfg.url}/og-default.png`;
 
+const publisherSchema = buildPublisherSchema(cfg);
+const websiteSchema = buildWebsiteSchema(cfg);
 const pageJsonLd = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
+
+const accentHsl = cfg.accentHsl;
 ---
 
 <!doctype html>
@@ -60,7 +61,7 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     <link rel="preconnect" href={import.meta.env.PUBLIC_SUPABASE_URL} crossorigin />
     <link rel="preconnect" href="https://www.googletagmanager.com" />
     <link rel="preconnect" href="https://www.google-analytics.com" />
-    <link rel="dns-prefetch" href="https://productimpactpod.substack.com" />
+    {cfg.social.substack && <link rel="dns-prefetch" href={cfg.social.substack} />}
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -71,14 +72,16 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     {seo.yandex_verification && <meta name="yandex-verification" content={seo.yandex_verification} />}
     {seo.pinterest_verification && <meta name="p:domain_verify" content={seo.pinterest_verification} />}
 
-    {/* Google Analytics (gtag.js) */}
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${seo.ga_id || "G-5XKLYD86P7"}`}></script>
-    <script is:inline define:vars={{ gaId: seo.ga_id || "G-5XKLYD86P7" }}>
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+    <script is:inline define:vars={{ gaId }}>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', gaId);
     </script>
+
+    {/* Dynamic accent color from site config */}
+    <style set:html={`:root { --primary: ${accentHsl}; --accent: ${cfg.accentColor}; --accent-hover: ${cfg.accentHover}; --ring: ${accentHsl}; --coral: ${accentHsl}; }`}></style>
 
     <meta
       name="robots"
@@ -96,7 +99,7 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={fullOgImage} />
     {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
-    <meta property="og:site_name" content="Product Impact" />
+    <meta property="og:site_name" content={cfg.name} />
     <meta property="og:locale" content="en_US" />
 
     {ogType === "article" && publishedTime && (
@@ -123,8 +126,8 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     <meta name="twitter:image" content={fullOgImage} />
     {ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
 
-    <link rel="alternate" type="application/rss+xml" title="Product Impact — News" href={`${siteUrl}/news/rss.xml`} />
-    <link rel="alternate" type="application/rss+xml" title="Product Impact — Podcast" href={`${siteUrl}/podcast/rss.xml`} />
+    <link rel="alternate" type="application/rss+xml" title={`${cfg.name} — News`} href={`${cfg.url}/news/rss.xml`} />
+    <link rel="alternate" type="application/rss+xml" title={`${cfg.name} — Podcast`} href={`${cfg.url}/podcast/rss.xml`} />
 
     {jsonLdBlocks.map((block) => (
       <script type="application/ld+json" set:html={JSON.stringify(block)} />

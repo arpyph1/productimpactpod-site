@@ -10,9 +10,10 @@ import PartnersScreen from "./screens/PartnersScreen";
 import ResourcesScreen from "./screens/ResourcesScreen";
 import SocialScreen from "./screens/SocialScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
+import BrandingScreen from "./screens/BrandingScreen";
 import ArticleModal from "./ArticleModal";
 
-type Screen = "settings" | "seo" | "homepage" | "articles" | "resources" | "podcast" | "partners" | "social" | "analytics";
+type Screen = "branding" | "settings" | "seo" | "homepage" | "articles" | "resources" | "podcast" | "partners" | "social" | "analytics";
 
 interface AdminUser {
   user: User;
@@ -22,6 +23,7 @@ interface AdminUser {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 const NAV_ITEMS: { key: Screen; label: string; icon: string }[] = [
+  { key: "branding", label: "Branding", icon: "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" },
   { key: "settings", label: "Settings", icon: "M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" },
   { key: "seo", label: "SEO", icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" },
   { key: "homepage", label: "Homepage", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
@@ -268,6 +270,7 @@ export default function AdminApp() {
 
 function ScreenRouter({ screen, supabase, admin, onEditArticle }: { screen: Screen; supabase: any; admin: AdminUser; onEditArticle: (a: any) => void }) {
   switch (screen) {
+    case "branding": return <BrandingScreen supabase={supabase} />;
     case "settings": return <SettingsScreen supabase={supabase} />;
     case "seo": return <SEOScreen supabase={supabase} />;
     case "homepage": return <HomepageScreen supabase={supabase} />;
