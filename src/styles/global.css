@@ -23,7 +23,7 @@
   --bg-elevated: #1a1a1a;
 
   /* Borders — subtle dividers */
-  --border: #181818;
+  --border: 0 0% 9%;
   --border-strong: #222222;
 
   /* Text — high contrast, no gray-on-gray */

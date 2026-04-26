@@ -10,7 +10,7 @@ import EntityHeadline from "@components/EntityHeadline.astro";
 import StoryCard from "@components/StoryCard.astro";
 import { sanitizeHtml } from "@lib/sanitize";
 import {
-  getAllArticles, getRelatedArticles, authorDisplayName,
+  getAllArticles, authorDisplayName,
   formatLabel, themeLabel, stripFirstH1, generateOverviewBullets,
   type Article,
 } from "@lib/supabase";
@@ -18,11 +18,23 @@ import { fetchPodcastEpisodes } from "@lib/rss";
 
 export async function getStaticPaths() {
   const articles = await getAllArticles();
-  return articles.map((a) => ({ params: { slug: a.slug }, props: { article: a } }));
+  return articles.map((a) => ({ params: { slug: a.slug }, props: { article: a, allArticles: articles } }));
 }
 
-const { article } = Astro.props as { article: Article };
-const related = await getRelatedArticles(article, 6);
+const { article, allArticles } = Astro.props as { article: Article; allArticles: Article[] };
+const related = (() => {
+  const others = allArticles.filter(a => a.slug !== article.slug && a.published);
+  if (!article.themes || article.themes.length === 0) {
+    return others.slice(0, 6);
+  }
+  const themeSet = new Set(article.themes);
+  const scored = others.map(a => ({
+    article: a,
+    overlap: (a.themes ?? []).filter(t => themeSet.has(t)).length,
+  }));
+  scored.sort((a, b) => b.overlap - a.overlap || new Date(b.article.publish_date).getTime() - new Date(a.article.publish_date).getTime());
+  return scored.slice(0, 6).map(s => s.article);
+})();
 const latestEpisodes = await fetchPodcastEpisodes(5);
 
 const siteUrl = "https://productimpactpod.com";
