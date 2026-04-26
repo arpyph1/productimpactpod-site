@@ -72,12 +72,12 @@ const jsonLdBlocks = [publisherSchema, websiteSchema, ...pageJsonLd];
     {seo.pinterest_verification && <meta name="p:domain_verify" content={seo.pinterest_verification} />}
 
     {/* Google Analytics (gtag.js) */}
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5XKLYD86P7"></script>
-    <script is:inline>
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${seo.ga_id || "G-5XKLYD86P7"}`}></script>
+    <script is:inline define:vars={{ gaId: seo.ga_id || "G-5XKLYD86P7" }}>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-5XKLYD86P7');
+      gtag('config', gaId);
     </script>
 
     <meta

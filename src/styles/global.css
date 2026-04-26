@@ -37,6 +37,33 @@
   --accent-hover: #ff8566;
   --accent-muted: rgba(255, 107, 74, 0.15);
   --accent-text: #ff8566;
+
+  /* Tailwind semantic tokens (HSL values for hsl() wrapping in tailwind.config) */
+  --background: 0 0% 3%;
+  --foreground: 0 0% 94%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 94%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 94%;
+  --primary: 12 100% 65%;
+  --primary-foreground: 0 0% 3%;
+  --secondary: 0 0% 9%;
+  --secondary-foreground: 0 0% 94%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 47%;
+  --accent-foreground: 0 0% 3%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 0 0% 10%;
+  --ring: 12 100% 65%;
+
+  /* Named brand HSL values */
+  --coral: 12 100% 65%;
+  --teal: 174 60% 50%;
+  --amber: 38 92% 55%;
+  --lavender: 258 60% 73%;
+  --sage: 140 25% 55%;
+  --orange: 24 95% 58%;
 }
 
 /* ── Base ── */

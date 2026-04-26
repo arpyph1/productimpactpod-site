@@ -668,14 +668,16 @@ export default function SocialScreen({ supabase }: Props) {
       twitter: editingTwitter, linkedin: editingLinkedin, instagram: editingInstagram,
       generatedAt: new Date().toISOString(),
     };
-    const updated = new Map(drafts);
-    updated.set(article.id, draft);
-    setDrafts(updated);
-    await supabase.from("site_settings").upsert({
-      key: "social_drafts",
-      value: { drafts: Array.from(updated.values()) },
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "key" });
+    setDrafts(prev => {
+      const updated = new Map(prev);
+      updated.set(article.id, draft);
+      supabase.from("site_settings").upsert({
+        key: "social_drafts",
+        value: { drafts: Array.from(updated.values()) },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "key" });
+      return updated;
+    });
     setMsg("Draft saved");
     setTimeout(() => setMsg(""), 2000);
   }
@@ -881,6 +883,7 @@ function ShareImageGenerator({ article }: { article: Article }) {
   const squareRef = React.useRef<HTMLCanvasElement>(null);
   const [generating, setGenerating] = React.useState(false);
   const [generated, setGenerated] = React.useState(false);
+  const [genError, setGenError] = React.useState("");
   const [tab, setTab] = React.useState<"landscape" | "square">("landscape");
 
   function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, fontSize: number): string[] {
@@ -975,8 +978,9 @@ function ShareImageGenerator({ article }: { article: Article }) {
       if (squareRef.current) renderCanvas(squareRef.current, img, logo, 1080, 1080, 4);
 
       setGenerated(true);
+      setGenError("");
     } catch (e) {
-      console.error(e);
+      setGenError(e instanceof Error ? e.message : "Image generation failed");
     }
     setGenerating(false);
   }
@@ -1008,6 +1012,7 @@ function ShareImageGenerator({ article }: { article: Article }) {
         </button>
       </div>
       <div className="bg-[#080808] p-4">
+        {genError && <p className="text-[12px] text-red-400 text-center py-2 mb-2">{genError}</p>}
         {!article.hero_image_url ? (
           <p className="text-[12px] text-[#555] text-center py-8">No hero image available for this article.</p>
         ) : !generated ? (

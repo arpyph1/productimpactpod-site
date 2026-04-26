@@ -66,7 +66,8 @@ export default function PartnersScreen({ supabase }: Props) {
 
   async function deleteSponsor(id: string) {
     if (!confirm("Delete this partner?")) return;
-    await supabase.from("sponsors").delete().eq("id", id);
+    const { error } = await supabase.from("sponsors").delete().eq("id", id);
+    if (error) { alert(`Delete failed: ${error.message}`); return; }
     loadAll();
   }
 

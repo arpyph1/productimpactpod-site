@@ -152,7 +152,11 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   async function handleDelete() {
     if (!article?.id) return;
     if (!confirm(`Delete "${form.title}"? This cannot be undone.`)) return;
-    await supabase.from("articles").delete().eq("id", article.id);
+    const { error } = await supabase.from("articles").delete().eq("id", article.id);
+    if (error) {
+      alert(`Delete failed: ${error.message}`);
+      return;
+    }
     onSaved();
     onClose();
   }
