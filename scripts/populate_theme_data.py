@@ -13,29 +13,23 @@ Usage:
 Also links entities to themes via their associated articles.
 """
 
-import os
 import sys
 import json
 from pathlib import Path
 from urllib.request import urlopen, Request
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from load_env import load_env
-load_env()
 from urllib.error import URLError
 
-SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import supabase_client as sb
+
+SUPABASE_URL = sb.get_url()
+SUPABASE_KEY = sb.get_key()
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     print("ERROR: Set PUBLIC_SUPABASE_URL (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.")
     sys.exit(1)
 
-HEADERS = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-}
+HEADERS = sb.headers()
 
 THEME_KEYWORDS: dict[str, list[str]] = {
     "ai-product-strategy": [

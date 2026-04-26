@@ -20,36 +20,7 @@ export interface PodcastEpisode {
   link: string;
 }
 
-const STRIP_HTML = /<[^>]*>/g;
-const STRIP_CDATA = /<!\[CDATA\[|\]\]>/g;
-const UNSAFE_TAGS = /<\/?(script|iframe|object|embed|form|input|style|meta|link|base)[^>]*>/gi;
-
-function decodeHtmlEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n));
-}
-
-function extractTag(item: string, tag: string): string {
-  // Allows namespaced tags like itunes:duration via escaped colon
-  const escaped = tag.replace(/:/g, "\\:");
-  const re = new RegExp(`<${escaped}[^>]*>([\\s\\S]*?)</${escaped}>`, "i");
-  const m = item.match(re);
-  if (!m) return "";
-  return m[1].replace(STRIP_CDATA, "").trim();
-}
-
-function extractAttribute(item: string, tag: string, attr: string): string {
-  const escaped = tag.replace(/:/g, "\\:");
-  const re = new RegExp(`<${escaped}[^>]*\\s${attr}="([^"]*)"`, "i");
-  const m = item.match(re);
-  return m ? m[1] : "";
-}
+import { STRIP_HTML, UNSAFE_TAGS, decodeHtmlEntities, extractTag, extractAttribute } from "./xml-utils";
 
 interface FetchResult {
   episodes: PodcastEpisode[];

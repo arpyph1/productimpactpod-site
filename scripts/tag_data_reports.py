@@ -11,7 +11,6 @@ Usage:
   python3 scripts/tag_data_reports.py
 """
 
-import os
 import sys
 import json
 import re
@@ -20,21 +19,16 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from load_env import load_env
-load_env()
+import supabase_client as sb
 
-SUPABASE_URL = os.environ.get("PUBLIC_SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_URL = sb.get_url()
+SUPABASE_KEY = sb.get_key()
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     print("ERROR: Set PUBLIC_SUPABASE_URL (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.")
     sys.exit(1)
 
-HEADERS = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-}
+HEADERS = sb.headers()
 
 # Only match when the TITLE clearly indicates data/report content.
 # These are phrases/words that signal the article IS a report or data analysis.

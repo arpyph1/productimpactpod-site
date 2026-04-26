@@ -9,6 +9,7 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import StoryCard from "@components/StoryCard.astro";
 import { sanitizeHtml } from "@lib/sanitize";
+import { timeAgo } from "@lib/utils";
 import {
   getAllArticles, authorDisplayName,
   formatLabel, themeLabel, stripFirstH1, generateOverviewBullets,
@@ -56,13 +57,6 @@ const shareDesc = article.meta_description ?? article.subtitle ?? '';
 const twitterShareText = `${article.title}${shareDesc ? '\n\n' + shareDesc.slice(0, 180) : ''}\n\n${articleUrl}`;
 const linkedinSummary = shareDesc + (bullets.length > 0 ? '\n\n' + bullets.slice(0, 2).map((b: string) => '• ' + b).join('\n') : '');
 
-function timeAgo(d: string): string {
-  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "1d ago";
-  if (days < 30) return `${days}d ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 const jsonLd = article.schema_jsonld ?? {
   "@context": "https://schema.org",

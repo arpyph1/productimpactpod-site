@@ -9,6 +9,7 @@ import {
 } from "@lib/supabase";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
 import { sanitizeHtml } from "@lib/sanitize";
+import { timeAgo } from "@lib/utils";
 
 const articles = await getAllArticles();
 const themes = await getAllThemes();
@@ -82,14 +83,6 @@ const partners = [
   },
 ];
 
-function timeAgo(d: string): string {
-  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "1d ago";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 const jsonLd = {
   "@context": "https://schema.org", "@type": "WebSite", name: "Product Impact",
