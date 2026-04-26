@@ -8,6 +8,7 @@ import {
   formatLabel, authorDisplayName, getSiteSetting,
 } from "@lib/supabase";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
+import { sanitizeHtml } from "@lib/sanitize";
 
 const articles = await getAllArticles();
 const themes = await getAllThemes();
@@ -276,7 +277,7 @@ const jsonLd = {
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
               <button type="button" class="ep-modal-trigger group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] text-left cursor-pointer"
-                data-title={ep.title} data-desc={ep.fullDescriptionHtml} data-audio={ep.audioUrl} data-image={ep.imageUrl} data-date={date} data-ep={epLabel} data-link={ep.link} data-duration={ep.duration}>
+                data-title={ep.title} data-desc={sanitizeHtml(ep.fullDescriptionHtml || "")} data-audio={ep.audioUrl} data-image={ep.imageUrl} data-date={date} data-ep={epLabel} data-link={ep.link} data-duration={ep.duration}>
                 <div class="relative aspect-square overflow-hidden">
                   {ep.imageUrl ? (
                     <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />

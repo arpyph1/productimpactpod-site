@@ -3,6 +3,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import StoryCard from "@components/StoryCard.astro";
+import { sanitizeHtml } from "@lib/sanitize";
 import {
   getAllThemes, getAllArticles, getEpisodesByTheme, getEntitiesByTheme,
   themeLabel, type Theme, type Article, type Entity, type Episode,
@@ -128,7 +129,7 @@ const entityTypeUrls: Record<string, string> = {
     {/* Long-form intro (cleaned of placeholders) */}
     {theme.long_form_intro && (() => {
       const cleaned = cleanLongFormIntro(theme.long_form_intro);
-      return cleaned ? <div class="article-prose mb-12 max-w-[680px]" set:html={cleaned}></div> : null;
+      return cleaned ? <div class="article-prose mb-12 max-w-[680px]" set:html={sanitizeHtml(cleaned)}></div> : null;
     })()}
 
     {/* Articles in this theme */}

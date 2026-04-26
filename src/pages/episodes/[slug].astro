@@ -2,6 +2,7 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
+import { sanitizeHtml } from "@lib/sanitize";
 import { getAllEpisodes, getEpisodeBySlug, getAllArticles, themeLabel } from "@lib/supabase";
 import EntityHeadline from "@components/EntityHeadline.astro";
 
@@ -208,7 +209,7 @@ const jsonLd = [
 
         {/* Show notes body */}
         {episode.content_html && (
-          <div class="article-prose" set:html={episode.content_html} />
+          <div class="article-prose" set:html={sanitizeHtml(episode.content_html)} />
         )}
 
         {/* Transcript */}

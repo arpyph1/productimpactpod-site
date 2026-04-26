@@ -8,6 +8,7 @@ import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import StoryCard from "@components/StoryCard.astro";
+import { sanitizeHtml } from "@lib/sanitize";
 import {
   getAllArticles, getRelatedArticles, authorDisplayName,
   formatLabel, themeLabel, stripFirstH1, generateOverviewBullets,
@@ -27,7 +28,7 @@ const latestEpisodes = await fetchPodcastEpisodes(5);
 const siteUrl = "https://productimpactpod.com";
 const articleUrl = `${siteUrl}/news/${article.slug}`;
 
-const cleanedHtml = stripFirstH1(article.content_html);
+const cleanedHtml = sanitizeHtml(stripFirstH1(article.content_html));
 const bullets = article.overview_bullets?.length
   ? article.overview_bullets
   : generateOverviewBullets(article.content_html);

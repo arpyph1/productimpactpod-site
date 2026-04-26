@@ -361,23 +361,26 @@ export async function getArticlesByEntity(
 
   // Also search articles that mention this entity in their arrays
   const entityName = entitySlug.replace(/-/g, " ");
+  // Escape PostgREST special characters to prevent filter injection
+  const safeSlug = entitySlug.replace(/[%,().*\\]/g, "");
+  const safeName = entityName.replace(/[%,().*\\]/g, "");
   const { data: byArray } = await supabase
     .from("articles")
     .select("*")
     .eq("published", true)
-    .or(`organizations.cs.{${entitySlug}},organizations.cs.{${entityName}},people.cs.{${entitySlug}},people.cs.{${entityName}},products.cs.{${entitySlug}},products.cs.{${entityName}}`)
+    .or(`organizations.cs.{${safeSlug}},organizations.cs.{${safeName}},people.cs.{${safeSlug}},people.cs.{${safeName}},products.cs.{${safeSlug}},products.cs.{${safeName}}`)
     .order("publish_date", { ascending: false })
     .limit(limit);
 
   // Also text search titles
-  const titleSearch = entityName.length >= 3 ? entitySlug : null;
+  const titleSearch = safeName.length >= 3 ? safeSlug : null;
   let byTitle: Article[] = [];
   if (titleSearch) {
     const { data } = await supabase
       .from("articles")
       .select("*")
       .eq("published", true)
-      .or(`title.ilike.%${entityName}%,meta_description.ilike.%${entityName}%`)
+      .or(`title.ilike.%${safeName}%,meta_description.ilike.%${safeName}%`)
       .order("publish_date", { ascending: false })
       .limit(limit);
     byTitle = (data ?? []) as Article[];

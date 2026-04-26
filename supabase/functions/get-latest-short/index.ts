@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://productimpactpod.com",
+  "https://www.productimpactpod.com",
+  "http://localhost:4321",
+  "http://localhost:3000",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 function parseDuration(iso: string): number {
   const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -22,7 +33,7 @@ interface ShortInfo {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -30,7 +41,7 @@ serve(async (req) => {
     if (!channelId) {
       return new Response(
         JSON.stringify({ error: "channelId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -38,7 +49,7 @@ serve(async (req) => {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "YouTube API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -53,7 +64,7 @@ serve(async (req) => {
       console.error("YouTube Search API error:", JSON.stringify(searchData));
       return new Response(
         JSON.stringify({ error: "YouTube API error", details: searchData.error?.message || "Unknown error" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -61,7 +72,7 @@ serve(async (req) => {
     if (items.length === 0) {
       return new Response(
         JSON.stringify({ error: "No videos found", shorts: [], mostWatched: null }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -75,7 +86,7 @@ serve(async (req) => {
       console.error("YouTube Videos API error:", JSON.stringify(detailsData));
       return new Response(
         JSON.stringify({ error: "YouTube API error fetching video details" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -106,7 +117,7 @@ serve(async (req) => {
     if (allShorts.length === 0) {
       return new Response(
         JSON.stringify({ error: "No Shorts found (videos ≤3min) in the latest uploads", shorts: [], mostWatched: null }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -122,13 +133,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ shorts, mostWatched: mostWatchedResult, _version: "v3-search-api", _totalFound: allShorts.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store, no-cache, must-revalidate" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json", "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   } catch (err) {
     console.error("Edge function error:", err);
     return new Response(
       JSON.stringify({ error: "Internal error", message: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

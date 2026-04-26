@@ -5,6 +5,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import { formatLabel, themeLabel, type Entity, type Article } from "@lib/supabase";
+import { sanitizeHtml } from "@lib/sanitize";
 import EntityHeadline from "@components/EntityHeadline.astro";
 
 interface Props {
@@ -148,7 +149,7 @@ const allArticles = [...new Map(
 
         {/* Long-form */}
         {entity.long_form && (
-          <div class="article-prose mb-12" set:html={entity.long_form}></div>
+          <div class="article-prose mb-12" set:html={sanitizeHtml(entity.long_form)}></div>
         )}
 
         {/* Articles */}
