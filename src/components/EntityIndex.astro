@@ -69,7 +69,7 @@ for (const list of grouped.values()) {
 const sortedGroups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
 ---
 
-<BaseLayout title={title} description={description} canonicalUrl={`${siteUrl}${path}`} jsonLd={collectionJsonLd}>
+<BaseLayout title={title} description={description} canonicalUrl={`${siteUrl}${path}`} jsonLd={collectionJsonLd} noindex={true}>
   <Nav />
 
   <main class="container-wide py-16">

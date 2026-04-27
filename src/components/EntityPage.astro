@@ -88,6 +88,8 @@ const breadcrumbJsonLd = {
 const allArticles = [...new Map(
   [...authoredArticles, ...articles].map((a) => [a.slug, a])
 ).values()];
+
+const isThinPage = !entity.long_form && allArticles.length < 3;
 ---
 
 <BaseLayout
@@ -95,6 +97,7 @@ const allArticles = [...new Map(
   description={entity.description ?? `${entity.name} — coverage and analysis on Product Impact.`}
   canonicalUrl={canonicalUrl}
   jsonLd={[entityJsonLd, breadcrumbJsonLd]}
+  noindex={isThinPage}
 >
   <Nav />
 
