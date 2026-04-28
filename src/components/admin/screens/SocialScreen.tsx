@@ -610,16 +610,22 @@ export default function SocialScreen({ supabase }: Props) {
   const [igPublishing, setIgPublishing] = useState(false);
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState("");
+  const [revisionModal, setRevisionModal] = useState<{ postType: string; text: string; setter: (t: string) => void } | null>(null);
+  const [showPrompts, setShowPrompts] = useState(false);
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
+  const [promptsSaving, setPromptsSaving] = useState(false);
+  const [promptsMsg, setPromptsMsg] = useState("");
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     setLoading(true);
-    const [artRes, draftsRes] = await Promise.all([
+    const [artRes, draftsRes, promptsRes] = await Promise.all([
       supabase.from("articles")
         .select("id, slug, title, subtitle, meta_description, content_html, themes, publish_date, author_slugs, format, hero_image_url")
         .eq("published", true).order("publish_date", { ascending: false }).limit(30),
       supabase.from("site_settings").select("value").eq("key", "social_drafts").single(),
+      supabase.from("site_settings").select("value").eq("key", "social_prompts").single(),
     ]);
     if (artRes.data) setArticles(artRes.data);
     const saved = draftsRes.data?.value?.drafts as SocialDraft[] | undefined;
@@ -628,6 +634,7 @@ export default function SocialScreen({ supabase }: Props) {
       saved.forEach(d => map.set(d.articleId, d));
       setDrafts(map);
     }
+    if (promptsRes.data?.value) setPrompts(promptsRes.data.value as Record<string, string>);
     setLoading(false);
   }
 
@@ -645,20 +652,6 @@ export default function SocialScreen({ supabase }: Props) {
     }
   }
 
-  function regenTwitter() {
-    const article = articles.find(a => a.id === selectedId);
-    if (article) setEditingTwitter(generateTwitter(article, twitterVoice));
-  }
-
-  function regenLinkedin() {
-    const article = articles.find(a => a.id === selectedId);
-    if (article) setEditingLinkedin(generateLinkedin(article, linkedinVoice));
-  }
-
-  function regenInstagram() {
-    const article = articles.find(a => a.id === selectedId);
-    if (article) setEditingInstagram(generateInstagram(article, instagramVoice));
-  }
 
   async function saveDraft() {
     const article = articles.find(a => a.id === selectedId);
@@ -757,10 +750,10 @@ export default function SocialScreen({ supabase }: Props) {
               }}
               text={editingTwitter}
               onTextChange={setEditingTwitter}
-              onRegenerate={regenTwitter}
+              onEdit={() => setRevisionModal({ postType: `twitter-${twitterVoice}`, text: editingTwitter, setter: setEditingTwitter })}
               onCopy={() => copyText(editingTwitter, "twitter")}
               copied={copied === "twitter"}
-              charLimit={280}
+              charLimit={twitterVoice === "arpy" ? 4000 : 280}
               shareUrl={twitterShareUrl(editingTwitter)}
               shareLabel="Share on X →"
               shareClass="bg-white/10 text-white hover:bg-white/20"
@@ -779,7 +772,7 @@ export default function SocialScreen({ supabase }: Props) {
               }}
               text={editingLinkedin}
               onTextChange={setEditingLinkedin}
-              onRegenerate={regenLinkedin}
+              onEdit={() => setRevisionModal({ postType: `linkedin-${linkedinVoice}`, text: editingLinkedin, setter: setEditingLinkedin })}
               onCopy={() => copyText(editingLinkedin, "linkedin")}
               copied={copied === "linkedin"}
               shareUrl={linkedinShareUrl(`${SITE}/news/${selected.slug}/`)}
@@ -798,7 +791,7 @@ export default function SocialScreen({ supabase }: Props) {
               }}
               text={editingInstagram}
               onTextChange={setEditingInstagram}
-              onRegenerate={regenInstagram}
+              onEdit={() => setRevisionModal({ postType: `instagram-${instagramVoice}`, text: editingInstagram, setter: setEditingInstagram })}
               onCopy={() => copyText(editingInstagram, "instagram")}
               copied={copied === "instagram"}
               publishing={igPublishing}
@@ -813,6 +806,34 @@ export default function SocialScreen({ supabase }: Props) {
           </div>
         )}
       </div>
+
+      {/* Prompts management */}
+      <div className="mt-8 col-span-2">
+        <button onClick={() => setShowPrompts(!showPrompts)}
+          className="px-4 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] font-semibold text-[#888] hover:text-white transition-colors">
+          {showPrompts ? "Hide Prompts" : "Prompts"}
+        </button>
+        {showPrompts && <PromptsEditor prompts={prompts} setPrompts={setPrompts} saving={promptsSaving} msg={promptsMsg}
+          onSave={async (updated) => {
+            setPromptsSaving(true);
+            const { error } = await supabase.from("site_settings").upsert({ key: "social_prompts", value: updated, updated_at: new Date().toISOString() }, { onConflict: "key" });
+            setPromptsSaving(false);
+            setPromptsMsg(error ? `Error: ${error.message}` : "Prompts saved");
+            if (!error) setPrompts(updated);
+            setTimeout(() => setPromptsMsg(""), 3000);
+          }} />}
+      </div>
+
+      {/* Revision modal */}
+      {revisionModal && (
+        <RevisionModal
+          postType={revisionModal.postType}
+          initialText={revisionModal.text}
+          customPrompt={prompts[revisionModal.postType]}
+          onClose={() => setRevisionModal(null)}
+          onSave={(newText) => { revisionModal.setter(newText); setRevisionModal(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -823,11 +844,11 @@ const VOICE_LINKEDIN_TARGETS: Record<Voice, { min: number; max: number; label: s
   brittany: { min: 900, max: 2100, label: "30-70%" },
 };
 
-function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTextChange, onRegenerate, onCopy, copied, charLimit, shareUrl, shareLabel, shareClass }: {
+function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTextChange, onEdit, onCopy, copied, charLimit, shareUrl, shareLabel, shareClass }: {
   platform: string; icon: React.ReactNode; label: string;
   voice: Voice; onVoiceChange: (v: Voice) => void;
   text: string; onTextChange: (t: string) => void;
-  onRegenerate: () => void; onCopy: () => void; copied: boolean;
+  onEdit: () => void; onCopy: () => void; copied: boolean;
   charLimit?: number; shareUrl: string; shareLabel: string; shareClass: string;
 }) {
   const liTarget = platform === "linkedin" ? VOICE_LINKEDIN_TARGETS[voice] : null;
@@ -857,8 +878,8 @@ function PlatformCard({ platform, icon, label, voice, onVoiceChange, text, onTex
             <option value="arpy">Arpy Dragffy</option>
             <option value="brittany">Brittany Hobbs</option>
           </select>
-          <button onClick={onRegenerate} className="p-1.5 text-[#666] hover:text-white transition-colors rounded-lg hover:bg-[#1a1a1a]" title="Generate new variant">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+          <button onClick={onEdit} className="p-1.5 text-[#666] hover:text-white transition-colors rounded-lg hover:bg-[#1a1a1a]" title="Edit this post with a revision prompt">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button onClick={onCopy} className="text-[11px] text-[#666] hover:text-white transition-colors">
             {copied ? "Copied!" : "Copy"}
@@ -1053,11 +1074,11 @@ function ShareImageGenerator({ article }: { article: Article }) {
   );
 }
 
-function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onRegenerate, onCopy, copied, publishing, supabase, onPublishStart, onPublishEnd }: {
+function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onEdit, onCopy, copied, publishing, supabase, onPublishStart, onPublishEnd }: {
   article: Article;
   voice: Voice; onVoiceChange: (v: Voice) => void;
   text: string; onTextChange: (t: string) => void;
-  onRegenerate: () => void; onCopy: () => void; copied: boolean;
+  onEdit: () => void; onCopy: () => void; copied: boolean;
   publishing: boolean; supabase: SupabaseClient;
   onPublishStart: () => void; onPublishEnd: (ok: boolean, msg: string) => void;
 }) {
@@ -1146,7 +1167,7 @@ function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onRe
               {VOICE_META[v].label.split(" ")[0]}
             </button>
           ))}
-          <button onClick={onRegenerate} className="ml-1 px-2 py-1 rounded text-[10px] font-semibold text-[#555] hover:text-white transition-colors" title="Regenerate">↻</button>
+          <button onClick={onEdit} className="ml-1 px-2 py-1 rounded text-[10px] font-semibold text-[#555] hover:text-white transition-colors" title="Edit with revision prompt">✎</button>
         </div>
       </div>
 
@@ -1205,6 +1226,166 @@ function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onRe
 
       <div className="px-4 py-2 bg-[#060606] border-t border-[#1a1a1a]">
         <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_META[voice].label}</strong> — {VOICE_META[voice].description}</span>
+      </div>
+    </div>
+  );
+}
+
+const PROMPT_KEYS = [
+  { key: "twitter-product-impact", label: "Twitter — Product Impact" },
+  { key: "twitter-arpy", label: "Twitter — Arpy (X Premium, up to 4k chars)" },
+  { key: "twitter-brittany", label: "Twitter — Brittany" },
+  { key: "linkedin-product-impact", label: "LinkedIn — Product Impact" },
+  { key: "linkedin-arpy", label: "LinkedIn — Arpy" },
+  { key: "linkedin-brittany", label: "LinkedIn — Brittany" },
+  { key: "instagram-product-impact", label: "Instagram — Product Impact" },
+  { key: "instagram-arpy", label: "Instagram — Arpy" },
+  { key: "instagram-brittany", label: "Instagram — Brittany" },
+];
+
+function PromptsEditor({ prompts, setPrompts, saving, msg, onSave }: {
+  prompts: Record<string, string>;
+  setPrompts: (p: Record<string, string>) => void;
+  saving: boolean; msg: string;
+  onSave: (p: Record<string, string>) => void;
+}) {
+  const [local, setLocal] = React.useState<Record<string, string>>({ ...prompts });
+
+  return (
+    <div className="mt-4 space-y-4 p-5 bg-[#0c0c0c] border border-[#1a1a1a] rounded-xl">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[14px] font-bold text-white">Social Post Prompts</h3>
+        <div className="flex items-center gap-3">
+          {msg && <span className={`text-[11px] ${msg.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>{msg}</span>}
+          <button onClick={() => onSave(local)} disabled={saving}
+            className="px-4 py-1.5 bg-[#ff6b4a] text-white rounded-lg text-[11px] font-semibold hover:bg-[#ff8566] disabled:opacity-50">
+            {saving ? "Saving..." : "Save Prompts"}
+          </button>
+        </div>
+      </div>
+      <p className="text-[11px] text-[#555]">These system prompts are sent to the AI when you use the Edit button on a post. Leave blank to use the default prompt.</p>
+      {PROMPT_KEYS.map(({ key, label }) => (
+        <div key={key}>
+          <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">{label}</label>
+          <textarea
+            className="w-full bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 text-[12px] text-[#ccc] leading-relaxed focus:outline-none focus:border-[#ff6b4a]/30 resize-y h-24"
+            value={local[key] ?? ""}
+            onChange={e => setLocal(prev => ({ ...prev, [key]: e.target.value }))}
+            placeholder="Leave blank for default prompt"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RevisionModal({ postType, initialText, customPrompt, onClose, onSave }: {
+  postType: string;
+  initialText: string;
+  customPrompt?: string;
+  onClose: () => void;
+  onSave: (newText: string) => void;
+}) {
+  const [text, setText] = React.useState(initialText);
+  const [revisionPrompt, setRevisionPrompt] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  const hasChanges = text !== initialText || revisionPrompt.trim().length > 0;
+
+  React.useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && hasChanges && !loading) { e.preventDefault(); handleRegenerate(); }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [text, revisionPrompt, hasChanges, loading]);
+
+  async function handleRegenerate() {
+    setLoading(true);
+    setError("");
+    try {
+      const sbUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const sbKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+      const resp = await fetch(`${sbUrl}/functions/v1/regenerate-social-post`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sbKey}`,
+          "apikey": sbKey,
+        },
+        body: JSON.stringify({
+          post_type: postType,
+          current_text: text,
+          revision_prompt: revisionPrompt || undefined,
+          custom_prompt: customPrompt || undefined,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        setError(data.error || data.details || "Request failed");
+        setLoading(false);
+        return;
+      }
+
+      onSave(data.post_text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error");
+    }
+    setLoading(false);
+  }
+
+  const typeLabel = postType.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-[#0c0c0c] border border-[#222] rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-[#1a1a1a]">
+          <h3 className="text-[16px] font-bold text-white">Revise this post</h3>
+          <p className="text-[12px] text-[#666] mt-0.5">{typeLabel}</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Post text</label>
+            <textarea
+              className="w-full bg-[#080808] border border-[#1a1a1a] rounded-lg p-4 text-[14px] text-[#ddd] leading-relaxed focus:outline-none focus:border-[#ff6b4a]/30 resize-y h-48"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              disabled={loading}
+            />
+            <div className="text-[10px] text-[#555] mt-1">{text.length} characters</div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Revision prompt</label>
+            <textarea
+              className="w-full bg-[#080808] border border-[#1a1a1a] rounded-lg p-4 text-[13px] text-[#ccc] leading-relaxed focus:outline-none focus:border-[#ff6b4a]/30 resize-y h-24"
+              value={revisionPrompt}
+              onChange={e => setRevisionPrompt(e.target.value)}
+              placeholder="How should this post be different? e.g. 'sharper hook', 'lead with the data point', 'cut the rhetorical question', 'make it longer'."
+              disabled={loading}
+            />
+          </div>
+
+          {error && <p className="text-[12px] text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#1a1a1a]">
+          <span className="text-[10px] text-[#444] mr-auto">Esc to cancel · {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter to regenerate</span>
+          <button onClick={onClose} disabled={loading}
+            className="px-4 py-2 text-[13px] text-[#888] hover:text-white transition-colors disabled:opacity-50">
+            Cancel
+          </button>
+          <button onClick={handleRegenerate} disabled={!hasChanges || loading}
+            className="px-5 py-2 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            {loading && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {loading ? "Generating..." : "Regenerate"}
+          </button>
+        </div>
       </div>
     </div>
   );
