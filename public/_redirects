@@ -44,5 +44,10 @@
 /sitemap            /sitemap.xml                   301
 /sitemap_index.xml  /sitemap-index.xml             301
 
+# ── Storage CDN proxy ────────────────────────────────────────────────────────
+# Serve Supabase Storage images through Cloudflare's CDN to avoid egress.
+# /cdn/* → Supabase storage, cached at the edge by Cloudflare.
+/cdn/*  https://pgsljoqwfhufubodlqjk.supabase.co/storage/v1/object/public/:splat  200
+
 # Social/unfurl bot compatibility — some platforms strip trailing slashes
 # and re-append with quotes. These are harmless no-ops if never hit.
