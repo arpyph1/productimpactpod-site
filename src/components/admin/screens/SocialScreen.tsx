@@ -178,12 +178,41 @@ function generateArpyTwitter(article: Article): string {
   const stats = extractStats(article.content_html);
   const desc = article.meta_description ?? "";
 
-  const bold = stats[0]
+  const hook = stats[0]
     ?? sentences.find(s => s.match(/should|must|can't|won't|fail|miss|overlook|underestimate|wrong|broken/i))
     ?? desc.split(/(?<=[.!?])\s+/)[0] ?? article.title;
 
-  let text = `${bold.slice(0, 220)}\n\n${link}`;
-  if (text.length > 280) text = `${article.title.slice(0, 220)}\n\n${link}`;
+  const strategicPool = sentences.filter(s =>
+    s.match(/means|indicates|suggests|reveals|impact|implication|shift|fundamental|transform|strategy|decision|opportunity/i)
+  );
+  const contrarianPool = sentences.filter(s =>
+    s.match(/but|however|despite|yet|although|contrary|instead|rather|not just|beyond|overlooked|missed|wrong|actually/i)
+  );
+
+  const parts: string[] = [];
+  parts.push(hook);
+  parts.push("");
+
+  if (desc && desc !== hook) {
+    parts.push(desc);
+    parts.push("");
+  }
+
+  const usedSet = new Set([hook, desc]);
+  for (const s of [...strategicPool, ...contrarianPool, ...sentences]) {
+    if (parts.join("\n").length > 3000) break;
+    if (!usedSet.has(s) && s.length > 40) {
+      parts.push(s);
+      parts.push("");
+      usedSet.add(s);
+    }
+    if (usedSet.size > 8) break;
+  }
+
+  parts.push(link);
+
+  let text = parts.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (text.length > 4000) text = text.slice(0, 3950) + "...\n\n" + link;
   return text;
 }
 
@@ -611,10 +640,7 @@ export default function SocialScreen({ supabase }: Props) {
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState("");
   const [revisionModal, setRevisionModal] = useState<{ postType: string; text: string; setter: (t: string) => void } | null>(null);
-  const [showPrompts, setShowPrompts] = useState(false);
   const [prompts, setPrompts] = useState<Record<string, string>>({});
-  const [promptsSaving, setPromptsSaving] = useState(false);
-  const [promptsMsg, setPromptsMsg] = useState("");
 
   useEffect(() => { loadData(); }, []);
 
@@ -805,23 +831,6 @@ export default function SocialScreen({ supabase }: Props) {
             />
           </div>
         )}
-      </div>
-
-      {/* Prompts management */}
-      <div className="mt-8 col-span-2">
-        <button onClick={() => setShowPrompts(!showPrompts)}
-          className="px-4 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] font-semibold text-[#888] hover:text-white transition-colors">
-          {showPrompts ? "Hide Prompts" : "Prompts"}
-        </button>
-        {showPrompts && <PromptsEditor prompts={prompts} setPrompts={setPrompts} saving={promptsSaving} msg={promptsMsg}
-          onSave={async (updated) => {
-            setPromptsSaving(true);
-            const { error } = await supabase.from("site_settings").upsert({ key: "social_prompts", value: updated, updated_at: new Date().toISOString() }, { onConflict: "key" });
-            setPromptsSaving(false);
-            setPromptsMsg(error ? `Error: ${error.message}` : "Prompts saved");
-            if (!error) setPrompts(updated);
-            setTimeout(() => setPromptsMsg(""), 3000);
-          }} />}
       </div>
 
       {/* Revision modal */}
@@ -1227,54 +1236,6 @@ function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onEd
       <div className="px-4 py-2 bg-[#060606] border-t border-[#1a1a1a]">
         <span className="text-[10px] text-[#444]">Voice: <strong className="text-[#888]">{VOICE_META[voice].label}</strong> — {VOICE_META[voice].description}</span>
       </div>
-    </div>
-  );
-}
-
-const PROMPT_KEYS = [
-  { key: "twitter-product-impact", label: "Twitter — Product Impact" },
-  { key: "twitter-arpy", label: "Twitter — Arpy (X Premium, up to 4k chars)" },
-  { key: "twitter-brittany", label: "Twitter — Brittany" },
-  { key: "linkedin-product-impact", label: "LinkedIn — Product Impact" },
-  { key: "linkedin-arpy", label: "LinkedIn — Arpy" },
-  { key: "linkedin-brittany", label: "LinkedIn — Brittany" },
-  { key: "instagram-product-impact", label: "Instagram — Product Impact" },
-  { key: "instagram-arpy", label: "Instagram — Arpy" },
-  { key: "instagram-brittany", label: "Instagram — Brittany" },
-];
-
-function PromptsEditor({ prompts, setPrompts, saving, msg, onSave }: {
-  prompts: Record<string, string>;
-  setPrompts: (p: Record<string, string>) => void;
-  saving: boolean; msg: string;
-  onSave: (p: Record<string, string>) => void;
-}) {
-  const [local, setLocal] = React.useState<Record<string, string>>({ ...prompts });
-
-  return (
-    <div className="mt-4 space-y-4 p-5 bg-[#0c0c0c] border border-[#1a1a1a] rounded-xl">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[14px] font-bold text-white">Social Post Prompts</h3>
-        <div className="flex items-center gap-3">
-          {msg && <span className={`text-[11px] ${msg.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>{msg}</span>}
-          <button onClick={() => onSave(local)} disabled={saving}
-            className="px-4 py-1.5 bg-[#ff6b4a] text-white rounded-lg text-[11px] font-semibold hover:bg-[#ff8566] disabled:opacity-50">
-            {saving ? "Saving..." : "Save Prompts"}
-          </button>
-        </div>
-      </div>
-      <p className="text-[11px] text-[#555]">These system prompts are sent to the AI when you use the Edit button on a post. Leave blank to use the default prompt.</p>
-      {PROMPT_KEYS.map(({ key, label }) => (
-        <div key={key}>
-          <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">{label}</label>
-          <textarea
-            className="w-full bg-[#080808] border border-[#1a1a1a] rounded-lg p-3 text-[12px] text-[#ccc] leading-relaxed focus:outline-none focus:border-[#ff6b4a]/30 resize-y h-24"
-            value={local[key] ?? ""}
-            onChange={e => setLocal(prev => ({ ...prev, [key]: e.target.value }))}
-            placeholder="Leave blank for default prompt"
-          />
-        </div>
-      ))}
     </div>
   );
 }

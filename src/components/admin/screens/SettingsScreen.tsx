@@ -263,6 +263,9 @@ export default function SettingsScreen({ supabase }: Props) {
         </div>
       </section>
 
+      {/* Social Post Prompts */}
+      <SocialPromptsSection supabase={supabase} settings={settings} saveSetting={saveSetting} />
+
       {/* Custom CSS */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-4">Custom CSS Snippet</h3>
@@ -281,6 +284,74 @@ export default function SettingsScreen({ supabase }: Props) {
           onBlur={(e) => saveSetting("custom_head", { html: e.target.value })} />
       </section>
     </div>
+  );
+}
+
+const SOCIAL_PROMPT_KEYS = [
+  { key: "twitter-product-impact", label: "Twitter — Product Impact" },
+  { key: "twitter-arpy", label: "Twitter — Arpy (X Premium, up to 4k chars)" },
+  { key: "twitter-brittany", label: "Twitter — Brittany" },
+  { key: "linkedin-product-impact", label: "LinkedIn — Product Impact" },
+  { key: "linkedin-arpy", label: "LinkedIn — Arpy" },
+  { key: "linkedin-brittany", label: "LinkedIn — Brittany" },
+  { key: "instagram-product-impact", label: "Instagram — Product Impact" },
+  { key: "instagram-arpy", label: "Instagram — Arpy" },
+  { key: "instagram-brittany", label: "Instagram — Brittany" },
+];
+
+function SocialPromptsSection({ supabase, settings, saveSetting }: { supabase: SupabaseClient; settings: Record<string, any>; saveSetting: (key: string, value: any) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const saved = (settings.social_prompts ?? {}) as Record<string, string>;
+  const [local, setLocal] = useState<Record<string, string>>({ ...saved });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => { setLocal({ ...saved }); }, [JSON.stringify(saved)]);
+
+  async function savePrompts() {
+    setSaving(true);
+    const { error } = await supabase.from("site_settings").upsert(
+      { key: "social_prompts", value: local, updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
+    setSaving(false);
+    setMsg(error ? `Error: ${error.message}` : "Prompts saved");
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-[16px] font-bold text-white">Social Post Prompts</h3>
+        <button onClick={() => setExpanded(!expanded)} className="text-[12px] text-[#666] hover:text-white transition-colors">
+          {expanded ? "Collapse" : "Expand"}
+        </button>
+      </div>
+      <p className="text-[12px] text-[#555] mb-4">System prompts sent to AI when you use the Edit button on a social post. Leave blank to use defaults.</p>
+
+      {expanded && (
+        <div className="space-y-4">
+          {SOCIAL_PROMPT_KEYS.map(({ key, label }) => (
+            <div key={key}>
+              <label className="block text-[12px] font-medium text-[#888] mb-1.5">{label}</label>
+              <textarea
+                className="w-full bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-[#ccc] leading-relaxed focus:outline-none focus:border-[#ff6b4a]/30 resize-y h-28"
+                value={local[key] ?? ""}
+                onChange={e => setLocal(prev => ({ ...prev, [key]: e.target.value }))}
+                placeholder="Leave blank for default prompt"
+              />
+            </div>
+          ))}
+          <div className="flex items-center gap-3">
+            <button onClick={savePrompts} disabled={saving}
+              className="px-4 py-2 bg-[#ff6b4a] text-white rounded-lg text-[12px] font-semibold hover:bg-[#ff8566] disabled:opacity-50">
+              {saving ? "Saving..." : "Save Prompts"}
+            </button>
+            {msg && <span className={`text-[11px] ${msg.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>{msg}</span>}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
