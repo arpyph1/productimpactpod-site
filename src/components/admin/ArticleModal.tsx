@@ -111,11 +111,6 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     }
   }
 
-  function toCdnUrl(publicUrl: string): string {
-    const match = publicUrl.match(/\/storage\/v1\/object\/public\/(.+)$/);
-    return match ? `/cdn/${match[1]}` : publicUrl;
-  }
-
   async function uploadHeroImage(file: File) {
     setUploading(true);
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -123,7 +118,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     const { error: upErr } = await supabase.storage.from("article-heroes").upload(path, file, { contentType: file.type, upsert: false });
     if (upErr) { setMsg(`Upload error: ${upErr.message}`); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("article-heroes").getPublicUrl(path);
-    update("hero_image_url", toCdnUrl(urlData.publicUrl));
+    update("hero_image_url", urlData.publicUrl);
     setMsg("Image uploaded");
     setTimeout(() => setMsg(""), 2000);
     setUploading(false);
@@ -143,7 +138,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
         const { error: upErr } = await supabase.storage.from("article-heroes").upload(path, file, { contentType: file.type, upsert: false });
         if (upErr) { setMsg(`Image upload error: ${upErr.message}`); return; }
         const { data: urlData } = supabase.storage.from("article-heroes").getPublicUrl(path);
-        const imgTag = `<img src="${toCdnUrl(urlData.publicUrl)}" alt="" style="max-width:100%;border-radius:8px;margin:1em 0" />`;
+        const imgTag = `<img src="${urlData.publicUrl}" alt="" style="max-width:100%;border-radius:8px;margin:1em 0" />`;
         document.execCommand("insertHTML", false, imgTag);
         syncFromEditor();
         setMsg("Image inserted");
