@@ -128,6 +128,14 @@ export interface Episode {
 
 // ── Query helpers ─────────────────────────────────────────────────────────────
 
+import heroImageMap from "../data/hero-image-map.json";
+
+function rewriteHeroUrl(url: string | null): string | null {
+  if (!url) return null;
+  const mapped = (heroImageMap as Record<string, string>)[url];
+  return mapped ?? url;
+}
+
 export async function getAllArticles(): Promise<Article[]> {
   const { data, error } = await supabase
     .from("articles")
@@ -138,7 +146,10 @@ export async function getAllArticles(): Promise<Article[]> {
     console.error("getAllArticles error:", error);
     return [];
   }
-  return (data ?? []) as Article[];
+  return ((data ?? []) as Article[]).map(a => ({
+    ...a,
+    hero_image_url: rewriteHeroUrl(a.hero_image_url),
+  }));
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
@@ -152,7 +163,9 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     console.error("getArticleBySlug error:", error);
     return null;
   }
-  return data as Article;
+  const article = data as Article;
+  article.hero_image_url = rewriteHeroUrl(article.hero_image_url);
+  return article;
 }
 
 export async function getRelatedArticles(

@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "build:assets": "node scripts/build-brand-assets.mjs",
-    "prebuild": "npm run build:assets",
+    "download:images": "node scripts/download-hero-images.mjs",
+    "prebuild": "npm run build:assets && npm run download:images",
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check"
