@@ -1,10 +1,19 @@
 ---
 // Nav — centered logo, mega menu dropdowns for News/Themes, scroll-aware.
+// Mobile: 64px tall with a compact 48px logo. Desktop: 120px expanded /
+// 80px scrolled with a large logo. Spacer auto-tracks the desktop expanded
+// height so initial layout doesn't sit under the nav.
 ---
 
 <header>
-  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-transparent transition-all duration-300" id="main-nav">
-    <div class="container-wide flex items-center justify-between transition-all duration-300" style="height: 80px;" id="nav-inner">
+  <nav
+    class="fixed top-0 left-0 right-0 z-50 border-b border-transparent transition-all duration-300"
+    id="main-nav"
+  >
+    <div
+      class="container-wide flex items-center justify-between transition-all duration-300 h-[64px] md:h-[120px]"
+      id="nav-inner"
+    >
 
       {/* Left nav items — with mega menu dropdowns */}
       <div class="hidden md:flex items-center gap-6 flex-1">
@@ -69,9 +78,15 @@
         </div>
       </div>
 
-      {/* Center logo */}
+      {/* Center logo — compact on mobile, large on desktop. JS only adjusts
+          desktop sizes on scroll; mobile sticks at 48px. */}
       <a href="/" class="flex items-center justify-center flex-shrink-0">
-        <img src="/nav-logo-full.png" alt="Product Impact Podcast" class="object-contain transition-all duration-300" style="width: 120px; height: 120px;" id="nav-logo" />
+        <img
+          src="/nav-logo-full.png"
+          alt="Product Impact Podcast"
+          class="object-contain transition-all duration-300 w-auto h-12 md:w-[300px] md:h-[300px]"
+          id="nav-logo"
+        />
       </a>
 
       {/* Right nav items */}
@@ -81,9 +96,16 @@
         <a href="/partnerships/" class="text-[13px] font-medium text-white/60 hover:text-white transition-colors">Partner</a>
       </div>
 
-      {/* Mobile hamburger */}
-      <button type="button" aria-label="Menu" class="md:hidden p-1.5 text-white/60 hover:text-white" id="nav-toggle">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      {/* Mobile hamburger — 44×44 tap target */}
+      <button
+        type="button"
+        aria-label="Menu"
+        aria-expanded="false"
+        aria-controls="nav-menu"
+        class="md:hidden p-3 -mr-2 text-white/60 hover:text-white"
+        id="nav-toggle"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="4" y1="6" x2="20" y2="6"></line>
           <line x1="4" y1="12" x2="20" y2="12"></line>
           <line x1="4" y1="18" x2="20" y2="18"></line>
@@ -91,19 +113,32 @@
       </button>
     </div>
 
-    {/* Mobile menu */}
-    <div id="nav-menu" class="md:hidden hidden border-t border-white/5 bg-[#0a0a0a]/95 backdrop-blur-md">
-      <div class="py-3 px-6">
-        <a href="/news/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">News</a>
-        <a href="/themes/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Themes</a>
-        <a href="/podcast/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Podcast</a>
-        <a href="/episodes/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Episodes</a>
-        <a href="/partnerships/" class="block py-2.5 text-[14px] font-medium text-white/70 hover:text-white">Partner</a>
+    {/* Mobile menu — full inventory, scrollable, closes on link tap */}
+    <div id="nav-menu" class="md:hidden hidden border-t border-white/5 bg-[#0a0a0a]/95 backdrop-blur-md max-h-[calc(100dvh-64px)] overflow-y-auto">
+      <div class="py-4 px-6">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[#555] mb-2">Browse</div>
+        <a href="/news/" class="block py-3 text-[15px] font-medium text-white/80 hover:text-white nav-menu-link">News</a>
+        <a href="/themes/" class="block py-3 text-[15px] font-medium text-white/80 hover:text-white nav-menu-link">Themes</a>
+        <a href="/podcast/" class="block py-3 text-[15px] font-medium text-white/80 hover:text-white nav-menu-link">Podcast</a>
+        <a href="/episodes/" class="block py-3 text-[15px] font-medium text-white/80 hover:text-white nav-menu-link">Episodes</a>
+
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[#555] mt-5 mb-2">Entities</div>
+        <a href="/people/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">People</a>
+        <a href="/organizations/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Organizations</a>
+        <a href="/products/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Products</a>
+        <a href="/concepts/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Concepts</a>
+        <a href="/frameworks/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Frameworks</a>
+        <a href="/sources/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Sources</a>
+
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[#555] mt-5 mb-2">Connect</div>
+        <a href="/partnerships/" class="block py-3 text-[14px] text-[#ff6b4a] hover:text-[#ff8566] nav-menu-link">Partner with us</a>
+        <a href="/about/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">About</a>
+        <a href="/contact/" class="block py-3 text-[14px] text-white/70 hover:text-white nav-menu-link">Contact</a>
       </div>
     </div>
   </nav>
-  {/* Spacer */}
-  <div style="height: 80px;"></div>
+  {/* Spacer — matches expanded nav height per breakpoint */}
+  <div class="h-[64px] md:h-[120px]"></div>
 </header>
 
 <script is:inline>
@@ -114,38 +149,73 @@
   var toggle = document.getElementById('nav-toggle');
   var menu = document.getElementById('nav-menu');
 
-  // Scroll: compact nav
+  if (!nav || !inner || !logo) return;
+
+  var DESKTOP_BP = 768;
+
+  // Apply scroll-driven sizing only on desktop. On mobile, the responsive
+  // Tailwind classes (h-[64px], h-12 logo) own the sizing — never touched
+  // by JS.
+  function applyScrollState(scrolled) {
+    nav.style.background = scrolled ? 'rgba(8,8,8,0.95)' : 'rgba(8,8,8,0.6)';
+    nav.style.backdropFilter = scrolled ? 'blur(12px)' : 'blur(8px)';
+    nav.style.borderColor = scrolled ? 'rgba(255,255,255,0.06)' : 'transparent';
+
+    if (window.innerWidth >= DESKTOP_BP) {
+      inner.style.height = scrolled ? '80px' : '120px';
+      logo.style.width = scrolled ? '200px' : '300px';
+      logo.style.height = scrolled ? '200px' : '300px';
+    } else {
+      // Mobile: clear any inline desktop overrides so Tailwind classes win.
+      inner.style.height = '';
+      logo.style.width = '';
+      logo.style.height = '';
+    }
+  }
+
   var scrolled = false;
-  window.addEventListener('scroll', function() {
+  function onScroll() {
     var now = window.scrollY > 40;
     if (now !== scrolled) {
       scrolled = now;
-      if (scrolled) {
-        nav.style.background = 'rgba(8,8,8,0.95)';
-        nav.style.backdropFilter = 'blur(12px)';
-        nav.style.borderColor = 'rgba(255,255,255,0.06)';
-        inner.style.height = '56px';
-        logo.style.width = '80px';
-        logo.style.height = '80px';
-      } else {
-        nav.style.background = 'rgba(8,8,8,0.6)';
-        nav.style.backdropFilter = 'blur(8px)';
-        nav.style.borderColor = 'transparent';
-        inner.style.height = '80px';
-        logo.style.width = '120px';
-        logo.style.height = '120px';
-      }
+      applyScrollState(scrolled);
     }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // On resize across the desktop breakpoint, reapply sizing so we don't
+  // leak desktop inline px-values into mobile.
+  window.addEventListener('resize', function() {
+    applyScrollState(scrolled);
   }, { passive: true });
 
-  // Mobile toggle
+  // Initial paint
+  applyScrollState(false);
+
+  // Mobile toggle (with aria-expanded)
   if (toggle && menu) {
     toggle.addEventListener('click', function() {
+      var isOpen = !menu.classList.contains('hidden');
       menu.classList.toggle('hidden');
+      toggle.setAttribute('aria-expanded', String(!isOpen));
     });
+    // Close menu when any link inside it is tapped
+    menu.querySelectorAll('.nav-menu-link').forEach(function(link) {
+      link.addEventListener('click', function() {
+        menu.classList.add('hidden');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+    // Close on resize past mobile breakpoint
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= DESKTOP_BP) {
+        menu.classList.add('hidden');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    }, { passive: true });
   }
 
-  // Mega menu dropdowns
+  // Mega menu dropdowns (desktop only)
   function setupDropdown(triggerId, dropdownId, wrapId) {
     var trigger = document.getElementById(triggerId);
     var dropdown = document.getElementById(dropdownId);
@@ -162,7 +232,6 @@
       e.preventDefault();
       dropdown.classList.toggle('hidden');
     });
-    // Close on click outside
     document.addEventListener('click', function(e) {
       if (!wrap.contains(e.target)) dropdown.classList.add('hidden');
     });

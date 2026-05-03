@@ -15,12 +15,30 @@
 :root {
   color-scheme: dark;
 
-  /* Backgrounds — barely distinguishable layers */
-  --bg-base: #080808;
-  --bg-surface: #0c0c0c;
-  --bg-card: #111111;
-  --bg-card-hover: #161616;
-  --bg-elevated: #1a1a1a;
+  /* ── HSL design tokens — referenced by tailwind.config.js via
+   *    hsl(var(--name)). Stored as raw "H S% L%" triplets so Tailwind's
+   *    opacity modifiers (bg-accent/20) work via color-mix.
+   */
+  --background: 0 0% 3%;            /* #080808 */
+  --foreground: 0 0% 94%;           /* #f0f0f0 */
+  --card: 0 0% 5%;                  /* #0c0c0c */
+  --card-foreground: 0 0% 94%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 94%;
+  --primary: 11 100% 65%;           /* #ff6b4a (coral) */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 9%;             /* #161616 — hover surface */
+  --secondary-foreground: 0 0% 94%;
+  --muted: 0 0% 7%;                 /* #111111 */
+  --muted-foreground: 0 0% 47%;     /* #777777 */
+  --accent: 11 100% 65%;            /* coral, same as primary */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 75% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 9%;                /* #181818 */
+  --input: 0 0% 13%;                /* #222222 */
+  --ring: 11 100% 65%;
+  --radius: 0.75rem;
 
   /* Borders — subtle dividers */
   --border: 0 0% 9%;
@@ -69,8 +87,8 @@
 /* ── Base ── */
 
 html {
-  background: var(--bg-base);
-  color: var(--text-primary);
+  background: var(--bg-base-hex);
+  color: var(--text-primary-hex);
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -78,10 +96,13 @@ html {
 }
 
 body {
-  background: var(--bg-base);
-  color: var(--text-primary);
+  background: var(--bg-base-hex);
+  color: var(--text-primary-hex);
   margin: 0;
+  /* Use dvh to avoid mobile Safari address-bar height jitter; fall back
+   * to vh on browsers without dynamic viewport units. */
   min-height: 100vh;
+  min-height: 100dvh;
   font-size: 15px;
   line-height: 1.6;
   /* Particle-style subtle ambient gradient on body */
@@ -91,9 +112,30 @@ body {
   background-attachment: fixed;
 }
 
+/* fixed background-attachment is buggy on iOS and costly on low-end mobile;
+ * fall back to default scroll attachment below the lg breakpoint. */
+@media (max-width: 1023px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+/* Honor user motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 ::selection {
-  background: var(--accent-muted);
-  color: var(--text-primary);
+  background: var(--accent-muted-hex);
+  color: var(--text-primary-hex);
 }
 
 /* ── Layout containers ── */
@@ -126,7 +168,7 @@ body {
 
 .divider {
   height: 1px;
-  background: var(--border);
+  background: var(--border-hex);
   border: none;
   margin: 0;
 }
@@ -134,10 +176,24 @@ body {
 /* ── Article prose — the typography fix ── */
 
 .article-prose {
-  color: var(--text-primary);
+  color: var(--text-primary-hex);
   font-size: 18px;
   line-height: 1.78;
   max-width: 680px;
+  /* Center prose within its container on tablet sizes where the parent
+   * grid is single-column and full-width. On lg+ the two-column grid
+   * already constrains the article column. */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1024px) {
+  /* On desktop the left grid column already constrains width; let prose
+   * sit flush-left to match the breadcrumb/headline/hero alignment. */
+  .article-prose {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 @media (max-width: 639px) {
@@ -149,7 +205,7 @@ body {
 
 .article-prose p {
   margin: 0 0 1.4em;
-  color: var(--text-primary);
+  color: var(--text-primary-hex);
 }
 
 .article-prose strong,
@@ -159,11 +215,11 @@ body {
 }
 
 .article-prose em {
-  color: var(--text-primary);
+  color: var(--text-primary-hex);
 }
 
 .article-prose a {
-  color: var(--accent);
+  color: var(--accent-hex);
   text-decoration: underline;
   text-decoration-color: rgba(255, 107, 74, 0.35);
   text-underline-offset: 2px;
@@ -172,7 +228,7 @@ body {
 }
 
 .article-prose a:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--accent-hex);
 }
 
 /* Headings in article body */
@@ -210,7 +266,7 @@ body {
 
 /* Blockquotes — the Brunner and Yan quotes */
 .article-prose blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--accent-hex);
   padding: 2px 0 2px 20px;
   margin: 36px 0;
 }
@@ -246,19 +302,19 @@ body {
 
 .article-prose li {
   margin-bottom: 0.4em;
-  color: var(--text-primary);
+  color: var(--text-primary-hex);
   line-height: 1.7;
 }
 
 .article-prose ul li::marker {
-  color: var(--accent);
+  color: var(--accent-hex);
 }
 
 /* Horizontal rules */
 .article-prose hr {
   border: none;
   height: 1px;
-  background: var(--border);
+  background: var(--border-hex);
   margin: 48px 0;
 }
 
@@ -272,27 +328,27 @@ body {
 
 /* Code */
 .article-prose code {
-  background: var(--bg-card);
+  background: var(--bg-card-hex);
   padding: 0.1em 0.35em;
   border-radius: 3px;
   font-size: 0.88em;
-  color: var(--accent-text);
+  color: var(--accent-hover-hex);
   font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
 }
 
 .article-prose pre {
-  background: var(--bg-card);
+  background: var(--bg-card-hex);
   padding: 16px 20px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 24px 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-hex);
 }
 
 .article-prose pre code {
   background: none;
   padding: 0;
-  color: var(--text-primary);
+  color: var(--text-primary-hex);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -312,7 +368,7 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-hex);
   outline-offset: 2px;
 }
 
@@ -323,10 +379,10 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-base);
+  background: var(--bg-base-hex);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: var(--border-strong-hex);
   border-radius: 3px;
 }

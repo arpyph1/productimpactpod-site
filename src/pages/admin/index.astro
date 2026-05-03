@@ -11,6 +11,21 @@ const siteUrl = "https://productimpactpod.com";
     <title>Admin | Product Impact</title>
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <style>
+      @media (max-width: 767px) {
+        #admin-root input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+        #admin-root select,
+        #admin-root textarea {
+          font-size: 16px !important;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #admin-root *, #admin-root *::before, #admin-root *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
   </head>
   <body class="bg-[#080808] text-[#e5e5e5] min-h-screen font-sans antialiased">
     <div id="admin-root"></div>

@@ -145,18 +145,18 @@ const href = `/news/${a.slug}/`;
     </div>
 
     <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-1.5 mb-0.5 text-[9px]">
+      <div class="flex items-center gap-1.5 mb-0.5 text-[10px]">
         <span class="font-bold uppercase tracking-wider text-[#ff6b4a]">{formatLabel(a.format)}</span>
         <span class="text-[#444]">·</span>
-        <span class="text-[#555]">{time}</span>
+        <span class="text-[#666]">{time}</span>
       </div>
       <EntityHeadline
         title={a.title}
         entities={entities}
         tag="h3"
-        class="text-[13px] font-semibold text-[#bbb] leading-snug group-hover:text-white transition-colors line-clamp-2"
+        class="text-[13px] font-semibold text-[#cfcfcf] leading-snug group-hover:text-white transition-colors line-clamp-2"
       />
-      <div class="text-[10px] text-[#555] mt-0.5">
+      <div class="text-[11px] text-[#666] mt-0.5">
         {author}{a.read_time_minutes && ` · ${a.read_time_minutes} min`}
       </div>
     </div>
