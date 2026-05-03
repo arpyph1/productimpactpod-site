@@ -43,17 +43,6 @@ const entityTypeLabel: Record<Entity["type"], string> = {
 
 const canonicalUrl = `${siteUrl}/${entityTypePlural[entity.type]}/${entity.slug}`;
 
-const themeGradients: Record<string, string> = {
-  "ai-product-strategy":                  "from-[#ff6b4a] to-[#8a3a28]",
-  "agents-agentic-systems":               "from-[#9b7bff] to-[#4a3a80]",
-  "ux-experience-design-for-ai":          "from-[#4ab8c9] to-[#1f5a66]",
-  "adoption-organizational-change":       "from-[#f5a623] to-[#7a5310]",
-  "evaluation-benchmarking":              "from-[#6bbf71] to-[#2d5a30]",
-  "go-to-market-distribution":            "from-[#ff8566] to-[#8a3a28]",
-  "data-semantics-knowledge-foundations": "from-[#5ba3cc] to-[#1f4a66]",
-  "governance-risk-trust":                "from-[#c96bff] to-[#5a2a80]",
-};
-
 const entityJsonLd = entity.schema_jsonld ?? {
   "@context": "https://schema.org",
   "@type":

@@ -102,7 +102,7 @@ const jsonLd = [
       <span>›</span>
       <a href="/episodes/" class="hover:text-white transition-colors">Episodes</a>
       <span>›</span>
-      <span class="text-[#888] truncate max-w-[300px]">{episode.title}</span>
+      <span class="text-[#888] truncate max-w-[140px] sm:max-w-[300px]">{episode.title}</span>
     </nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
@@ -227,9 +227,9 @@ const jsonLd = [
 
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar — top-[96px] clears the scrolled (compacted) nav at 80px. */}
       <aside class="hidden lg:block">
-        <div class="sticky top-16 space-y-6">
+        <div class="sticky top-[96px] space-y-6">
 
           {/* Hosts */}
           <div class="p-4 rounded-xl bg-[#0c0c0c] border border-[#161616]">

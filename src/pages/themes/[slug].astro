@@ -126,10 +126,11 @@ const entityTypeUrls: Record<string, string> = {
       </div>
     </header>
 
-    {/* Long-form intro (cleaned of placeholders) */}
+    {/* Long-form intro (cleaned of placeholders) — centered on tablet,
+        flush-left on desktop. */}
     {theme.long_form_intro && (() => {
       const cleaned = cleanLongFormIntro(theme.long_form_intro);
-      return cleaned ? <div class="article-prose mb-12 max-w-[680px]" set:html={sanitizeHtml(cleaned)}></div> : null;
+      return cleaned ? <div class="article-prose mb-12 max-w-[680px] mx-auto lg:mx-0" set:html={sanitizeHtml(cleaned)}></div> : null;
     })()}
 
     {/* Articles in this theme */}

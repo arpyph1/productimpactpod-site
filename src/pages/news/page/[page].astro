@@ -33,13 +33,11 @@ export async function getStaticPaths() {
 
 const PAGE_SIZE = 24;
 
-interface Props {
+const { articles, currentPage, lastPage } = Astro.props as {
   articles: Article[];
   currentPage: number;
   lastPage: number;
-}
-
-const { articles, currentPage, lastPage } = Astro.props;
+};
 const siteUrl = "https://productimpactpod.com";
 const canonicalUrl = `${siteUrl}/news/page/${currentPage}`;
 

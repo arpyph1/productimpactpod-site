@@ -30,28 +30,17 @@ export async function getStaticPaths() {
   });
 }
 
-interface Props {
+const { year, month, articles } = Astro.props as {
   year: string;
   month: string;
   articles: Article[];
-}
-
-const { year, month, articles } = Astro.props;
+};
 const siteUrl = "https://productimpactpod.com";
 const canonicalUrl = `${siteUrl}/news/${year}/${month}`;
 
 const monthDate = new Date(Date.UTC(+year, +month - 1, 1));
 const monthName = monthDate.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
 const displayLabel = `${monthName} ${year}`;
-
-// Compute prev/next month for navigation
-function shiftMonth(delta: number): { year: string; month: string } {
-  const d = new Date(Date.UTC(+year, +month - 1 + delta, 1));
-  return {
-    year: String(d.getUTCFullYear()),
-    month: String(d.getUTCMonth() + 1).padStart(2, "0"),
-  };
-}
 
 const jsonLd = {
   "@context": "https://schema.org",

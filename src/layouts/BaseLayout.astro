@@ -130,7 +130,7 @@ const accentHsl = cfg.accentHsl;
     <link rel="alternate" type="application/rss+xml" title={`${cfg.name} — Podcast`} href={`${cfg.url}/podcast/rss.xml`} />
 
     {jsonLdBlocks.map((block) => (
-      <script type="application/ld+json" set:html={JSON.stringify(block)} />
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(block)} />
     ))}
   </head>
   <body class="bg-background text-foreground antialiased font-body">
