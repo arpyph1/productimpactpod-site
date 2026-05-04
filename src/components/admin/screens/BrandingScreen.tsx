@@ -194,20 +194,21 @@ export default function BrandingScreen({ supabase }: Props) {
       {section === "colors" && (
         <div className={SECTION_STYLE}>
           <h3 className="text-[14px] font-bold text-white">Colors & Style</h3>
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
+          {/* Stack the two color pickers on mobile so neither hex input is squeezed. */}
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            <div className="flex-1 min-w-0">
               <label className={LABEL}>Accent Color</label>
               <div className="flex items-center gap-3">
                 <input type="color" value={config.accentColor} onChange={e => update("accentColor", e.target.value)}
-                  className="w-10 h-10 rounded-lg border border-[#333] cursor-pointer bg-transparent" />
+                  className="w-10 h-10 rounded-lg border border-[#333] cursor-pointer bg-transparent flex-shrink-0" />
                 <input className={INPUT} value={config.accentColor} onChange={e => update("accentColor", e.target.value)} />
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className={LABEL}>Hover Color</label>
               <div className="flex items-center gap-3">
                 <input type="color" value={config.accentHover} onChange={e => update("accentHover", e.target.value)}
-                  className="w-10 h-10 rounded-lg border border-[#333] cursor-pointer bg-transparent" />
+                  className="w-10 h-10 rounded-lg border border-[#333] cursor-pointer bg-transparent flex-shrink-0" />
                 <input className={INPUT} value={config.accentHover} onChange={e => update("accentHover", e.target.value)} />
               </div>
             </div>

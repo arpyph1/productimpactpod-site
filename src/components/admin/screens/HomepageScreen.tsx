@@ -162,16 +162,20 @@ export default function HomepageScreen({ supabase }: Props) {
         <h3 className="text-[16px] font-bold text-white mb-1">Lead Stories</h3>
         <p className="text-[12px] text-[#555] mb-4">Toggle articles as lead stories for the hero carousel.</p>
         <div className="grid grid-cols-1 gap-1">
-          <div className="grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2 text-[11px] font-semibold text-[#555] uppercase tracking-wider">
+          {/* Hide format/date columns on mobile to keep title readable. */}
+          <div className="hidden sm:grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2 text-[11px] font-semibold text-[#555] uppercase tracking-wider">
             <span>Lead</span><span>Title</span><span>Format</span><span>Date</span>
           </div>
           {articles.filter(a => a.published).slice(0, 20).map((a) => (
-            <div key={a.id} className="grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2.5 rounded-lg hover:bg-[#111] items-center">
+            <div key={a.id} className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_100px_80px] gap-3 sm:gap-4 px-3 py-2.5 rounded-lg hover:bg-[#111] items-center">
               <input type="checkbox" checked={a.is_lead_story} onChange={() => toggleLead(a.id, a.is_lead_story)}
-                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-              <span className="text-[13px] text-[#ccc] truncate">{a.title}</span>
-              <span className="text-[11px] text-[#555]">{a.format}</span>
-              <span className="text-[11px] text-[#555]">{a.publish_date?.slice(0, 10)}</span>
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+              <div className="min-w-0">
+                <div className="text-[13px] text-[#ccc] truncate">{a.title}</div>
+                <div className="sm:hidden text-[10px] text-[#555] mt-0.5">{a.format} · {a.publish_date?.slice(0, 10)}</div>
+              </div>
+              <span className="hidden sm:inline text-[11px] text-[#555]">{a.format}</span>
+              <span className="hidden sm:inline text-[11px] text-[#555]">{a.publish_date?.slice(0, 10)}</span>
             </div>
           ))}
         </div>
@@ -281,16 +285,19 @@ export default function HomepageScreen({ supabase }: Props) {
         )}
 
         <div className="grid grid-cols-1 gap-1 max-h-[400px] overflow-y-auto">
-          <div className="grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2 text-[11px] font-semibold text-[#555] uppercase tracking-wider sticky top-0 bg-[#080808]">
+          <div className="hidden sm:grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2 text-[11px] font-semibold text-[#555] uppercase tracking-wider sticky top-0 bg-[#080808]">
             <span>Pick</span><span>Title</span><span>Format</span><span>Date</span>
           </div>
           {articles.filter(a => a.published).map((a) => (
-            <div key={a.id} className={`grid grid-cols-[auto_1fr_100px_80px] gap-4 px-3 py-2.5 rounded-lg hover:bg-[#111] items-center ${evergreenSlugs.includes(a.slug) ? "bg-[#ff6b4a]/5" : ""}`}>
+            <div key={a.id} className={`grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_100px_80px] gap-3 sm:gap-4 px-3 py-2.5 rounded-lg hover:bg-[#111] items-center ${evergreenSlugs.includes(a.slug) ? "bg-[#ff6b4a]/5" : ""}`}>
               <input type="checkbox" checked={evergreenSlugs.includes(a.slug)} onChange={() => toggleEvergreen(a.slug)}
-                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
-              <span className="text-[13px] text-[#ccc] truncate">{a.title}</span>
-              <span className="text-[11px] text-[#555]">{a.format}</span>
-              <span className="text-[11px] text-[#555]">{a.publish_date?.slice(0, 10)}</span>
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+              <div className="min-w-0">
+                <div className="text-[13px] text-[#ccc] truncate">{a.title}</div>
+                <div className="sm:hidden text-[10px] text-[#555] mt-0.5">{a.format} · {a.publish_date?.slice(0, 10)}</div>
+              </div>
+              <span className="hidden sm:inline text-[11px] text-[#555]">{a.format}</span>
+              <span className="hidden sm:inline text-[11px] text-[#555]">{a.publish_date?.slice(0, 10)}</span>
             </div>
           ))}
         </div>

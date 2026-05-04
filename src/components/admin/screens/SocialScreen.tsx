@@ -716,9 +716,10 @@ export default function SocialScreen({ supabase }: Props) {
   );
 
   return (
-    <div className="grid grid-cols-[340px_1fr] gap-6 max-w-6xl">
-      {/* Article list */}
-      <div className="space-y-1 max-h-[calc(100vh-160px)] overflow-y-auto pr-2">
+    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 max-w-6xl">
+      {/* Article list — capped height + scroll on lg+; on mobile it's a
+          short scrollable strip above the editor instead of the whole page. */}
+      <div className="space-y-1 max-h-[40vh] lg:max-h-[calc(100vh-160px)] overflow-y-auto pr-2 min-w-0">
         <div className="text-[11px] font-semibold text-[#555] uppercase tracking-wider mb-3">Published Articles</div>
         {articles.map(a => (
           <button key={a.id} onClick={() => openArticle(a)}

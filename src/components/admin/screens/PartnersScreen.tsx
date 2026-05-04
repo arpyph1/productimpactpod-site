@@ -146,19 +146,19 @@ export default function PartnersScreen({ supabase }: Props) {
         ) : (
           <div className="space-y-2">
             {sponsors.map((s, idx) => (
-              <div key={s.id} className="flex items-center gap-4 p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a] hover:border-[#282828] transition-colors">
+              <div key={s.id} className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a] hover:border-[#282828] transition-colors">
                 <div className="flex flex-col gap-0.5">
-                  <button onClick={() => moveOrder(s.id, "up")} disabled={idx === 0} className="text-[#555] hover:text-white disabled:opacity-20">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
+                  <button onClick={() => moveOrder(s.id, "up")} disabled={idx === 0} aria-label="Move up" className="text-[#555] hover:text-white disabled:opacity-20 p-1">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
-                  <button onClick={() => moveOrder(s.id, "down")} disabled={idx === sponsors.length - 1} className="text-[#555] hover:text-white disabled:opacity-20">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                  <button onClick={() => moveOrder(s.id, "down")} disabled={idx === sponsors.length - 1} aria-label="Move down" className="text-[#555] hover:text-white disabled:opacity-20 p-1">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                   </button>
                 </div>
                 <div className="w-20 h-14 rounded bg-[#111] border border-[#1a1a1a] flex items-center justify-center flex-shrink-0 overflow-hidden p-1.5">
                   {s.logo_url ? <img src={s.logo_url} alt="" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] text-[#444]">No logo</span>}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 basis-[180px]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[14px] font-semibold text-[#ccc]">{s.name}</span>
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.active ? "bg-green-500/10 text-green-400" : "bg-[#222] text-[#555]"}`}>{s.active ? "Active" : "Inactive"}</span>
@@ -167,10 +167,11 @@ export default function PartnersScreen({ supabase }: Props) {
                   {s.tagline && <div className="text-[12px] text-[#666] line-clamp-1 mt-0.5">{s.tagline}</div>}
                   {s.website_url && <div className="text-[11px] text-[#444] mt-0.5 truncate">{s.website_url}</div>}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => toggleActive(s.id, s.active)} className="text-[11px] text-[#666] hover:text-white">{s.active ? "Deactivate" : "Activate"}</button>
-                  <button onClick={() => { setEditing({ ...s }); setIsNew(false); }} className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
-                  <button onClick={() => deleteSponsor(s.id)} className="text-[11px] text-[#555] hover:text-red-400">Delete</button>
+                {/* Action buttons wrap to a new row on narrow widths */}
+                <div className="flex items-center gap-3 flex-shrink-0 ml-auto basis-full sm:basis-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-[#1a1a1a]">
+                  <button onClick={() => toggleActive(s.id, s.active)} className="text-[12px] text-[#666] hover:text-white py-1">{s.active ? "Deactivate" : "Activate"}</button>
+                  <button onClick={() => { setEditing({ ...s }); setIsNew(false); }} className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-medium py-1">Edit</button>
+                  <button onClick={() => deleteSponsor(s.id)} className="text-[12px] text-[#555] hover:text-red-400 py-1">Delete</button>
                 </div>
               </div>
             ))}

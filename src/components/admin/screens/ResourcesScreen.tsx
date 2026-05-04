@@ -223,9 +223,9 @@ export default function ResourcesScreen({ supabase }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_300px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         {/* Main column */}
-        <div className="space-y-5">
+        <div className="space-y-5 min-w-0">
           <div>
             <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Title</label>
             <input type="text" className="w-full px-4 py-3 bg-[#111] border border-[#222] rounded-lg text-[16px] font-bold text-white focus:outline-none focus:border-[#ff6b4a]/50"

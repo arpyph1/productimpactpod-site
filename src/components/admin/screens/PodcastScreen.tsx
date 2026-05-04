@@ -181,8 +181,8 @@ export default function PodcastScreen({ supabase }: Props) {
         ) : episodes.length === 0 ? (
           <p className="text-[13px] text-[#555] py-8">No episodes in database. Episodes are populated via the RSS feed at build time.</p>
         ) : (
-          <div className="border border-[#1a1a1a] rounded-xl overflow-hidden">
-            <table className="w-full">
+          <div className="border border-[#1a1a1a] rounded-xl overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="bg-[#0c0c0c] text-[11px] font-semibold text-[#555] uppercase tracking-wider">
                   <th className="text-left px-4 py-3 w-12">Pub</th>
