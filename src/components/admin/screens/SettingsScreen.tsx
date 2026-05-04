@@ -145,23 +145,26 @@ export default function SettingsScreen({ supabase }: Props) {
           {roles.length === 0 && <p className="text-[13px] text-[#555]">No admin users found.</p>}
         </div>
 
-        {/* Add admin form */}
+        {/* Add admin form — email gets its own row on mobile, select +
+            button share a row below; all on one row on sm+. */}
         <div className="p-4 rounded-lg bg-[#0c0c0c] border border-[#1a1a1a]">
           <div className="text-[12px] font-semibold text-[#888] mb-3">Add a new admin or editor</div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input type="email" placeholder="email@example.com"
-              className="flex-1 px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a]/50"
+              className="flex-1 min-w-0 px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a]/50"
               value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addAdmin(); }} />
-            <select className="px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white"
-              value={newRole} onChange={(e) => setNewRole(e.target.value as any)}>
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
-            </select>
-            <button onClick={addAdmin} disabled={addingAdmin}
-              className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] disabled:opacity-50">
-              {addingAdmin ? "Adding..." : "Add"}
-            </button>
+            <div className="flex gap-2">
+              <select className="flex-1 sm:flex-none px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white"
+                value={newRole} onChange={(e) => setNewRole(e.target.value as any)}>
+                <option value="admin">Admin</option>
+                <option value="editor">Editor</option>
+              </select>
+              <button onClick={addAdmin} disabled={addingAdmin}
+                className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] disabled:opacity-50 flex-shrink-0">
+                {addingAdmin ? "Adding..." : "Add"}
+              </button>
+            </div>
           </div>
           <p className="text-[10px] text-[#444] mt-2">The user must have signed in at least once (via Google) before you can add them.</p>
         </div>
@@ -174,30 +177,30 @@ export default function SettingsScreen({ supabase }: Props) {
 
         <div className="space-y-2 mb-3">
           {navItems.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-[#111] border border-[#1a1a1a]">
+            <div key={idx} className="flex flex-wrap items-center gap-2 sm:gap-3 p-3 rounded-lg bg-[#111] border border-[#1a1a1a]">
               {/* Reorder */}
               <div className="flex flex-col gap-0.5">
-                <button onClick={() => moveNav(idx, "up")} disabled={idx === 0} className="text-[#555] hover:text-white disabled:opacity-20">
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
+                <button onClick={() => moveNav(idx, "up")} disabled={idx === 0} aria-label="Move up" className="text-[#555] hover:text-white disabled:opacity-20 p-1">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
                 </button>
-                <button onClick={() => moveNav(idx, "down")} disabled={idx === navItems.length - 1} className="text-[#555] hover:text-white disabled:opacity-20">
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                <button onClick={() => moveNav(idx, "down")} disabled={idx === navItems.length - 1} aria-label="Move down" className="text-[#555] hover:text-white disabled:opacity-20 p-1">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
               </div>
 
               {/* Visibility */}
               <input type="checkbox" checked={item.visible} onChange={(e) => updateNavItem(idx, "visible", e.target.checked)}
-                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" title="Visible" />
+                className="w-5 h-5 sm:w-4 sm:h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a] flex-shrink-0" title="Visible" />
 
-              {/* Label */}
-              <input type="text" className="w-32 px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              {/* Label — full width on mobile, fixed 8rem on sm+ */}
+              <input type="text" aria-label="Label" className="basis-[140px] sm:basis-auto sm:w-32 flex-1 sm:flex-none px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
                 value={item.label} onChange={(e) => updateNavItem(idx, "label", e.target.value)} />
 
-              {/* Link */}
-              <input type="text" className="flex-1 px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded text-[12px] text-[#888] font-mono focus:outline-none focus:border-[#ff6b4a]/50"
+              {/* Link — wraps to its own row below sm */}
+              <input type="text" aria-label="Link href" className="basis-full sm:basis-auto sm:flex-1 min-w-0 px-2 py-1.5 bg-[#0a0a0a] border border-[#1a1a1a] rounded text-[12px] text-[#888] font-mono focus:outline-none focus:border-[#ff6b4a]/50"
                 value={item.href} onChange={(e) => updateNavItem(idx, "href", e.target.value)} />
 
-              <button onClick={() => removeNavItem(idx)} className="text-[#444] hover:text-red-400 transition-colors">
+              <button onClick={() => removeNavItem(idx)} aria-label="Remove" className="text-[#444] hover:text-red-400 transition-colors p-1 ml-auto">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
