@@ -35,30 +35,47 @@ const NAV_ITEMS: { key: Screen; label: string; icon: string }[] = [
   { key: "analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
 ];
 
-function Sidebar({ active, onNav, admin, onLogout }: {
+function Sidebar({ active, onNav, admin, onLogout, isOpen, onClose }: {
   active: Screen;
   onNav: (s: Screen) => void;
   admin: AdminUser;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }) {
   return (
-    <aside className="w-60 bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col h-screen sticky top-0">
-      <div className="p-5 border-b border-[#1a1a1a]">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-7 h-7 rounded bg-[#ff6b4a] flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-black text-[9px]">PI</span>
+    <aside
+      className={`fixed md:static inset-y-0 left-0 z-40 w-60 max-w-[85vw] bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col h-dvh md:h-screen md:sticky md:top-0 transform transition-transform duration-200 ease-out md:translate-x-0 md:flex-shrink-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+      aria-hidden={!isOpen ? undefined : undefined}
+    >
+      <div className="p-5 border-b border-[#1a1a1a] flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded bg-[#ff6b4a] flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-black text-[9px]">PI</span>
+            </div>
+            <span className="text-[14px] font-bold text-white">Admin</span>
           </div>
-          <span className="text-[14px] font-bold text-white">Admin</span>
+          <p className="text-[11px] text-[#555] mt-1">Product Impact CMS</p>
         </div>
-        <p className="text-[11px] text-[#555] mt-1">Product Impact CMS</p>
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={onClose}
+          className="md:hidden -m-2 p-2 text-[#666] hover:text-white"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.key}
-            onClick={() => onNav(item.key)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+            onClick={() => { onNav(item.key); onClose?.(); }}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[14px] md:text-[13px] font-medium transition-colors ${
               active === item.key
                 ? "bg-[#ff6b4a]/10 text-[#ff6b4a] border border-[#ff6b4a]/20"
                 : "text-[#888] hover:text-white hover:bg-[#111] border border-transparent"
@@ -86,7 +103,7 @@ function Sidebar({ active, onNav, admin, onLogout }: {
         </div>
         <button
           onClick={onLogout}
-          className="w-full text-[11px] text-[#666] hover:text-[#ff6b4a] transition-colors text-left"
+          className="w-full text-[12px] text-[#666] hover:text-[#ff6b4a] transition-colors text-left py-2"
         >
           Sign out
         </button>
@@ -144,8 +161,16 @@ export default function AdminApp() {
   const [editingArticle, setEditingArticle] = useState<any | undefined>(undefined);
   const [deploying, setDeploying] = useState(false);
   const [deployMsg, setDeployMsg] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
 
   const supabase = getAdminClient();
+
+  // Lock body scroll while the off-canvas drawer is open on mobile.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = navOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [navOpen]);
 
   useEffect(() => {
     // Check for OAuth error in URL hash (Supabase redirects errors here)
@@ -237,22 +262,62 @@ export default function AdminApp() {
 
   return (
     <div className="flex min-h-screen bg-[#080808] text-white">
-      <Sidebar active={screen} onNav={setScreen} admin={admin} onLogout={handleLogout} />
+      {/* Sidebar: in-flow flex item on md+, off-canvas drawer on mobile */}
+      <Sidebar
+        active={screen}
+        onNav={setScreen}
+        admin={admin}
+        onLogout={handleLogout}
+        isOpen={navOpen}
+        onClose={() => setNavOpen(false)}
+      />
+
+      {/* Backdrop — visible only when drawer is open on mobile */}
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setNavOpen(false)}
+          className="md:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+        />
+      )}
+
       <main className="flex-1 min-w-0">
-        <header className="sticky top-0 z-10 bg-[#080808]/95 backdrop-blur-sm border-b border-[#1a1a1a] px-8 py-4 flex items-center justify-between">
-          <h2 className="text-[20px] font-bold text-white capitalize">{screen}</h2>
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 bg-[#080808]/95 backdrop-blur-sm border-b border-[#1a1a1a] px-3 md:px-8 py-3 md:py-4 flex items-center gap-2 md:gap-3">
+          {/* Mobile hamburger — 44×44 tap target */}
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen(true)}
+            className="md:hidden -ml-1 p-2.5 text-[#888] hover:text-white"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="18" x2="20" y2="18" />
+            </svg>
+          </button>
+          <h2 className="text-[16px] md:text-[20px] font-bold text-white capitalize flex-1 min-w-0 truncate">{screen}</h2>
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             {deployMsg && (
-              <span className={`text-[12px] ${deployMsg.includes("triggered") ? "text-green-400" : "text-[#ff6b4a]"}`}>{deployMsg}</span>
+              <span className={`hidden sm:inline text-[12px] max-w-[260px] truncate ${deployMsg.includes("triggered") ? "text-green-400" : "text-[#ff6b4a]"}`}>{deployMsg}</span>
             )}
             <button onClick={handleDeploy} disabled={deploying}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#222] text-[12px] font-semibold text-[#ccc] hover:text-white hover:border-[#444] transition-colors disabled:opacity-50">
+              className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#222] text-[12px] font-semibold text-[#ccc] hover:text-white hover:border-[#444] transition-colors disabled:opacity-50">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              {deploying ? "Deploying..." : "Rebuild & Deploy"}
+              <span className="hidden sm:inline">{deploying ? "Deploying..." : "Rebuild & Deploy"}</span>
+              <span className="sm:hidden">{deploying ? "…" : "Deploy"}</span>
             </button>
           </div>
         </header>
-        <div className="p-8">
+        {/* Mobile-only deploy status (under the bar so it doesn't fight for room) */}
+        {deployMsg && (
+          <div className={`sm:hidden px-4 py-2 text-[12px] border-b border-[#1a1a1a] ${deployMsg.includes("triggered") ? "text-green-400 bg-green-500/[0.04]" : "text-[#ff6b4a] bg-[#ff6b4a]/[0.04]"}`}>
+            {deployMsg}
+          </div>
+        )}
+        <div className="p-4 md:p-8">
           <ScreenRouter screen={screen} supabase={supabase} admin={admin} onEditArticle={(a: any) => setEditingArticle(a)} />
         </div>
       </main>

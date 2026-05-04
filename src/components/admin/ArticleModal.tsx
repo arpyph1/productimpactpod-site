@@ -213,37 +213,40 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm overflow-y-auto py-8 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm overflow-y-auto py-2 sm:py-8 px-2 sm:px-4">
       <div className="w-full max-w-5xl bg-[#0c0c0c] border border-[#222] rounded-2xl shadow-2xl">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1a1a1a]">
-          <h2 className="text-[18px] font-bold text-white">{isNew ? "New Article" : "Edit Article"}</h2>
-          <div className="flex items-center gap-3">
+        {/* Header — sticky so Save / Close stay reachable while scrolling. */}
+        <div className="sticky top-0 z-10 bg-[#0c0c0c]/95 backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-[#1a1a1a] rounded-t-2xl">
+          <h2 className="text-[16px] sm:text-[18px] font-bold text-white flex-1 min-w-0 truncate">{isNew ? "New Article" : "Edit Article"}</h2>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {!isNew && (
-              <button onClick={handleDelete} className="px-3 py-1.5 text-[12px] text-red-400 hover:text-red-300 border border-red-500/20 rounded-lg hover:bg-red-500/10 transition-colors">
+              <button onClick={handleDelete} className="px-3 py-2 text-[12px] text-red-400 hover:text-red-300 border border-red-500/20 rounded-lg hover:bg-red-500/10 transition-colors">
                 Delete
               </button>
             )}
             <button onClick={handleSave} disabled={saving}
-              className="px-5 py-2 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors disabled:opacity-50">
+              className="px-4 sm:px-5 py-2 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors disabled:opacity-50">
               {saving ? "Saving..." : "Save"}
             </button>
-            <button onClick={onClose} className="text-[#555] hover:text-white transition-colors p-1">
+            <button onClick={onClose} aria-label="Close" className="text-[#555] hover:text-white transition-colors p-2 -mr-1">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
         </div>
 
         {msg && (
-          <div className={`mx-6 mt-4 px-4 py-2 rounded-lg text-[13px] ${msg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>
+          <div className={`mx-4 sm:mx-6 mt-4 px-4 py-2 rounded-lg text-[13px] ${msg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>
             {msg}
           </div>
         )}
 
-        <div className="grid grid-cols-[1fr_300px] divide-x divide-[#1a1a1a]">
+        {/* Single-column on mobile/tablet; two-column with right-side meta
+            sidebar on lg+. The sidebar moves below the editor on smaller
+            screens so the editor gets the full viewport width. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] lg:divide-x divide-[#1a1a1a]">
           {/* Main editor area */}
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-5 min-w-0">
             {/* Title */}
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Title</label>
@@ -254,14 +257,14 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
             {/* Subtitle */}
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Subtitle</label>
-              <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[16px] sm:text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
                 value={form.subtitle} onChange={(e) => update("subtitle", e.target.value)} placeholder="Optional subtitle" />
             </div>
 
             {/* Meta Description */}
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Summary / Meta Description</label>
-              <textarea className="w-full h-20 bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+              <textarea className="w-full h-20 bg-[#111] border border-[#222] rounded-lg p-3 text-[16px] sm:text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
                 value={form.meta_description} onChange={(e) => update("meta_description", e.target.value)} placeholder="Brief description for search engines and social sharing" />
               <div className="text-[10px] text-[#444] mt-1">{form.meta_description.length}/160 characters</div>
             </div>
@@ -324,7 +327,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
           </div>
 
           {/* Sidebar */}
-          <div className="p-6 space-y-5 bg-[#0a0a0a]">
+          <div className="p-4 sm:p-6 space-y-5 bg-[#0a0a0a] border-t lg:border-t-0 border-[#1a1a1a] rounded-b-2xl lg:rounded-bl-none lg:rounded-br-2xl">
             {/* Status */}
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Status</label>
