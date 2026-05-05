@@ -127,6 +127,8 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   async function handleEditorPaste(e: React.ClipboardEvent) {
     const items = e.clipboardData?.items;
     if (!items) return;
+
+    // Image paste — upload to storage and insert <img>
     for (const item of Array.from(items)) {
       if (item.type.startsWith("image/")) {
         e.preventDefault();
@@ -145,6 +147,32 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
         setTimeout(() => setMsg(""), 2000);
         return;
       }
+    }
+
+    // HTML paste — strip leading subtitle/byline paragraphs before inserting
+    const htmlData = e.clipboardData.getData("text/html");
+    if (htmlData) {
+      e.preventDefault();
+      const tmp = document.createElement("div");
+      tmp.innerHTML = htmlData;
+      const root = tmp.querySelector("body") ?? tmp;
+      const subtitleNorm = (form.subtitle ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+      let el = root.firstElementChild;
+      while (el) {
+        const text = (el.textContent ?? "").trim().replace(/\s+/g, " ");
+        const isSubtitleDupe = subtitleNorm && text.toLowerCase() === subtitleNorm;
+        // "By Name" or "By First Last" patterns up to ~6 words
+        const isByline = /^by\s+\S/i.test(text) && text.split(/\s+/).length <= 7;
+        if (isSubtitleDupe || isByline) {
+          const next = el.nextElementSibling;
+          el.remove();
+          el = next;
+        } else {
+          break;
+        }
+      }
+      document.execCommand("insertHTML", false, root.innerHTML);
+      syncFromEditor();
     }
   }
 
