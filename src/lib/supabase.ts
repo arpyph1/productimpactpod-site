@@ -31,12 +31,14 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // and schema_jsonld — the three largest fields, averaging 50-200 KB per article.
 // getArticleBySlug() and getAllArticlesWithContent() still use SELECT * for the
 // two cases that genuinely need full content.
+// `people`, `organizations`, `products` are NOT columns on the articles table —
+// they live in the article_entities join table and are populated separately.
 const ARTICLE_SUMMARY_COLS = [
   "id", "slug", "title", "subtitle", "format", "author_slugs",
   "byline_role", "dateline", "publish_date", "last_updated",
   "read_time_minutes", "word_count", "meta_description",
   "hero_image_url", "hero_image_alt", "hero_image_credit",
-  "themes", "lenses", "topics", "people", "organizations", "products",
+  "themes", "lenses", "topics",
   "primary_podcast_episode_guid", "canonical_url", "published",
   "is_lead_story", "overview_bullets", "created_at", "updated_at",
 ].join(", ");
