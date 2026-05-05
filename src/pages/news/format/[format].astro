@@ -5,11 +5,6 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
 
-const validFormats: ArticleFormat[] = [
-  "news-brief", "news-analysis", "release-note", "feature", "data-reports",
-  "case-study", "opinion", "explainer", "product-review", "research-brief",
-];
-
 export async function getStaticPaths() {
   return [
     "news-brief", "news-analysis", "release-note", "feature", "data-reports",
