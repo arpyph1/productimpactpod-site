@@ -246,6 +246,9 @@ const bcJsonLd = {
 
         {/* ── Article body ── */}
         <div class="article-prose" set:html={cleanedHtml}></div>
+        {hasTwitterEmbed && (
+          <script is:inline async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        )}
 
         {/* ── Heart reactions ── */}
         <div class="mt-12 pt-8 border-t border-[#1a1a1a]"
@@ -456,10 +459,6 @@ const bcJsonLd = {
 
   <Footer />
 </BaseLayout>
-
-{hasTwitterEmbed && (
-  <script is:inline async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-)}
 
 <script is:inline>
 (function() {

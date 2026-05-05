@@ -265,13 +265,13 @@ body {
 }
 
 /* Blockquotes — the Brunner and Yan quotes */
-.article-prose blockquote {
+.article-prose blockquote:not(.twitter-tweet) {
   border-left: 3px solid var(--accent-hex);
   padding: 2px 0 2px 20px;
   margin: 36px 0;
 }
 
-.article-prose blockquote p {
+.article-prose blockquote:not(.twitter-tweet) p {
   font-size: 17px;
   font-style: italic;
   line-height: 1.7;
@@ -279,18 +279,25 @@ body {
   margin-bottom: 0.6em;
 }
 
-.article-prose blockquote p:last-child {
+.article-prose blockquote:not(.twitter-tweet) p:last-child {
   margin-bottom: 0;
 }
 
 @media (max-width: 639px) {
-  .article-prose blockquote {
+  .article-prose blockquote:not(.twitter-tweet) {
     padding-left: 16px;
     margin: 28px 0;
   }
-  .article-prose blockquote p {
+  .article-prose blockquote:not(.twitter-tweet) p {
     font-size: 15.5px;
   }
+}
+
+/* Twitter/X embeds — let widgets.js own the visual treatment, just center
+   the placeholder while it loads. */
+.article-prose blockquote.twitter-tweet {
+  margin: 28px auto;
+  max-width: 550px;
 }
 
 /* Lists */
