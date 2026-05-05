@@ -78,13 +78,13 @@
         </div>
       </div>
 
-      {/* Center logo — compact on mobile, large on desktop. JS only adjusts
-          desktop sizes on scroll; mobile sticks at 48px. */}
+      {/* Center logo */}
       <a href="/" class="flex items-center justify-center flex-shrink-0">
         <img
           src="/nav-logo-full.png"
           alt="Product Impact Podcast"
-          class="object-contain transition-all duration-300 w-auto h-12 md:w-[300px] md:h-[300px]"
+          class="object-contain transition-all duration-300"
+          style="width: 120px; height: 120px;"
           id="nav-logo"
         />
       </a>
@@ -162,11 +162,10 @@
     nav.style.borderColor = scrolled ? 'rgba(255,255,255,0.06)' : 'transparent';
 
     if (window.innerWidth >= DESKTOP_BP) {
-      inner.style.height = scrolled ? '80px' : '120px';
-      logo.style.width = scrolled ? '200px' : '300px';
-      logo.style.height = scrolled ? '200px' : '300px';
+      inner.style.height = scrolled ? '64px' : '80px';
+      logo.style.width = scrolled ? '80px' : '120px';
+      logo.style.height = scrolled ? '80px' : '120px';
     } else {
-      // Mobile: clear any inline desktop overrides so Tailwind classes win.
       inner.style.height = '';
       logo.style.width = '';
       logo.style.height = '';
