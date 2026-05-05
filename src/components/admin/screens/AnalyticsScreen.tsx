@@ -75,11 +75,12 @@ export default function AnalyticsScreen({ supabase }: Props) {
 
       {/* Table */}
       <div className="rounded-xl border border-[#1a1a1a] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
-          <div className="flex items-center gap-1">
+        {/* Sort tabs — horizontal-scroll row on mobile so labels never clip */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
+          <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
             {(["views", "shares", "hearts"] as SortKey[]).map(k => (
               <button key={k} onClick={() => { setTab(k); setShowAll(false); }}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${k === tab ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}>
+                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${k === tab ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}>
                 {k === "views" ? "👁 Most Viewed" : k === "shares" ? "↗ Most Shared" : "❤️ Most Hearted"}
               </button>
             ))}
@@ -87,7 +88,10 @@ export default function AnalyticsScreen({ supabase }: Props) {
           <button onClick={loadData} className="text-[11px] text-[#555] hover:text-white transition-colors">↻ Refresh</button>
         </div>
 
-        <table className="w-full">
+        {/* Engagement table is wider than a phone — wrap in horizontal
+            scroll instead of clipping article titles. */}
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px]">
           <thead>
             <tr className="text-[10px] font-bold uppercase tracking-wider text-[#555] border-b border-[#1a1a1a]">
               <th className="text-left px-4 py-2.5 w-8">#</th>
@@ -124,6 +128,7 @@ export default function AnalyticsScreen({ supabase }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
 
         {sorted.length > 10 && !showAll && (
           <div className="px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a] text-center">
