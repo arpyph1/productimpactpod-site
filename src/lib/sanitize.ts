@@ -16,7 +16,7 @@ const ALLOWED_ATTRS: Record<string, string[]> = {
   img: ["src", "alt", "width", "height", "loading"],
   td: ["colspan", "rowspan"],
   th: ["colspan", "rowspan"],
-  "*": ["class", "id"],
+  "*": ["class", "id", "lang", "dir"],
 };
 
 export function sanitizeHtml(dirty: string): string {

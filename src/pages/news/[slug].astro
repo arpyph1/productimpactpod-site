@@ -42,6 +42,7 @@ const siteUrl = "https://productimpactpod.com";
 const articleUrl = `${siteUrl}/news/${article.slug}`;
 
 const cleanedHtml = sanitizeHtml(stripFirstH1(article.content_html));
+const hasTwitterEmbed = cleanedHtml.includes('twitter-tweet');
 const bullets = article.overview_bullets?.length
   ? article.overview_bullets
   : generateOverviewBullets(article.content_html);
@@ -455,6 +456,10 @@ const bcJsonLd = {
 
   <Footer />
 </BaseLayout>
+
+{hasTwitterEmbed && (
+  <script is:inline async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+)}
 
 <script is:inline>
 (function() {
