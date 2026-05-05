@@ -4,15 +4,15 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { formatLabel, themeLabel, type Entity, type Article } from "@lib/supabase";
+import { formatLabel, themeLabel, type Entity, type ArticleSummary } from "@lib/supabase";
 import { sanitizeHtml } from "@lib/sanitize";
 import EntityHeadline from "@components/EntityHeadline.astro";
 
 interface Props {
   entity: Entity;
-  articles: Article[];
+  articles: ArticleSummary[];
   // Optional: authored articles for person entities
-  authoredArticles?: Article[];
+  authoredArticles?: ArticleSummary[];
   siteUrl?: string;
 }
 

@@ -8,11 +8,11 @@
 //   size="compact" — small thumbnail + text row (sidebar list)
 
 import EntityHeadline from "./EntityHeadline.astro";
-import type { Article } from "@lib/supabase";
+import type { ArticleSummary } from "@lib/supabase";
 import { formatLabel, authorDisplayName } from "@lib/supabase";
 
 export interface Props {
-  article: Article;
+  article: ArticleSummary;
   size?: "hero" | "medium" | "compact";
   totalArticles?: number;
 }

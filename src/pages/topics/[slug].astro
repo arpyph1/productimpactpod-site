@@ -11,7 +11,7 @@ import {
   getArticlesByTopic,
   formatLabel,
   themeLabel,
-  type Article,
+  type ArticleSummary,
 } from "@lib/supabase";
 import { themeGradients } from "@lib/themes";
 import EntityHeadline from "@components/EntityHeadline.astro";
@@ -86,7 +86,7 @@ const formatDate = (iso: string) =>
     month: "short", day: "numeric", year: "numeric",
   });
 
-function articleCard(article: Article) {
+function articleCard(article: ArticleSummary) {
   const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
   const gradient = themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
   return { article, firstTheme, gradient };

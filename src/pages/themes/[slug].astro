@@ -6,7 +6,7 @@ import StoryCard from "@components/StoryCard.astro";
 import { sanitizeHtml } from "@lib/sanitize";
 import {
   getAllThemes, getAllArticles, getEpisodesByTheme, getEntitiesByTheme,
-  themeLabel, type Theme, type Article, type Entity, type Episode,
+  themeLabel, type Theme, type ArticleSummary, type Entity, type Episode,
 } from "@lib/supabase";
 
 export async function getStaticPaths() {
@@ -40,7 +40,7 @@ export async function getStaticPaths() {
   });
 }
 
-const { theme, articles } = Astro.props as { theme: Theme; articles: Article[] };
+const { theme, articles } = Astro.props as { theme: Theme; articles: ArticleSummary[] };
 const siteUrl = "https://productimpactpod.com";
 const canonicalUrl = `${siteUrl}/themes/${theme.slug}`;
 

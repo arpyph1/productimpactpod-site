@@ -6,12 +6,12 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import ArticleCard from "@components/ArticleCard.astro";
-import { type Article } from "@lib/supabase";
+import { type ArticleSummary } from "@lib/supabase";
 
 export async function getStaticPaths() {
   const { getAllArticles } = await import("@lib/supabase");
   const articles = await getAllArticles();
-  const byMonth = new Map<string, Article[]>();
+  const byMonth = new Map<string, ArticleSummary[]>();
   for (const a of articles) {
     const d = new Date(a.publish_date);
     if (isNaN(d.getTime())) continue;
@@ -33,7 +33,7 @@ export async function getStaticPaths() {
 const { year, month, articles } = Astro.props as {
   year: string;
   month: string;
-  articles: Article[];
+  articles: ArticleSummary[];
 };
 const siteUrl = "https://productimpactpod.com";
 const canonicalUrl = `${siteUrl}/news/${year}/${month}`;

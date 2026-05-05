@@ -3,12 +3,12 @@
 // /news/format/[format], /news/[year], /news/[year]/[month], /topics/[slug],
 // /themes/[slug], and entity hubs. Single source of truth for card markup.
 
-import { formatLabel, themeLabel, type Article } from "@lib/supabase";
+import { formatLabel, themeLabel, type ArticleSummary } from "@lib/supabase";
 import { themeGradients } from "@lib/themes";
 import EntityHeadline from "@components/EntityHeadline.astro";
 
 interface Props {
-  article: Article;
+  article: ArticleSummary;
   showThemes?: boolean;
 }
 

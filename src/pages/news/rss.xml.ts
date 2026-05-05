@@ -1,14 +1,14 @@
 // News RSS feed — full content, optimized for Google News, Apple News, Flipboard.
 // Includes <media:content> for hero images and <dc:creator> for author attribution.
 
-import { getAllArticles, authorDisplayName } from "@lib/supabase";
+import { getAllArticlesWithContent, authorDisplayName } from "@lib/supabase";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export async function GET() {
-  const articles = await getAllArticles();
+  const articles = await getAllArticlesWithContent();
   const siteUrl = "https://productimpactpod.com";
   const now = new Date().toUTCString();
 

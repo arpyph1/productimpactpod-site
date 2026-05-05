@@ -27,6 +27,20 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+// Columns fetched in list/bulk contexts. Excludes content_html, content_markdown,
+// and schema_jsonld — the three largest fields, averaging 50-200 KB per article.
+// getArticleBySlug() and getAllArticlesWithContent() still use SELECT * for the
+// two cases that genuinely need full content.
+const ARTICLE_SUMMARY_COLS = [
+  "id", "slug", "title", "subtitle", "format", "author_slugs",
+  "byline_role", "dateline", "publish_date", "last_updated",
+  "read_time_minutes", "word_count", "meta_description",
+  "hero_image_url", "hero_image_alt", "hero_image_credit",
+  "themes", "lenses", "topics", "people", "organizations", "products",
+  "primary_podcast_episode_guid", "canonical_url", "published",
+  "is_lead_story", "overview_bullets", "created_at", "updated_at",
+].join(", ");
+
 export type ArticleFormat =
   | "news-brief"
   | "news-analysis"
@@ -74,6 +88,11 @@ export interface Article {
   created_at: string;
   updated_at: string;
 }
+
+// ArticleSummary is Article without the three heavyweight text fields.
+// All bulk/list queries return this type; detail pages use Article via getArticleBySlug().
+// Article is assignable to ArticleSummary, so components typed ArticleSummary accept both.
+export type ArticleSummary = Omit<Article, "content_html" | "content_markdown" | "schema_jsonld">;
 
 export interface Entity {
   id: string;
@@ -136,14 +155,32 @@ function rewriteHeroUrl(url: string | null): string | null {
   return mapped ?? url;
 }
 
-export async function getAllArticles(): Promise<Article[]> {
+export async function getAllArticles(): Promise<ArticleSummary[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select(ARTICLE_SUMMARY_COLS)
+    .eq("published", true)
+    .order("publish_date", { ascending: false });
+  if (error) {
+    console.error("getAllArticles error:", error);
+    return [];
+  }
+  return ((data ?? []) as unknown as ArticleSummary[]).map(a => ({
+    ...a,
+    hero_image_url: rewriteHeroUrl(a.hero_image_url),
+  }));
+}
+
+// Full-content variant — only for the /news/rss.xml full-text feed.
+// All other callers should use getAllArticles().
+export async function getAllArticlesWithContent(): Promise<Article[]> {
   const { data, error } = await supabase
     .from("articles")
     .select("*")
     .eq("published", true)
     .order("publish_date", { ascending: false });
   if (error) {
-    console.error("getAllArticles error:", error);
+    console.error("getAllArticlesWithContent error:", error);
     return [];
   }
   return ((data ?? []) as Article[]).map(a => ({
@@ -171,20 +208,20 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
 export async function getRelatedArticles(
   article: Article,
   limit = 3,
-): Promise<Article[]> {
+): Promise<ArticleSummary[]> {
   if (!article.themes || article.themes.length === 0) {
     const { data } = await supabase
       .from("articles")
-      .select("*")
+      .select(ARTICLE_SUMMARY_COLS)
       .eq("published", true)
       .neq("slug", article.slug)
       .order("publish_date", { ascending: false })
       .limit(limit);
-    return (data ?? []) as Article[];
+    return (data ?? []) as unknown as ArticleSummary[];
   }
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(ARTICLE_SUMMARY_COLS)
     .eq("published", true)
     .neq("slug", article.slug)
     .overlaps("themes", article.themes)
@@ -194,7 +231,7 @@ export async function getRelatedArticles(
     console.error("getRelatedArticles error:", error);
     return [];
   }
-  return (data ?? []) as Article[];
+  return (data ?? []) as unknown as ArticleSummary[];
 }
 
 /**
@@ -226,10 +263,10 @@ export async function getAllTopics(): Promise<
 export async function getArticlesByTopic(
   topicSlug: string,
   limit = 50,
-): Promise<Article[]> {
+): Promise<ArticleSummary[]> {
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(ARTICLE_SUMMARY_COLS)
     .eq("published", true)
     .contains("topics", [topicSlug])
     .order("publish_date", { ascending: false })
@@ -238,16 +275,16 @@ export async function getArticlesByTopic(
     console.error("getArticlesByTopic error:", error);
     return [];
   }
-  return (data ?? []) as Article[];
+  return (data ?? []) as unknown as ArticleSummary[];
 }
 
 export async function getArticlesByTheme(
   themeSlug: string,
   limit = 50,
-): Promise<Article[]> {
+): Promise<ArticleSummary[]> {
   const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(ARTICLE_SUMMARY_COLS)
     .eq("published", true)
     .contains("themes", [themeSlug])
     .order("publish_date", { ascending: false })
@@ -256,7 +293,7 @@ export async function getArticlesByTheme(
     console.error("getArticlesByTheme error:", error);
     return [];
   }
-  return (data ?? []) as Article[];
+  return (data ?? []) as unknown as ArticleSummary[];
 }
 
 export async function getAllThemes(): Promise<Theme[]> {
@@ -355,13 +392,13 @@ export async function getArticleEntities(
 export async function getArticlesByEntity(
   entitySlug: string,
   limit = 20,
-): Promise<Article[]> {
+): Promise<ArticleSummary[]> {
   // Try join table first
   const { data: rows } = await supabase
     .from("article_entities")
     .select(
       `
-      articles!inner (*),
+      articles!inner (${ARTICLE_SUMMARY_COLS}),
       entities!inner ( slug )
     `,
     )
@@ -369,7 +406,7 @@ export async function getArticlesByEntity(
     .limit(limit);
 
   const fromJoin = (rows ?? [])
-    .map((r: any) => r.articles as Article)
+    .map((r: any) => r.articles as ArticleSummary)
     .filter((a) => a && a.published);
 
   // Also search articles that mention this entity in their arrays
@@ -379,7 +416,7 @@ export async function getArticlesByEntity(
   const safeName = entityName.replace(/[%,().*\\]/g, "");
   const { data: byArray } = await supabase
     .from("articles")
-    .select("*")
+    .select(ARTICLE_SUMMARY_COLS)
     .eq("published", true)
     .or(`organizations.cs.{${safeSlug}},organizations.cs.{${safeName}},people.cs.{${safeSlug}},people.cs.{${safeName}},products.cs.{${safeSlug}},products.cs.{${safeName}}`)
     .order("publish_date", { ascending: false })
@@ -387,20 +424,20 @@ export async function getArticlesByEntity(
 
   // Also text search titles
   const titleSearch = safeName.length >= 3 ? safeSlug : null;
-  let byTitle: Article[] = [];
+  let byTitle: ArticleSummary[] = [];
   if (titleSearch) {
     const { data } = await supabase
       .from("articles")
-      .select("*")
+      .select(ARTICLE_SUMMARY_COLS)
       .eq("published", true)
       .or(`title.ilike.%${safeName}%,meta_description.ilike.%${safeName}%`)
       .order("publish_date", { ascending: false })
       .limit(limit);
-    byTitle = (data ?? []) as Article[];
+    byTitle = (data ?? []) as unknown as ArticleSummary[];
   }
 
   // Deduplicate + sort
-  const all = [...fromJoin, ...((byArray ?? []) as Article[]), ...byTitle];
+  const all = [...fromJoin, ...((byArray ?? []) as unknown as ArticleSummary[]), ...byTitle];
   const seen = new Set<string>();
   const unique = all.filter((a) => {
     if (!a?.slug || seen.has(a.slug)) return false;
