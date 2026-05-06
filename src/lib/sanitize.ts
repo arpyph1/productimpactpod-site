@@ -9,6 +9,7 @@ const ALLOWED_TAGS = [
   "table", "thead", "tbody", "tr", "th", "td",
   "img", "figure", "figcaption",
   "div", "span", "sup", "sub", "mark",
+  "iframe",
 ];
 
 const ALLOWED_ATTRS: Record<string, string[]> = {
@@ -16,6 +17,11 @@ const ALLOWED_ATTRS: Record<string, string[]> = {
   img: ["src", "alt", "width", "height", "loading"],
   td: ["colspan", "rowspan"],
   th: ["colspan", "rowspan"],
+  iframe: [
+    "src", "width", "height", "title",
+    "frameborder", "allow", "allowfullscreen",
+    "referrerpolicy", "loading",
+  ],
   "*": ["class", "id", "lang", "dir"],
 };
 
@@ -24,6 +30,12 @@ export function sanitizeHtml(dirty: string): string {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: ALLOWED_ATTRS,
     allowedSchemes: ["http", "https", "mailto"],
+    allowedIframeHostnames: [
+      "www.youtube.com", "youtube.com", "youtube-nocookie.com",
+      "player.vimeo.com",
+      "open.spotify.com",
+      "platform.twitter.com",
+    ],
     disallowedTagsMode: "discard",
   });
 }
