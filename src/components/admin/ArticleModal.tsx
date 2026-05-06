@@ -174,8 +174,13 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
       // Insert via DOM Range — preserves all tags/attributes including <a href>.
       // execCommand("insertHTML") is deprecated and silently sanitizes in some
       // browsers, which was stripping anchor links from pasted content.
+      const editor = editorRef.current;
       const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
+      const selInsideEditor =
+        sel && sel.rangeCount > 0 && editor &&
+        editor.contains(sel.anchorNode) && editor.contains(sel.focusNode);
+
+      if (selInsideEditor) {
         const range = sel.getRangeAt(0);
         range.deleteContents();
         const frag = document.createDocumentFragment();
@@ -188,8 +193,11 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
           sel.removeAllRanges();
           sel.addRange(range);
         }
-      } else if (editorRef.current) {
-        editorRef.current.insertAdjacentHTML("beforeend", root.innerHTML);
+      } else if (editor) {
+        // Fallback: append to end of editor and place cursor there
+        const frag = document.createDocumentFragment();
+        while (root.firstChild) frag.appendChild(root.firstChild);
+        editor.appendChild(frag);
       }
       syncFromEditor();
     }
