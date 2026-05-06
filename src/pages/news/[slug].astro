@@ -147,16 +147,16 @@ const bcJsonLd = {
         </nav>
 
         {/* Metadata row — Particle style: format + time + themes inline */}
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a] whitespace-nowrap">
             {formatLabel(article.format)}
           </span>
           <span class="text-[10px] text-[#444]">·</span>
-          <span class="text-[10px] text-[#555]">{timeAgo(article.publish_date)}</span>
+          <span class="text-[10px] text-[#555] whitespace-nowrap">{timeAgo(article.publish_date)}</span>
           {article.themes?.map((t) => (
             <>
               <span class="text-[10px] text-[#333]">·</span>
-              <a href={`/themes/${t}/`} class="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors">
+              <a href={`/themes/${t}/`} class="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors whitespace-nowrap">
                 {themeLabel(t)}
               </a>
             </>
