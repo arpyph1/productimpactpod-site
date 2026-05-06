@@ -90,7 +90,7 @@ const jsonLd = article.schema_jsonld ?? {
   mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
   wordCount: article.word_count ?? undefined,
   articleSection: article.themes?.[0]?.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? undefined,
-  keywords: [...(article.themes ?? []), ...(article.topics ?? [])].join(", ") || undefined,
+  keywords: [...(article.themes ?? []), ...(article.topics ?? []), ...(article.tags ?? [])].join(", ") || undefined,
   isAccessibleForFree: true,
   inLanguage: "en",
   speakable: {
@@ -121,7 +121,7 @@ const bcJsonLd = {
   publishedTime={pubISO}
   modifiedTime={article.last_updated ?? pubISO}
   articleSection={article.themes?.[0] ?? null}
-  articleTags={article.topics ?? []}
+  articleTags={[...(article.topics ?? []), ...(article.tags ?? [])]}
   articleAuthor={`${siteUrl}/people/${article.author_slugs?.[0] ?? "arpy-dragffy"}`}
   jsonLd={[jsonLd, bcJsonLd]}
 >

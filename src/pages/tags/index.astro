@@ -1,0 +1,119 @@
+---
+// /tags — index of every AI-generated tag used across the archive.
+// Tags are fine-grained (≥16 per article) and complement /topics + /themes.
+// Hidden on the article template; surfaced here for browse + on-site search.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import { getAllTags } from "@lib/supabase";
+
+const tags = await getAllTags();
+const siteUrl = "https://productimpactpod.com";
+
+const grouped = new Map<string, typeof tags>();
+for (const t of tags) {
+  const letter = (t.slug[0] ?? "#").toUpperCase();
+  const key = /[A-Z]/.test(letter) ? letter : "#";
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(t);
+}
+for (const list of grouped.values()) {
+  list.sort((a, b) => a.slug.localeCompare(b.slug));
+}
+const sortedGroups = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+const tagDisplay = (slug: string) =>
+  slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Tags | Product Impact",
+  url: `${siteUrl}/tags`,
+  description:
+    "Every tag indexed across Product Impact — granular labels for AI products, companies, concepts, and use-cases.",
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: tags.length,
+    itemListElement: tags.slice(0, 100).map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/tags/${t.slug}`,
+      name: tagDisplay(t.slug),
+    })),
+  },
+};
+---
+
+<BaseLayout
+  title="Tags | Product Impact"
+  description="Every tag indexed across Product Impact — granular labels for browsing AI product news by company, concept, or use-case."
+  canonicalUrl={`${siteUrl}/tags`}
+  jsonLd={jsonLd}
+>
+  <Nav />
+
+  <main class="container-wide py-16">
+    <header class="mb-12">
+      <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
+        Tags
+      </h1>
+      <p class="text-lg text-[#d4d4d4] max-w-2xl">
+        Granular labels generated for every article — companies, products, concepts, use-cases, and more. For broader categories see <a href="/topics/" class="text-accent hover:text-accent-hover">Topics</a> or <a href="/themes/" class="text-accent hover:text-accent-hover">Themes</a>.
+      </p>
+    </header>
+
+    {tags.length === 0 ? (
+      <div class="text-center py-24">
+        <p class="text-xl text-[#a0a0a0]">No tags indexed yet.</p>
+        <a href="/news/" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          Browse news →
+        </a>
+      </div>
+    ) : (
+      <>
+        <nav aria-label="Jump to letter" class="flex flex-wrap gap-1.5 mb-10 pb-6 border-b border-[#2a2a2a]">
+          {sortedGroups.map(([letter]) => (
+            <a
+              href={`#letter-${letter}`}
+              class="w-8 h-8 flex items-center justify-center rounded-md text-sm font-bold text-[#d4d4d4] bg-background-card hover:bg-background-hover hover:text-accent transition-colors"
+            >
+              {letter}
+            </a>
+          ))}
+        </nav>
+
+        <div class="space-y-10">
+          {sortedGroups.map(([letter, list]) => (
+            <section id={`letter-${letter}`}>
+              <h2 class="text-3xl font-extrabold text-accent mb-5 border-b border-[#2a2a2a] pb-2">
+                {letter}
+              </h2>
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {list.map((t) => (
+                  <a
+                    href={`/tags/${t.slug}/`}
+                    class="group flex items-baseline justify-between gap-2 px-3 py-2 rounded-md hover:bg-background-card transition-colors"
+                  >
+                    <span class="text-sm text-[#d4d4d4] group-hover:text-accent transition-colors truncate">
+                      {tagDisplay(t.slug)}
+                    </span>
+                    <span class="text-xs text-[#707070] flex-shrink-0">{t.count}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <p class="text-sm text-[#707070] italic mt-12 pt-6 border-t border-[#2a2a2a]">
+          {tags.length} tags indexed across the archive.
+        </p>
+      </>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

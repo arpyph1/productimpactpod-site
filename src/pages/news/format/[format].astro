@@ -14,7 +14,11 @@ export async function getStaticPaths() {
 
 const { format } = Astro.params;
 const allArticles = await getAllArticles();
-const articles = allArticles.filter((a) => a.format === format);
+// Articles can carry multiple formats now; fall back to the legacy
+// single `format` column for rows that haven't been re-saved yet.
+const articles = allArticles.filter((a) =>
+  (a.formats?.length ? a.formats.includes(format as ArticleFormat) : a.format === format)
+);
 const siteUrl = "https://productimpactpod.com";
 const label = formatLabel(format as ArticleFormat);
 

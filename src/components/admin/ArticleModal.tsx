@@ -55,6 +55,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     subtitle: article?.subtitle ?? "",
     slug: article?.slug ?? "",
     format: article?.format ?? "news-analysis",
+    formats: article?.formats?.length ? article.formats : (article?.format ? [article.format] : ["news-analysis"]),
     author_slugs: article?.author_slugs ?? ["arpy-dragffy"],
     publish_date: article?.publish_date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
     published: article?.published ?? false,
@@ -67,9 +68,11 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     themes: article?.themes ?? [],
     lenses: article?.lenses ?? [],
     topics: article?.topics ?? [],
+    tags: article?.tags ?? [],
     is_lead_story: article?.is_lead_story ?? false,
     read_time_minutes: article?.read_time_minutes ?? 5,
   });
+  const [generatingTags, setGeneratingTags] = useState(false);
 
   const deriveStatus = (): ArticleStatus => {
     if (form.published) return "published";
@@ -108,6 +111,40 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   function syncFromEditor() {
     if (editorRef.current) {
       update("content_html", editorRef.current.innerHTML);
+    }
+  }
+
+  async function generateTags() {
+    const html = editorRef.current?.innerHTML ?? form.content_html;
+    if (!form.title.trim() || !html.trim()) {
+      setMsg("Need a title and article body to generate tags");
+      setTimeout(() => setMsg(""), 3000);
+      return;
+    }
+    setGeneratingTags(true);
+    setMsg("Generating tags…");
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-article-tags", {
+        body: {
+          title: form.title,
+          subtitle: form.subtitle,
+          content_html: html,
+          themes: form.themes,
+        },
+      });
+      if (error) throw error;
+      const newTags: string[] = Array.isArray(data?.tags) ? data.tags : [];
+      if (newTags.length === 0) {
+        setMsg("Model returned 0 tags — try regenerating");
+      } else {
+        update("tags", newTags);
+        setMsg(`Generated ${newTags.length} tags`);
+      }
+    } catch (e: any) {
+      setMsg(`Tag generation failed: ${e.message ?? e}`);
+    } finally {
+      setGeneratingTags(false);
+      setTimeout(() => setMsg(""), 3000);
     }
   }
 
@@ -437,13 +474,29 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                 value={form.slug} onChange={(e) => update("slug", e.target.value)} />
             </div>
 
-            {/* Format */}
+            {/* Formats — multi-select. The first selected becomes the
+                 canonical "primary" format (kept in form.format for
+                 back-compat with code that still reads a single value). */}
             <div>
-              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Format</label>
-              <select className="w-full px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
-                value={form.format} onChange={(e) => update("format", e.target.value)}>
-                {FORMATS.map(f => <option key={f} value={f}>{f.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>)}
-              </select>
+              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Formats</label>
+              <div className="flex flex-wrap gap-1.5">
+                {FORMATS.map(f => {
+                  const selected = form.formats.includes(f);
+                  return (
+                    <button key={f} type="button"
+                      onClick={() => {
+                        const next = selected ? form.formats.filter((x: string) => x !== f) : [...form.formats, f];
+                        const safe = next.length ? next : [f];
+                        setForm(prev => ({ ...prev, formats: safe, format: safe[0] }));
+                      }}
+                      className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                        selected ? "bg-[#ff6b4a]/15 text-[#ff6b4a] border border-[#ff6b4a]/30" : "bg-[#111] text-[#666] border border-[#1a1a1a] hover:text-white"
+                      }`}>
+                      {f.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Author */}
@@ -527,6 +580,32 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                 <button onClick={() => { if (topicInput.trim()) { update("topics", [...(form.topics ?? []), topicInput.trim()]); setTopicInput(""); } }}
                   className="px-2 py-1.5 bg-[#1a1a1a] text-[#888] text-[11px] rounded hover:text-white">+</button>
               </div>
+            </div>
+
+            {/* Tags — AI-generated. Hidden on the article template; used for
+                 the /tags index and on-site search. Click a tag to remove it. */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-semibold text-[#666] uppercase tracking-wider">
+                  Tags{form.tags.length ? ` (${form.tags.length})` : ""}
+                </label>
+                <button type="button" onClick={generateTags} disabled={generatingTags}
+                  className="text-[11px] text-[#ff6b4a] hover:text-[#ff8566] disabled:opacity-40 disabled:cursor-not-allowed">
+                  {generatingTags ? "Generating…" : (form.tags.length ? "Regenerate" : "Generate")}
+                </button>
+              </div>
+              {form.tags.length === 0 ? (
+                <p className="text-[11px] text-[#555] italic">No tags yet — click Generate to create them from the article body.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {form.tags.map((t: string) => (
+                    <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#111] border border-[#1a1a1a] rounded text-[10px] text-[#888]">
+                      {t}
+                      <button type="button" onClick={() => update("tags", form.tags.filter((x: string) => x !== t))} className="text-[#555] hover:text-red-400">&times;</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Lead story */}
