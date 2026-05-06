@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import https from "https";
@@ -81,7 +82,12 @@ async function main() {
   for (const article of toDownload) {
     const url = article.hero_image_url;
     const ext = path.extname(new URL(url).pathname) || ".png";
-    const filename = `${article.slug}${ext}`;
+    // Fingerprint the filename with a short hash of the source URL so each
+    // re-upload produces a new local path. /hero-images/* is served with
+    // Cache-Control: immutable, so a stable filename would keep stale images
+    // pinned in browser/CDN caches forever after a re-upload.
+    const hash = crypto.createHash("sha1").update(url).digest("hex").slice(0, 10);
+    const filename = `${article.slug}-${hash}${ext}`;
     const dest = path.join(OUT_DIR, filename);
     const localPath = `/hero-images/${filename}`;
 
