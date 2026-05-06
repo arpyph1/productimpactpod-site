@@ -171,7 +171,26 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
           break;
         }
       }
-      document.execCommand("insertHTML", false, root.innerHTML);
+      // Insert via DOM Range — preserves all tags/attributes including <a href>.
+      // execCommand("insertHTML") is deprecated and silently sanitizes in some
+      // browsers, which was stripping anchor links from pasted content.
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const frag = document.createDocumentFragment();
+        while (root.firstChild) frag.appendChild(root.firstChild);
+        const lastNode = frag.lastChild;
+        range.insertNode(frag);
+        if (lastNode) {
+          range.setStartAfter(lastNode);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } else if (editorRef.current) {
+        editorRef.current.insertAdjacentHTML("beforeend", root.innerHTML);
+      }
       syncFromEditor();
     }
   }
