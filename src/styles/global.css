@@ -82,6 +82,19 @@
   --lavender: 258 60% 73%;
   --sage: 140 25% 55%;
   --orange: 24 95% 58%;
+
+  /* Hex literal aliases — required by component styles that use var(--*-hex) */
+  --accent-hex: #ff6b4a;
+  --accent-hover-hex: #ff8566;
+  --accent-muted-hex: rgba(255, 107, 74, 0.15);
+  --text-primary-hex: #f0f0f0;
+  --text-secondary-hex: #b0b0b0;
+  --text-tertiary-hex: #777777;
+  --text-faint-hex: #4a4a4a;
+  --bg-base-hex: #080808;
+  --bg-card-hex: #0c0c0c;
+  --border-hex: #181818;
+  --border-strong-hex: #222222;
 }
 
 /* ── Base ── */
