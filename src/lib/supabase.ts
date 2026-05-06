@@ -435,11 +435,16 @@ export async function getArticlesByEntity(
 // ── Site Settings ─────────────────────────────────────────────────────────────
 
 export async function getSiteSetting(key: string): Promise<any> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("site_settings")
     .select("value")
     .eq("key", key)
     .single();
+  if (error) {
+    console.warn(`[getSiteSetting] key="${key}" error: ${error.code} ${error.message}`);
+  } else if (!data) {
+    console.warn(`[getSiteSetting] key="${key}" returned no row`);
+  }
   return data?.value ?? null;
 }
 
