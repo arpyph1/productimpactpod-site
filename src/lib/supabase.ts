@@ -143,20 +143,71 @@ function rewriteHeroUrl(url: string | null): string | null {
   return mapped ?? url;
 }
 
+// Columns that listing pages need. Critically excludes content_html and
+// content_markdown, which are by far the largest fields and only the
+// /news/[slug] detail page actually consumes them. Dropping them from
+// the listing query cuts Supabase egress per build by roughly an order
+// of magnitude on a typical archive.
+const ARTICLE_LIST_COLUMNS = [
+  "id",
+  "slug",
+  "title",
+  "subtitle",
+  "format",
+  "formats",
+  "author_slugs",
+  "byline_role",
+  "dateline",
+  "publish_date",
+  "last_updated",
+  "read_time_minutes",
+  "word_count",
+  "meta_description",
+  "hero_image_url",
+  "hero_image_alt",
+  "hero_image_credit",
+  "themes",
+  "lenses",
+  "topics",
+  "tags",
+  "people",
+  "organizations",
+  "products",
+  "primary_podcast_episode_guid",
+  "schema_jsonld",
+  "canonical_url",
+  "published",
+  "is_lead_story",
+  "overview_bullets",
+  "created_at",
+  "updated_at",
+].join(",");
+
+// Build-time memoization. Astro evaluates each .astro page in the same
+// Node process during `astro build`, so a top-level promise cache is
+// shared across every getStaticPaths/frontmatter call within a single
+// build. Without this, 17+ templates each re-fetched the full archive
+// from Supabase, multiplying egress by the call count.
+let _articlesCache: Promise<ArticleSummary[]> | null = null;
+
 export async function getAllArticles(): Promise<ArticleSummary[]> {
-  const { data, error } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("published", true)
-    .order("publish_date", { ascending: false });
-  if (error) {
-    console.error("getAllArticles error:", error);
-    return [];
-  }
-  return ((data ?? []) as Article[]).map(a => ({
-    ...a,
-    hero_image_url: rewriteHeroUrl(a.hero_image_url),
-  }));
+  if (_articlesCache) return _articlesCache;
+  _articlesCache = (async () => {
+    const { data, error } = await supabase
+      .from("articles")
+      .select(ARTICLE_LIST_COLUMNS)
+      .eq("published", true)
+      .order("publish_date", { ascending: false });
+    if (error) {
+      console.error("getAllArticles error:", error);
+      return [];
+    }
+    return ((data ?? []) as unknown as Article[]).map(a => ({
+      ...a,
+      hero_image_url: rewriteHeroUrl(a.hero_image_url),
+    }));
+  })();
+  return _articlesCache;
 }
 
 // Full-content variant — only for the /news/rss.xml full-text feed.
@@ -345,19 +396,35 @@ export async function getAllThemes(): Promise<Theme[]> {
   return (data ?? []) as Theme[];
 }
 
+// Listing-page columns for entities — drops `long_form` and
+// `long_form_intro`, which only the entity detail page renders.
+const ENTITY_LIST_COLUMNS = [
+  "id", "type", "slug", "name", "aliases", "description",
+  "external_links", "metadata", "themes", "lenses",
+  "canonical_url", "schema_jsonld", "created_at", "updated_at",
+].join(",");
+
+const _entitiesCache = new Map<Entity["type"], Promise<Entity[]>>();
+
 export async function getAllEntitiesByType(
   type: Entity["type"],
 ): Promise<Entity[]> {
-  const { data, error } = await supabase
-    .from("entities")
-    .select("*")
-    .eq("type", type)
-    .order("name", { ascending: true });
-  if (error) {
-    console.error("getAllEntitiesByType error:", error);
-    return [];
-  }
-  return (data ?? []) as Entity[];
+  const cached = _entitiesCache.get(type);
+  if (cached) return cached;
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("entities")
+      .select(ENTITY_LIST_COLUMNS)
+      .eq("type", type)
+      .order("name", { ascending: true });
+    if (error) {
+      console.error("getAllEntitiesByType error:", error);
+      return [];
+    }
+    return (data ?? []) as unknown as Entity[];
+  })();
+  _entitiesCache.set(type, promise);
+  return promise;
 }
 
 export async function getEntityBySlug(
@@ -588,17 +655,33 @@ export async function getEntitiesByTheme(themeSlug: string): Promise<Entity[]> {
   return (data ?? []) as Entity[];
 }
 
+// Listing-page columns for episodes — drops `content_html` and the
+// (potentially huge) `transcript_markdown`, which only the episode
+// detail page consumes.
+const EPISODE_LIST_COLUMNS = [
+  "episode_guid", "slug", "title", "meta_description",
+  "episode_number", "season_number", "duration",
+  "themes", "lenses", "hosts", "guests",
+  "schema_jsonld", "published_at", "links", "video_urls", "published",
+].join(",");
+
+let _episodesCache: Promise<Episode[]> | null = null;
+
 export async function getAllEpisodes(): Promise<Episode[]> {
-  const { data, error } = await supabase
-    .from("episode_shownotes")
-    .select("*")
-    .eq("published", true)
-    .order("published_at", { ascending: false });
-  if (error) {
-    console.error("getAllEpisodes error:", error);
-    return [];
-  }
-  return (data ?? []) as Episode[];
+  if (_episodesCache) return _episodesCache;
+  _episodesCache = (async () => {
+    const { data, error } = await supabase
+      .from("episode_shownotes")
+      .select(EPISODE_LIST_COLUMNS)
+      .eq("published", true)
+      .order("published_at", { ascending: false });
+    if (error) {
+      console.error("getAllEpisodes error:", error);
+      return [];
+    }
+    return (data ?? []) as unknown as Episode[];
+  })();
+  return _episodesCache;
 }
 
 export async function getEpisodeBySlug(slug: string): Promise<Episode | null> {
