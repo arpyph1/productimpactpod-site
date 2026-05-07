@@ -56,7 +56,7 @@ const hubJsonLd = {
   "@type": "CollectionPage",
   name: `${topicName} | Product Impact`,
   description: metaDescription,
-  url: `${siteUrl}/topics/${topicSlug}`,
+  url: `${siteUrl}/topics/${topicSlug}/`,
   isPartOf: { "@id": `${siteUrl}/#website` },
   mainEntity: {
     "@type": "ItemList",
@@ -64,7 +64,7 @@ const hubJsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },
@@ -76,8 +76,8 @@ const breadcrumbJsonLd = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "Topics", item: `${siteUrl}/topics` },
-    { "@type": "ListItem", position: 3, name: topicName, item: `${siteUrl}/topics/${topicSlug}` },
+    { "@type": "ListItem", position: 2, name: "Topics", item: `${siteUrl}/topics/` },
+    { "@type": "ListItem", position: 3, name: topicName, item: `${siteUrl}/topics/${topicSlug}/` },
   ],
 };
 
@@ -96,7 +96,7 @@ function articleCard(article: ArticleSummary) {
 <BaseLayout
   title={`${topicName} | Product Impact`}
   description={metaDescription}
-  canonicalUrl={`${siteUrl}/topics/${topicSlug}`}
+  canonicalUrl={`${siteUrl}/topics/${topicSlug}/`}
   jsonLd={[hubJsonLd, breadcrumbJsonLd]}
 >
   <Nav />

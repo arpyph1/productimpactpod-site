@@ -40,7 +40,7 @@ const jsonLd = {
     itemListElement: tags.slice(0, 100).map((t, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/tags/${t.slug}`,
+      url: `${siteUrl}/tags/${t.slug}/`,
       name: tagDisplay(t.slug),
     })),
   },
@@ -50,7 +50,7 @@ const jsonLd = {
 <BaseLayout
   title="Tags | Product Impact"
   description="Every tag indexed across Product Impact — granular labels for browsing AI product news by company, concept, or use-case."
-  canonicalUrl={`${siteUrl}/tags`}
+  canonicalUrl={`${siteUrl}/tags/`}
   jsonLd={jsonLd}
 >
   <Nav />

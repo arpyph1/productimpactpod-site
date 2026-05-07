@@ -43,7 +43,7 @@ jobs:
       - name: Verify key outputs exist
         run: |
           for f in dist/index.html dist/news/index.html dist/podcast/index.html \
-                   dist/sitemap.xml dist/sitemap-index.xml dist/sitemap-0.xml \
+                   dist/sitemap.xml dist/sitemap-0.xml \
                    dist/news-sitemap.xml dist/rss.xml \
                    dist/robots.txt dist/favicon.png dist/og-default.png \
                    dist/logo.png dist/about/index.html dist/privacy/index.html \

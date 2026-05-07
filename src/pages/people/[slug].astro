@@ -21,7 +21,7 @@ export async function getStaticPaths() {
 
 const { entity, articles } = Astro.props as { entity: Entity; articles: ArticleSummary[] };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/people/${entity.slug}`;
+const canonicalUrl = `${siteUrl}/people/${entity.slug}/`;
 
 const jsonLd = {
   "@context": "https://schema.org", "@type": "Person",

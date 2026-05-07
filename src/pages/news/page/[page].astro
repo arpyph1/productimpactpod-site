@@ -39,7 +39,7 @@ const { articles, currentPage, lastPage } = Astro.props as {
   lastPage: number;
 };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/page/${currentPage}`;
+const canonicalUrl = `${siteUrl}/news/page/${currentPage}/`;
 
 const prevUrl =
   currentPage === 2 ? "/news" : `/news/page/${currentPage - 1}`;
@@ -57,7 +57,7 @@ const jsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: (currentPage - 1) * PAGE_SIZE + i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },

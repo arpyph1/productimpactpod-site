@@ -42,7 +42,7 @@ export async function getStaticPaths() {
 
 const { theme, articles } = Astro.props as { theme: Theme; articles: ArticleSummary[] };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/themes/${theme.slug}`;
+const canonicalUrl = `${siteUrl}/themes/${theme.slug}/`;
 
 const episodes = await getEpisodesByTheme(theme.slug, 20);
 const themeEntities = await getEntitiesByTheme(theme.slug);

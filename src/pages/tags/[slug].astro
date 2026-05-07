@@ -34,7 +34,7 @@ const hubJsonLd = {
   "@type": "CollectionPage",
   name: `${tagName} | Product Impact`,
   description: metaDescription,
-  url: `${siteUrl}/tags/${tagSlug}`,
+  url: `${siteUrl}/tags/${tagSlug}/`,
   isPartOf: { "@id": `${siteUrl}/#website` },
   mainEntity: {
     "@type": "ItemList",
@@ -42,7 +42,7 @@ const hubJsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },
@@ -54,8 +54,8 @@ const breadcrumbJsonLd = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "Tags", item: `${siteUrl}/tags` },
-    { "@type": "ListItem", position: 3, name: tagName, item: `${siteUrl}/tags/${tagSlug}` },
+    { "@type": "ListItem", position: 2, name: "Tags", item: `${siteUrl}/tags/` },
+    { "@type": "ListItem", position: 3, name: tagName, item: `${siteUrl}/tags/${tagSlug}/` },
   ],
 };
 
@@ -71,7 +71,7 @@ function gradientFor(article: ArticleSummary) {
 <BaseLayout
   title={`${tagName} | Product Impact`}
   description={metaDescription}
-  canonicalUrl={`${siteUrl}/tags/${tagSlug}`}
+  canonicalUrl={`${siteUrl}/tags/${tagSlug}/`}
   jsonLd={[hubJsonLd, breadcrumbJsonLd]}
 >
   <Nav />

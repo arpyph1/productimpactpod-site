@@ -42,7 +42,7 @@ const jsonLd = {
     itemListElement: topics.slice(0, 100).map((t, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/topics/${t.slug}`,
+      url: `${siteUrl}/topics/${t.slug}/`,
       name: topicsForDisplay(t.slug),
     })),
   },
@@ -52,7 +52,7 @@ const jsonLd = {
 <BaseLayout
   title="Topics | Product Impact"
   description="Every topic covered on Product Impact — browse AI product news and analysis by subject, from specific products to broader concepts."
-  canonicalUrl={`${siteUrl}/topics`}
+  canonicalUrl={`${siteUrl}/topics/`}
   jsonLd={jsonLd}
 >
   <Nav />

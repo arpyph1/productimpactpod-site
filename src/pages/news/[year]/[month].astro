@@ -36,7 +36,7 @@ const { year, month, articles } = Astro.props as {
   articles: ArticleSummary[];
 };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/${year}/${month}`;
+const canonicalUrl = `${siteUrl}/news/${year}/${month}/`;
 
 const monthDate = new Date(Date.UTC(+year, +month - 1, 1));
 const monthName = monthDate.toLocaleString("en-US", { month: "long", timeZone: "UTC" });
@@ -54,7 +54,7 @@ const jsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },
@@ -65,9 +65,9 @@ const breadcrumbJsonLd = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news` },
-    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive` },
-    { "@type": "ListItem", position: 4, name: year, item: `${siteUrl}/news/${year}` },
+    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news/` },
+    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive/` },
+    { "@type": "ListItem", position: 4, name: year, item: `${siteUrl}/news/${year}/` },
     { "@type": "ListItem", position: 5, name: displayLabel, item: canonicalUrl },
   ],
 };

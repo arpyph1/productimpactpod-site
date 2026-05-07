@@ -54,7 +54,7 @@ const jsonLd = [
     "@type": "PodcastEpisode",
     name: episode.title,
     description: episode.meta_description ?? "",
-    url: `${siteUrl}/episodes/${slug}`,
+    url: `${siteUrl}/episodes/${slug}/`,
     datePublished: episode.published_at,
     duration: episode.duration ? `PT${episode.duration.replace(/:/g, "H").replace(/H(\d+)H/, "H$1M")}S` : undefined,
     episodeNumber: episode.episode_number,
@@ -65,7 +65,7 @@ const jsonLd = [
     partOfSeries: {
       "@type": "PodcastSeries",
       name: "Product Impact Podcast",
-      url: `${siteUrl}/podcast`,
+      url: `${siteUrl}/podcast/`,
     },
     ...(episode.hosts?.length ? {
       author: episode.hosts.map((h) => ({
@@ -78,8 +78,8 @@ const jsonLd = [
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
-      { "@type": "ListItem", position: 2, name: "Episodes", item: `${siteUrl}/episodes` },
+      { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Episodes", item: `${siteUrl}/episodes/` },
       { "@type": "ListItem", position: 3, name: episode.title },
     ],
   },
@@ -89,7 +89,7 @@ const jsonLd = [
 <BaseLayout
   title={`${episode.title} | Product Impact Podcast`}
   description={episode.meta_description ?? `Listen to ${episode.title} on the Product Impact Podcast.`}
-  canonicalUrl={`${siteUrl}/episodes/${slug}`}
+  canonicalUrl={`${siteUrl}/episodes/${slug}/`}
   jsonLd={jsonLd}
 >
   <Nav />

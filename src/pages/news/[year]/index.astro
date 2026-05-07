@@ -32,7 +32,7 @@ interface Props {
 
 const { year, articles } = Astro.props;
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/${year}`;
+const canonicalUrl = `${siteUrl}/news/${year}/`;
 
 // Month buckets for in-page navigation
 const byMonth = new Map<string, ArticleSummary[]>();
@@ -61,7 +61,7 @@ const jsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },
@@ -72,8 +72,8 @@ const breadcrumbJsonLd = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
-    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news` },
-    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive` },
+    { "@type": "ListItem", position: 2, name: "News", item: `${siteUrl}/news/` },
+    { "@type": "ListItem", position: 3, name: "Archive", item: `${siteUrl}/news/archive/` },
     { "@type": "ListItem", position: 4, name: year, item: canonicalUrl },
   ],
 };
