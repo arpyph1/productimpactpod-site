@@ -32,7 +32,7 @@ interface Props {
 
 const { year, articles } = Astro.props;
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/${year}`;
+const canonicalUrl = `${siteUrl}/news/${year}/`;
 
 // Month buckets for in-page navigation
 const byMonth = new Map<string, ArticleSummary[]>();

@@ -47,7 +47,7 @@ const bullets = article.overview_bullets?.length
   ? article.overview_bullets
   : generateOverviewBullets(article.content_html);
 const canonicalUrl = article.canonical_url?.startsWith(siteUrl)
-  ? article.canonical_url : `${siteUrl}/news/${article.slug}`;
+  ? article.canonical_url : `${siteUrl}/news/${article.slug}/`;
 
 const authorNames = (article.author_slugs ?? []).map(authorDisplayName);
 const pubDate = new Date(article.publish_date);

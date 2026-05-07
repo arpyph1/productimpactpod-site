@@ -39,7 +39,7 @@ const { articles, currentPage, lastPage } = Astro.props as {
   lastPage: number;
 };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/page/${currentPage}`;
+const canonicalUrl = `${siteUrl}/news/page/${currentPage}/`;
 
 const prevUrl =
   currentPage === 2 ? "/news" : `/news/page/${currentPage - 1}`;

@@ -36,7 +36,7 @@ const { year, month, articles } = Astro.props as {
   articles: ArticleSummary[];
 };
 const siteUrl = "https://productimpactpod.com";
-const canonicalUrl = `${siteUrl}/news/${year}/${month}`;
+const canonicalUrl = `${siteUrl}/news/${year}/${month}/`;
 
 const monthDate = new Date(Date.UTC(+year, +month - 1, 1));
 const monthName = monthDate.toLocaleString("en-US", { month: "long", timeZone: "UTC" });

@@ -42,7 +42,16 @@
 
 # Sitemap canonicalisation
 /sitemap            /sitemap.xml                   301
-/sitemap_index.xml  /sitemap-index.xml             301
+/sitemap_index.xml  /sitemap.xml                   301
+
+# Legacy episode URLs — early podcast pages lived under /podcast/{slug}/
+# before episodes moved to /episodes/{slug}/. Catch-all forwards them.
+/podcast/*          /episodes/:splat               301
+
+# Topic pages whose slug no longer exists (article unpublished, retagged,
+# or never had its own /topics/ entry). Send them to the topic index so
+# they're not 404s in Search Console.
+/topics/*           /topics/                       301
 
 # Social/unfurl bot compatibility — some platforms strip trailing slashes
 # and re-append with quotes. These are harmless no-ops if never hit.

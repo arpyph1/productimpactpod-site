@@ -2,8 +2,11 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
-import sitemap from "@astrojs/sitemap";
 
+// Sitemap is hand-rolled at /sitemap-0.xml.ts so it can suppress
+// thin entity pages, noindexed format/pagination URLs, and other
+// low-value paths the @astrojs/sitemap plugin would auto-include.
+//
 // https://astro.build/config
 export default defineConfig({
   site: "https://productimpactpod.com",
@@ -12,20 +15,6 @@ export default defineConfig({
     react(),
     tailwind({
       applyBaseStyles: false,
-    }),
-    sitemap({
-      // Keep the sitemap aligned with what we actually want indexed —
-      // noindexed routes (admin, error pages, paginated/filter views)
-      // shouldn't be advertised to crawlers.
-      filter: (page) =>
-        !page.includes("/admin") &&
-        !page.includes("/404") &&
-        !page.includes("/500") &&
-        !page.includes("/news/format/") &&
-        !page.includes("/news/page/"),
-      changefreq: "daily",
-      priority: 0.7,
-      lastmod: new Date(),
     }),
   ],
   build: {
