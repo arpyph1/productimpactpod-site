@@ -11,18 +11,25 @@ import StoryCard from "@components/StoryCard.astro";
 import { sanitizeHtml } from "@lib/sanitize";
 import { timeAgo } from "@lib/utils";
 import {
-  getAllArticles, authorDisplayName,
+  getAllArticles, getArticleBySlug, authorDisplayName,
   formatLabel, themeLabel, stripFirstH1, generateOverviewBullets,
-  type Article,
+  type ArticleSummary,
 } from "@lib/supabase";
 import { fetchPodcastEpisodes } from "@lib/rss";
 
 export async function getStaticPaths() {
+  // Use the listing-shaped articles (no content_html) for path generation
+  // and pass them through as `allArticles` for the related-articles logic.
+  // The full article body is fetched per-slug below to avoid pulling
+  // every article's content_html into every page build.
   const articles = await getAllArticles();
-  return articles.map((a) => ({ params: { slug: a.slug }, props: { article: a, allArticles: articles } }));
+  return articles.map((a) => ({ params: { slug: a.slug }, props: { allArticles: articles } }));
 }
 
-const { article, allArticles } = Astro.props as { article: Article; allArticles: Article[] };
+const { allArticles } = Astro.props as { allArticles: ArticleSummary[] };
+const article = await getArticleBySlug(Astro.params.slug!);
+if (!article) return Astro.redirect("/news/");
+
 const related = (() => {
   const others = allArticles.filter(a => a.slug !== article.slug && a.published);
   if (!article.themes || article.themes.length === 0) {
