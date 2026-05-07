@@ -1,0 +1,161 @@
+---
+// /tags/[slug] — articles tagged with this AI-generated label.
+
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Nav from "@components/Nav.astro";
+import Footer from "@components/Footer.astro";
+import EntityHeadline from "@components/EntityHeadline.astro";
+import { getArticlesByTag, formatLabel, type ArticleSummary } from "@lib/supabase";
+import { themeGradients } from "@lib/themes";
+
+export async function getStaticPaths() {
+  const { getAllTags } = await import("@lib/supabase");
+  const tags = await getAllTags();
+  return tags.map((t) => ({
+    params: { slug: t.slug },
+    props: { tagSlug: t.slug, count: t.count },
+  }));
+}
+
+interface Props { tagSlug: string; count: number; }
+
+const { tagSlug, count } = Astro.props as Props;
+const siteUrl = "https://productimpactpod.com";
+
+const articles = await getArticlesByTag(tagSlug);
+const tagName = tagSlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const metaDescription = articles.length > 0
+  ? `Product Impact coverage tagged ${tagName} — ${count} article${count !== 1 ? "s" : ""}.`
+  : `${tagName} coverage on Product Impact.`;
+
+const hubJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: `${tagName} | Product Impact`,
+  description: metaDescription,
+  url: `${siteUrl}/tags/${tagSlug}`,
+  isPartOf: { "@id": `${siteUrl}/#website` },
+  mainEntity: {
+    "@type": "ItemList",
+    numberOfItems: articles.length,
+    itemListElement: articles.map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/news/${a.slug}`,
+      name: a.title,
+    })),
+  },
+  about: { "@type": "Thing", name: tagName },
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "Tags", item: `${siteUrl}/tags` },
+    { "@type": "ListItem", position: 3, name: tagName, item: `${siteUrl}/tags/${tagSlug}` },
+  ],
+};
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+function gradientFor(article: ArticleSummary) {
+  const firstTheme = article.themes?.[0] ?? "ai-product-strategy";
+  return themeGradients[firstTheme] ?? themeGradients["ai-product-strategy"];
+}
+---
+
+<BaseLayout
+  title={`${tagName} | Product Impact`}
+  description={metaDescription}
+  canonicalUrl={`${siteUrl}/tags/${tagSlug}`}
+  jsonLd={[hubJsonLd, breadcrumbJsonLd]}
+>
+  <Nav />
+
+  <main class="container-wide py-12">
+    <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
+      <ol class="flex flex-wrap items-center gap-2">
+        <li><a href="/" class="hover:text-white">Home</a></li>
+        <li class="text-[#707070]">/</li>
+        <li><a href="/tags" class="hover:text-white">Tags</a></li>
+        <li class="text-[#707070]">/</li>
+        <li class="text-[#d4d4d4]">{tagName}</li>
+      </ol>
+    </nav>
+
+    <header class="mb-12 max-w-3xl">
+      <div class="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-4">
+        Tag
+      </div>
+      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.1] mb-4">
+        {tagName}
+      </h1>
+      <p class="text-lg text-[#d4d4d4] leading-relaxed">
+        {articles.length > 0
+          ? `${articles.length} article${articles.length !== 1 ? "s" : ""} tagged ${tagName}.`
+          : "No coverage yet — check back soon."}
+      </p>
+    </header>
+
+    {articles.length > 0 ? (
+      <section>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {articles.map((article) => {
+            const gradient = gradientFor(article);
+            return (
+              <a
+                href={`/news/${article.slug}`}
+                class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
+              >
+                {article.hero_image_url ? (
+                  <img
+                    src={article.hero_image_url}
+                    alt={article.hero_image_alt ?? article.title}
+                    loading="lazy"
+                    class="w-full aspect-video object-cover"
+                  />
+                ) : (
+                  <div class={`w-full aspect-video bg-gradient-to-br ${gradient} flex items-center justify-center p-6`}>
+                    <div class="text-[10px] uppercase tracking-widest text-white/80 font-semibold">
+                      Product Impact
+                    </div>
+                  </div>
+                )}
+                <div class="p-5">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-accent text-black">
+                      {formatLabel(article.format)}
+                    </span>
+                  </div>
+                  <EntityHeadline title={article.title}
+                    entities={[...(article.people ?? []), ...(article.organizations ?? []), ...(article.products ?? [])]}
+                    tag="h3"
+                    class="font-bold text-white group-hover:text-accent transition-colors line-clamp-2 mb-1" />
+                  {article.subtitle && (
+                    <p class="text-sm text-[#a0a0a0] line-clamp-2">{article.subtitle}</p>
+                  )}
+                  <div class="text-xs text-[#707070] mt-3">
+                    <time datetime={article.publish_date}>{formatDate(article.publish_date)}</time>
+                  </div>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    ) : (
+      <div class="text-center py-16">
+        <p class="text-[#a0a0a0]">No articles tagged with this label yet.</p>
+        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+          Browse all news →
+        </a>
+      </div>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

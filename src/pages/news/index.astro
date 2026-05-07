@@ -3,23 +3,29 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
-import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
+import { getAllArticles, getSiteSetting, formatLabel, authorDisplayName, type ArticleFormat } from "@lib/supabase";
 import { timeAgo } from "@lib/utils";
 
 const articles = await getAllArticles();
 const siteUrl = "https://productimpactpod.com";
 
-const formats: ArticleFormat[] = ["news-analysis", "feature", "data-reports", "case-study", "release-note", "opinion", "explainer"];
+const formats: ArticleFormat[] = ["feature", "data-reports", "case-study", "release-note", "opinion", "explainer"];
+
+// Section title — driven by the same nav_items setting as the global Nav,
+// so renaming "News" → "Insights" in admin updates this h1 too.
+const navSetting = await getSiteSetting("nav_items");
+const navItem = (navSetting?.items ?? []).find((i: { href: string }) => i.href === "/news/");
+const sectionLabel = navItem?.label ?? "News";
 
 const jsonLd = {
   "@context": "https://schema.org", "@type": "CollectionPage",
-  name: "Product Impact News", url: `${siteUrl}/news`,
+  name: `Product Impact ${sectionLabel}`, url: `${siteUrl}/news`,
   description: "AI product impact — news, releases, and case studies.",
 };
 ---
 
 <BaseLayout
-  title="News | Product Impact"
+  title={`${sectionLabel} | Product Impact`}
   description="AI product impact — news, releases, and case studies about the products transforming how we work and industries."
   canonicalUrl={`${siteUrl}/news`}
   jsonLd={jsonLd}
@@ -29,7 +35,7 @@ const jsonLd = {
   <main class="max-w-[900px] mx-auto px-4 md:px-6 py-8">
     <header class="mb-6">
       <div class="flex items-baseline gap-2 mb-1">
-        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">News</h1>
+        <h1 class="text-[28px] md:text-[36px] font-extrabold text-white tracking-tight">{sectionLabel}</h1>
         <span class="text-[16px] font-bold text-[#ff6b4a]">{articles.length}</span>
       </div>
       <p class="text-[14px] text-[#777] max-w-lg">

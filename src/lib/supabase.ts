@@ -46,6 +46,7 @@ export interface Article {
   title: string;
   subtitle: string | null;
   format: ArticleFormat;
+  formats: ArticleFormat[];
   author_slugs: string[];
   byline_role: string | null;
   dateline: string | null;
@@ -62,6 +63,9 @@ export interface Article {
   themes: string[];
   lenses: string[];
   topics: string[];
+  // AI-generated, fine-grained labels powering /tags and on-site search.
+  // Not displayed on the article template; surfaced via meta keywords.
+  tags: string[];
   // Entity slug arrays — populated by join in publish_articles.py
   people?: string[];
   organizations?: string[];
@@ -260,6 +264,52 @@ export async function getArticlesByTopic(
     return [];
   }
   return (data ?? []) as Article[];
+}
+
+/**
+ * Aggregate the unique set of AI-generated tag slugs used across all
+ * published articles. Powers the /tags index and search.
+ */
+export async function getAllTags(): Promise<
+  Array<{ slug: string; count: number; firstSeen: string }>
+> {
+  const articles = await getAllArticles();
+  const counter = new Map<string, { count: number; firstSeen: string }>();
+  for (const a of articles) {
+    for (const tag of a.tags ?? []) {
+      const prev = counter.get(tag);
+      if (prev) {
+        prev.count++;
+        if (a.publish_date < prev.firstSeen) prev.firstSeen = a.publish_date;
+      } else {
+        counter.set(tag, { count: 1, firstSeen: a.publish_date });
+      }
+    }
+  }
+  return [...counter.entries()]
+    .map(([slug, v]) => ({ slug, ...v }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export async function getArticlesByTag(
+  tagSlug: string,
+  limit = 50,
+): Promise<ArticleSummary[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("published", true)
+    .contains("tags", [tagSlug])
+    .order("publish_date", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("getArticlesByTag error:", error);
+    return [];
+  }
+  return ((data ?? []) as Article[]).map(a => ({
+    ...a,
+    hero_image_url: rewriteHeroUrl(a.hero_image_url),
+  }));
 }
 
 export async function getArticlesByTheme(
@@ -577,7 +627,7 @@ export function formatLabel(format: ArticleFormat): string {
   const labels: Record<ArticleFormat, string> = {
     "news-brief": "News Brief",
     "news-analysis": "News Analysis",
-    "release-note": "Release",
+    "release-note": "New Releases",
     feature: "Feature",
     "data-reports": "Data & Reports",
     "case-study": "Case Study",
