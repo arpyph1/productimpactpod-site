@@ -42,7 +42,7 @@ const jsonLd = {
     itemListElement: topics.slice(0, 100).map((t, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${siteUrl}/topics/${t.slug}`,
+      url: `${siteUrl}/topics/${t.slug}/`,
       name: topicsForDisplay(t.slug),
     })),
   },

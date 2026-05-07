@@ -57,7 +57,7 @@ const jsonLd = {
     itemListElement: articles.map((a, i) => ({
       "@type": "ListItem",
       position: (currentPage - 1) * PAGE_SIZE + i + 1,
-      url: `${siteUrl}/news/${a.slug}`,
+      url: `${siteUrl}/news/${a.slug}/`,
       name: a.title,
     })),
   },
