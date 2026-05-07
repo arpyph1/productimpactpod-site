@@ -12,8 +12,9 @@ name: Scheduled CF Pages rebuild
 
 on:
   schedule:
-    # 00:00, 06:00, 12:00, 18:00 UTC every day
-    - cron: "0 0,6,12,18 * * *"
+    # 06:00 and 18:00 UTC every day. Was 4× daily; halved to reduce
+    # Supabase egress (each rebuild redownloads hero images).
+    - cron: "0 6,18 * * *"
   workflow_dispatch:        # allow manual trigger from Actions tab
 
 jobs:

@@ -46,6 +46,11 @@
 
 # Legacy episode URLs — early podcast pages lived under /podcast/{slug}/
 # before episodes moved to /episodes/{slug}/. Catch-all forwards them.
+# Specific overrides come first for two known legacy slugs whose target
+# /episodes/{slug} doesn't exist — point them at the closest real page
+# so Search Console doesn't see a redirect-then-404.
+/podcast/robert-brunner-physical-ai                                   /people/robert-brunner/   301
+/podcast/cognitive-sovereignty-helen-dave-edwards-artificiality-institute  /episodes/                301
 /podcast/*          /episodes/:splat               301
 
 # Topic pages whose slug no longer exists (article unpublished, retagged,
