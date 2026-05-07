@@ -14,10 +14,15 @@ export default defineConfig({
       applyBaseStyles: false,
     }),
     sitemap({
+      // Keep the sitemap aligned with what we actually want indexed —
+      // noindexed routes (admin, error pages, paginated/filter views)
+      // shouldn't be advertised to crawlers.
       filter: (page) =>
         !page.includes("/admin") &&
         !page.includes("/404") &&
-        !page.includes("/500"),
+        !page.includes("/500") &&
+        !page.includes("/news/format/") &&
+        !page.includes("/news/page/"),
       changefreq: "daily",
       priority: 0.7,
       lastmod: new Date(),
