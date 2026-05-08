@@ -190,17 +190,15 @@ let _articlesCache: Promise<ArticleSummary[]> | null = null;
 export async function getAllArticles(): Promise<ArticleSummary[]> {
   if (_articlesCache) return _articlesCache;
   _articlesCache = (async () => {
-    console.log("[getAllArticles] querying Supabase…");
     const { data, error } = await supabase
       .from("articles")
-      .select("*")
+      .select(ARTICLE_LIST_COLUMNS)
       .eq("published", true)
       .order("publish_date", { ascending: false });
     if (error) {
-      console.error("[getAllArticles] ERROR:", error.code, error.message, error.details);
+      console.error("getAllArticles error:", error);
       return [];
     }
-    console.log(`[getAllArticles] got ${data?.length ?? "null"} rows`);
     return ((data ?? []) as unknown as Article[]).map(a => ({
       ...a,
       hero_image_url: rewriteHeroUrl(a.hero_image_url),
