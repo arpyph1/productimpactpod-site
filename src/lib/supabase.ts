@@ -66,7 +66,7 @@ export interface Article {
   // AI-generated, fine-grained labels powering /tags and on-site search.
   // Not displayed on the article template; surfaced via meta keywords.
   tags: string[];
-  // Entity slug arrays — populated by join in publish_articles.py
+  // Legacy optional fields — not selected in listing queries; undefined at runtime.
   people?: string[];
   organizations?: string[];
   products?: string[];
@@ -170,9 +170,6 @@ const ARTICLE_LIST_COLUMNS = [
   "lenses",
   "topics",
   "tags",
-  "people",
-  "organizations",
-  "products",
   "primary_podcast_episode_guid",
   "schema_jsonld",
   "canonical_url",
@@ -510,23 +507,11 @@ export async function getArticlesByEntity(
     .map((r: any) => r.articles as ArticleSummary)
     .filter((a) => a && a.published);
 
-  // Also search articles that mention this entity in their arrays
+  // Also text-search titles/descriptions for the entity name
   const entityName = entitySlug.replace(/-/g, " ");
-  // Escape PostgREST special characters to prevent filter injection
-  const safeSlug = entitySlug.replace(/[%,().*\\]/g, "");
   const safeName = entityName.replace(/[%,().*\\]/g, "");
-  const { data: byArray } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("published", true)
-    .or(`organizations.cs.{${safeSlug}},organizations.cs.{${safeName}},people.cs.{${safeSlug}},people.cs.{${safeName}},products.cs.{${safeSlug}},products.cs.{${safeName}}`)
-    .order("publish_date", { ascending: false })
-    .limit(limit);
-
-  // Also text search titles
-  const titleSearch = safeName.length >= 3 ? safeSlug : null;
   let byTitle: ArticleSummary[] = [];
-  if (titleSearch) {
+  if (safeName.length >= 3) {
     const { data } = await supabase
       .from("articles")
       .select("*")
@@ -538,7 +523,7 @@ export async function getArticlesByEntity(
   }
 
   // Deduplicate + sort
-  const all = [...fromJoin, ...((byArray ?? []) as Article[]), ...byTitle];
+  const all = [...fromJoin, ...byTitle];
   const seen = new Set<string>();
   const unique = all.filter((a) => {
     if (!a?.slug || seen.has(a.slug)) return false;
