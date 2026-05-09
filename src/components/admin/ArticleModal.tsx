@@ -87,6 +87,26 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [topicInput, setTopicInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [showSurveyPicker, setShowSurveyPicker] = useState(false);
+  const [surveys, setSurveys] = useState<Array<{ id: string; title: string }>>([]);
+
+  useEffect(() => {
+    if (!showSurveyPicker || surveys.length > 0) return;
+    supabase.from("surveys").select("id, title").order("created_at", { ascending: false })
+      .then(({ data }) => setSurveys(data ?? []));
+  }, [showSurveyPicker]);
+
+  function insertSurvey(s: { id: string; title: string }) {
+    const block = `<div data-survey-id="${s.id}" class="survey-embed" style="margin:1.5em 0;padding:1em;border:1px dashed #2a2a2a;border-radius:8px;color:#888;font-size:13px;text-align:center">📋 Survey: ${s.title || s.id}</div><p><br/></p>`;
+    if (tab === "edit" && editorRef.current) {
+      editorRef.current.focus();
+      document.execCommand("insertHTML", false, block);
+      syncFromEditor();
+    } else {
+      update("content_html", form.content_html + block);
+    }
+    setShowSurveyPicker(false);
+  }
 
   function update(field: string, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -391,6 +411,8 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                     <span className="w-px h-5 bg-[#222] mx-1" />
                     <ToolBtn label="Link" cmd={() => { const url = prompt("URL:"); if (url) execCmd("createLink", url); }} />
                     <ToolBtn label="—" cmd={() => execCmd("insertHorizontalRule")} />
+                    <span className="w-px h-5 bg-[#222] mx-1" />
+                    <ToolBtn label="+ Survey" cmd={() => setShowSurveyPicker(true)} />
                   </div>
                   <div ref={editorRef} contentEditable suppressContentEditableWarning
                     className="min-h-[400px] bg-[#111] border border-[#222] rounded-b-lg p-6 text-[14px] text-[#ddd] leading-relaxed focus:outline-none prose prose-invert max-w-none"
@@ -616,6 +638,34 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
             </label>
           </div>
         </div>
+
+        {showSurveyPicker && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowSurveyPicker(false)}>
+            <div className="w-full max-w-md bg-[#0c0c0c] border border-[#222] rounded-2xl p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[15px] font-bold text-white">Insert survey</h3>
+                <button onClick={() => setShowSurveyPicker(false)} className="text-[#555] hover:text-white text-[20px]">×</button>
+              </div>
+              {surveys.length === 0 ? (
+                <p className="text-[13px] text-[#888]">
+                  No surveys yet. Create one in <a href="/admin/" className="text-[#ff6b4a] hover:underline">Admin → Surveys</a>.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {surveys.map((s) => (
+                    <li key={s.id}>
+                      <button onClick={() => insertSurvey(s)}
+                        className="w-full text-left px-3 py-2.5 bg-[#111] border border-[#1a1a1a] rounded-lg text-[13px] text-white hover:border-[#ff6b4a]/50 hover:bg-[#ff6b4a]/5">
+                        {s.title || <span className="italic text-[#666]">Untitled</span>}
+                        <span className="block text-[10px] text-[#555] font-mono mt-0.5">{s.id.slice(0, 8)}…</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
