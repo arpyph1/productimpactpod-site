@@ -1,0 +1,338 @@
+---
+// SurveyWidget — client hydrator for [data-survey-id] embeds inside articles.
+//
+// Looks up each placeholder div, fetches the survey config + existing
+// response count from Supabase, then renders a step-through widget that
+// captures answers and finally an email + consent checkbox before posting
+// to the survey_responses table.
+//
+// Read/write happen through the public anon key with RLS enforcing access.
+---
+
+<script is:inline define:vars={{ sbUrl: import.meta.env.PUBLIC_SUPABASE_URL, sbKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY }}>
+(function () {
+  if (!sbUrl || !sbKey) return;
+  var nodes = document.querySelectorAll('div[data-survey-id]');
+  if (!nodes.length) return;
+
+  var headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + sbKey,
+    'apikey': sbKey,
+    'Accept': 'application/json',
+  };
+
+  function el(tag, attrs, children) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'html') n.innerHTML = attrs[k];
+      else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) {
+      if (c == null) return;
+      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return n;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function isEmail(s) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
+  }
+
+  function render(container, survey) {
+    var doneKey = 'pi_survey_done_' + survey.id;
+    if (localStorage.getItem(doneKey)) {
+      container.innerHTML = '';
+      container.appendChild(el('div', { class: 'pi-survey-done' }, ['Thanks — your response has been recorded.']));
+      return;
+    }
+
+    var step = 0; // 0..questions.length-1 = questions, then email screen, then thanks
+    var answers = {};
+    var email = '';
+    var consent = false;
+
+    function renderStep() {
+      container.innerHTML = '';
+      var inner = el('div', { class: 'pi-survey-card' });
+      container.appendChild(inner);
+
+      var questions = survey.questions || [];
+      var emailStepIdx = questions.length;
+      var thanksIdx = questions.length + 1;
+
+      // Header
+      inner.appendChild(el('div', { class: 'pi-survey-header' }, [
+        el('div', { class: 'pi-survey-title' }, [survey.title || 'Quick survey']),
+        step < emailStepIdx
+          ? el('div', { class: 'pi-survey-progress' }, ['Question ' + (step + 1) + ' of ' + questions.length])
+          : null,
+      ]));
+
+      if (step < emailStepIdx) {
+        var q = questions[step];
+        inner.appendChild(el('div', { class: 'pi-survey-prompt' }, [q.prompt]));
+        inner.appendChild(renderInput(q));
+        inner.appendChild(renderNav(step > 0, true, function () { step--; renderStep(); }, function () {
+          if (q.required && !hasAnswer(q)) { showError('Please answer to continue.'); return; }
+          step++;
+          renderStep();
+        }, step === questions.length - 1 ? 'Continue' : 'Next'));
+      } else if (step === emailStepIdx) {
+        var c = survey.complete || {};
+        inner.appendChild(el('div', { class: 'pi-survey-prompt' }, [c.prompt || 'Leave your email to get the results.']));
+
+        var emailInput = el('input', {
+          type: 'email',
+          placeholder: 'you@example.com',
+          class: 'pi-survey-email',
+          value: email,
+          oninput: function (e) { email = e.target.value; },
+        });
+        inner.appendChild(emailInput);
+
+        var consentLabel = el('label', { class: 'pi-survey-consent' }, []);
+        var consentBox = el('input', {
+          type: 'checkbox',
+          onchange: function (e) { consent = e.target.checked; },
+        });
+        if (consent) consentBox.checked = true;
+        consentLabel.appendChild(consentBox);
+        consentLabel.appendChild(el('span', null, [c.consent_label || "We will be contacting you to send you the information you're requested."]));
+        inner.appendChild(consentLabel);
+
+        inner.appendChild(renderNav(true, true, function () { step--; renderStep(); }, function () {
+          if (!isEmail(email)) { showError('Enter a valid email.'); return; }
+          if (!consent) { showError('Please agree to the consent checkbox.'); return; }
+          submit();
+        }, 'Submit'));
+      } else if (step === thanksIdx) {
+        inner.appendChild(el('div', { class: 'pi-survey-done' }, ['Thanks — your response has been recorded.']));
+      }
+    }
+
+    function hasAnswer(q) {
+      var v = answers[q.id];
+      if (q.type === 'multi') return Array.isArray(v) && v.length > 0;
+      if (q.type === 'text')  return typeof v === 'string' && v.trim().length > 0;
+      return v != null && v !== '';
+    }
+
+    function renderInput(q) {
+      var wrap = el('div', { class: 'pi-survey-input' });
+      if (q.type === 'single') {
+        (q.options || []).forEach(function (opt) {
+          var lbl = el('label', { class: 'pi-survey-opt' }, []);
+          var input = el('input', {
+            type: 'radio', name: 'q_' + q.id, value: opt,
+            onchange: function () { answers[q.id] = opt; },
+          });
+          if (answers[q.id] === opt) input.checked = true;
+          lbl.appendChild(input);
+          lbl.appendChild(el('span', null, [opt]));
+          wrap.appendChild(lbl);
+        });
+      } else if (q.type === 'multi') {
+        var current = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+        answers[q.id] = current;
+        (q.options || []).forEach(function (opt) {
+          var lbl = el('label', { class: 'pi-survey-opt' }, []);
+          var input = el('input', {
+            type: 'checkbox', value: opt,
+            onchange: function (e) {
+              if (e.target.checked) current.push(opt);
+              else { var i = current.indexOf(opt); if (i >= 0) current.splice(i, 1); }
+            },
+          });
+          if (current.indexOf(opt) >= 0) input.checked = true;
+          lbl.appendChild(input);
+          lbl.appendChild(el('span', null, [opt]));
+          wrap.appendChild(lbl);
+        });
+      } else if (q.type === 'text') {
+        var ta = el('textarea', {
+          rows: '3', class: 'pi-survey-text',
+          placeholder: 'Type your answer…',
+          oninput: function (e) { answers[q.id] = e.target.value; },
+        });
+        if (answers[q.id]) ta.value = answers[q.id];
+        wrap.appendChild(ta);
+      } else if (q.type === 'rating') {
+        var row = el('div', { class: 'pi-survey-rating' });
+        for (var i = 1; i <= 5; i++) (function (v) {
+          var b = el('button', {
+            type: 'button',
+            class: 'pi-survey-rating-btn' + (answers[q.id] === v ? ' is-active' : ''),
+            onclick: function () { answers[q.id] = v; renderStep(); },
+          }, [String(v)]);
+          row.appendChild(b);
+        })(i);
+        wrap.appendChild(row);
+      } else if (q.type === 'yesno') {
+        ['Yes','No'].forEach(function (opt) {
+          var b = el('button', {
+            type: 'button',
+            class: 'pi-survey-pill' + (answers[q.id] === opt ? ' is-active' : ''),
+            onclick: function () { answers[q.id] = opt; renderStep(); },
+          }, [opt]);
+          wrap.appendChild(b);
+        });
+      }
+      return wrap;
+    }
+
+    function renderNav(showBack, showNext, onBack, onNext, nextLabel) {
+      var nav = el('div', { class: 'pi-survey-nav' });
+      if (showBack) nav.appendChild(el('button', { type: 'button', class: 'pi-survey-btn pi-survey-btn-ghost', onclick: onBack }, ['Back']));
+      else nav.appendChild(el('span', null, []));
+      if (showNext) nav.appendChild(el('button', { type: 'button', class: 'pi-survey-btn pi-survey-btn-primary', onclick: onNext }, [nextLabel || 'Next']));
+      return nav;
+    }
+
+    function showError(text) {
+      var existing = container.querySelector('.pi-survey-error');
+      if (existing) existing.remove();
+      var card = container.querySelector('.pi-survey-card');
+      if (!card) return;
+      var err = el('div', { class: 'pi-survey-error' }, [text]);
+      card.appendChild(err);
+      setTimeout(function () { if (err.parentNode) err.remove(); }, 4000);
+    }
+
+    function submit() {
+      var btn = container.querySelector('.pi-survey-btn-primary');
+      if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+      fetch(sbUrl + '/rest/v1/survey_responses', {
+        method: 'POST',
+        headers: Object.assign({}, headers, { Prefer: 'return=minimal' }),
+        body: JSON.stringify({
+          survey_id: survey.id,
+          answers: answers,
+          email: email.trim(),
+          consent: consent,
+        }),
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        try { localStorage.setItem(doneKey, '1'); } catch (e) {}
+        step++;
+        renderStep();
+      }).catch(function () {
+        showError('Could not submit. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit'; }
+      });
+    }
+
+    renderStep();
+  }
+
+  Array.prototype.forEach.call(nodes, function (container) {
+    var id = container.getAttribute('data-survey-id');
+    if (!id) return;
+    container.classList.add('pi-survey-root');
+    container.innerHTML = '<div class="pi-survey-loading">Loading survey…</div>';
+    fetch(sbUrl + '/rest/v1/surveys?id=eq.' + encodeURIComponent(id) + '&select=id,title,questions,complete', { headers: headers })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        var s = rows && rows[0];
+        if (!s) { container.innerHTML = '<div class="pi-survey-error">Survey not found.</div>'; return; }
+        render(container, s);
+      })
+      .catch(function () { container.innerHTML = '<div class="pi-survey-error">Could not load survey.</div>'; });
+  });
+})();
+</script>
+
+<style is:global>
+  .pi-survey-root {
+    margin: 2em 0;
+    border: 1px solid #1a1a1a;
+    background: #0d0d0d;
+    border-radius: 16px;
+    padding: 0;
+    color: #e5e5e5;
+  }
+  .pi-survey-card {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .pi-survey-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .pi-survey-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #ff6b4a;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pi-survey-progress { font-size: 11px; color: #666; }
+  .pi-survey-prompt { font-size: 18px; font-weight: 600; color: #fff; line-height: 1.4; }
+  .pi-survey-input { display: flex; flex-direction: column; gap: 0.5rem; }
+  .pi-survey-opt {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    padding: 0.65rem 0.85rem; border: 1px solid #1f1f1f; border-radius: 10px;
+    background: #111; cursor: pointer; font-size: 14px; color: #ddd;
+  }
+  .pi-survey-opt:hover { border-color: #333; }
+  .pi-survey-opt input { margin-top: 3px; accent-color: #ff6b4a; }
+  .pi-survey-text {
+    width: 100%; padding: 0.75rem; background: #111; border: 1px solid #222;
+    border-radius: 10px; color: #fff; font-size: 14px; resize: vertical;
+    font-family: inherit;
+  }
+  .pi-survey-text:focus { outline: none; border-color: #ff6b4a; }
+  .pi-survey-rating { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .pi-survey-rating-btn, .pi-survey-pill {
+    min-width: 44px; min-height: 44px; padding: 0 1rem;
+    background: #111; border: 1px solid #222; border-radius: 10px;
+    color: #ddd; font-weight: 600; font-size: 14px; cursor: pointer;
+  }
+  .pi-survey-rating-btn:hover, .pi-survey-pill:hover { border-color: #444; color: #fff; }
+  .pi-survey-rating-btn.is-active, .pi-survey-pill.is-active {
+    background: rgba(255,107,74,0.12); border-color: #ff6b4a; color: #ff6b4a;
+  }
+  .pi-survey-email {
+    width: 100%; padding: 0.75rem; background: #111; border: 1px solid #222;
+    border-radius: 10px; color: #fff; font-size: 16px;
+  }
+  .pi-survey-email:focus { outline: none; border-color: #ff6b4a; }
+  .pi-survey-consent {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    font-size: 13px; color: #aaa; line-height: 1.45; cursor: pointer;
+  }
+  .pi-survey-consent input { margin-top: 3px; accent-color: #ff6b4a; }
+  .pi-survey-nav { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-top: 0.5rem; }
+  .pi-survey-btn {
+    padding: 0.65rem 1.25rem; border-radius: 10px; font-weight: 700;
+    font-size: 13px; cursor: pointer; border: 1px solid transparent;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .pi-survey-btn-primary { background: #ff6b4a; color: #fff; }
+  .pi-survey-btn-primary:hover { background: #ff8566; }
+  .pi-survey-btn-primary:disabled { opacity: 0.6; cursor: default; }
+  .pi-survey-btn-ghost { background: transparent; color: #888; border-color: #222; }
+  .pi-survey-btn-ghost:hover { color: #fff; border-color: #444; }
+  .pi-survey-error {
+    margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px;
+    background: rgba(239,68,68,0.1); color: #fca5a5; font-size: 12px;
+  }
+  .pi-survey-done {
+    padding: 1.25rem; text-align: center; color: #34d399; font-weight: 600;
+  }
+  .pi-survey-loading {
+    padding: 1.5rem; text-align: center; color: #666; font-size: 13px;
+  }
+</style>
