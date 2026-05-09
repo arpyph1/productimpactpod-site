@@ -57,6 +57,7 @@
 
     var step = 0; // 0..questions.length-1 = questions, then email screen, then thanks
     var answers = {};
+    var employer = '';
     var email = '';
     var consent = false;
 
@@ -89,6 +90,15 @@
       } else if (step === emailStepIdx) {
         var c = survey.complete || {};
         inner.appendChild(el('div', { class: 'pi-survey-prompt' }, [c.prompt || 'Leave your email to get the results.']));
+
+        var employerInput = el('input', {
+          type: 'text',
+          placeholder: 'Employer name (optional)',
+          class: 'pi-survey-email',
+          value: employer,
+          oninput: function (e) { employer = e.target.value; },
+        });
+        inner.appendChild(employerInput);
 
         var emailInput = el('input', {
           type: 'email',
@@ -216,6 +226,7 @@
         body: JSON.stringify({
           survey_id: survey.id,
           answers: answers,
+          employer: employer.trim() || null,
           email: email.trim(),
           consent: consent,
         }),
