@@ -91,21 +91,83 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
   const [surveys, setSurveys] = useState<Array<{ id: string; title: string }>>([]);
 
   useEffect(() => {
-    if (!showSurveyPicker || surveys.length > 0) return;
     supabase.from("surveys").select("id, title").order("created_at", { ascending: false })
       .then(({ data }) => setSurveys(data ?? []));
-  }, [showSurveyPicker]);
+  }, []);
 
   function insertSurvey(s: { id: string; title: string }) {
-    const block = `<div data-survey-id="${s.id}" class="survey-embed" style="margin:1.5em 0;padding:1em;border:1px dashed #2a2a2a;border-radius:8px;color:#888;font-size:13px;text-align:center">📋 Survey: ${s.title || s.id}</div><p><br/></p>`;
+    // contenteditable=false so the embed reads as a single, draggable block in
+    // the visual editor instead of letting the cursor land inside the label.
+    const block =
+      `<div data-survey-id="${s.id}" class="survey-embed" contenteditable="false" ` +
+      `style="margin:1.5em 0;padding:1em;border:2px dashed #ff6b4a;border-radius:8px;` +
+      `color:#ff6b4a;font-size:13px;text-align:center;background:rgba(255,107,74,0.06);` +
+      `font-weight:600;user-select:none">` +
+      `📋 Survey embed — ${escapeHtml(s.title || s.id)}` +
+      `</div><p><br/></p>`;
     if (tab === "edit" && editorRef.current) {
-      editorRef.current.focus();
+      const editor = editorRef.current;
+      editor.focus();
+      const sel = window.getSelection();
+      // If the cursor is outside the editor, append at the end so the block
+      // doesn't silently disappear into the document body.
+      if (!sel || sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
       document.execCommand("insertHTML", false, block);
       syncFromEditor();
     } else {
       update("content_html", form.content_html + block);
     }
     setShowSurveyPicker(false);
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  }
+
+  // Parse the body looking for embedded surveys so the editor can show a
+  // sticky list of them with move-up/down/remove controls.
+  function getEmbeddedSurveys(): Array<{ index: number; id: string }> {
+    const html = tab === "edit" && editorRef.current ? editorRef.current.innerHTML : form.content_html;
+    const re = /data-survey-id="([^"]+)"/g;
+    const out: Array<{ index: number; id: string }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) out.push({ index: m.index, id: m[1] });
+    return out;
+  }
+
+  function mutateBody(fn: (root: HTMLElement) => void) {
+    const html = tab === "edit" && editorRef.current ? editorRef.current.innerHTML : form.content_html;
+    const root = document.createElement("div");
+    root.innerHTML = html;
+    fn(root);
+    update("content_html", root.innerHTML);
+    if (editorRef.current) editorRef.current.innerHTML = root.innerHTML;
+  }
+
+  function moveSurveyEmbed(surveyIndex: number, dir: -1 | 1) {
+    mutateBody((root) => {
+      const nodes = Array.from(root.querySelectorAll("[data-survey-id]")) as HTMLElement[];
+      const node = nodes[surveyIndex];
+      if (!node) return;
+      const sibling = dir === -1 ? node.previousElementSibling : node.nextElementSibling;
+      if (!sibling) return;
+      // Move past one block-level sibling at a time.
+      if (dir === -1) sibling.before(node); else sibling.after(node);
+    });
+  }
+
+  function removeSurveyEmbed(surveyIndex: number) {
+    if (!confirm("Remove this survey embed from the article?")) return;
+    mutateBody((root) => {
+      const nodes = Array.from(root.querySelectorAll("[data-survey-id]")) as HTMLElement[];
+      nodes[surveyIndex]?.remove();
+    });
   }
 
   function update(field: string, value: any) {
@@ -396,8 +458,9 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
 
               {tab === "edit" && (
                 <div>
-                  {/* Toolbar */}
-                  <div className="flex flex-wrap items-center gap-1 p-2 bg-[#111] border border-[#222] border-b-0 rounded-t-lg">
+                  {/* Toolbar — sticky below the modal header so formatting
+                       controls stay reachable while scrolling long articles. */}
+                  <div className="sticky top-[56px] sm:top-[68px] z-[5] flex flex-wrap items-center gap-1 p-2 bg-[#111] border border-[#222] border-b-0 rounded-t-lg shadow-[0_4px_8px_-4px_rgba(0,0,0,0.6)]">
                     <ToolBtn label="B" cmd={() => execCmd("bold")} bold />
                     <ToolBtn label="I" cmd={() => execCmd("italic")} italic />
                     <ToolBtn label="U" cmd={() => execCmd("underline")} />
@@ -438,6 +501,36 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                 </div>
               )}
             </div>
+
+            {/* Embedded surveys — list + reorder controls */}
+            {(() => {
+              const embedded = getEmbeddedSurveys();
+              if (embedded.length === 0) return null;
+              return (
+                <div className="rounded-lg border border-[#1a1a1a] bg-[#0a0a0a] p-3">
+                  <div className="text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-2">
+                    Surveys in this article ({embedded.length})
+                  </div>
+                  <ul className="space-y-1.5">
+                    {embedded.map((e, i) => {
+                      const title = surveys.find((s) => s.id === e.id)?.title || e.id.slice(0, 8) + "…";
+                      return (
+                        <li key={`${e.id}-${i}`} className="flex items-center gap-2 px-3 py-2 bg-[#111] border border-[#1a1a1a] rounded">
+                          <span className="text-[11px] text-[#666] font-mono w-5">{i + 1}.</span>
+                          <span className="flex-1 text-[12px] text-white truncate">📋 {title}</span>
+                          <button onClick={() => moveSurveyEmbed(i, -1)} disabled={i === 0}
+                            className="p-1 text-[#666] hover:text-white disabled:opacity-30" title="Move up">↑</button>
+                          <button onClick={() => moveSurveyEmbed(i, 1)} disabled={i === embedded.length - 1}
+                            className="p-1 text-[#666] hover:text-white disabled:opacity-30" title="Move down">↓</button>
+                          <button onClick={() => removeSurveyEmbed(i)}
+                            className="p-1 text-red-400 hover:text-red-300" title="Remove">×</button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Sidebar */}

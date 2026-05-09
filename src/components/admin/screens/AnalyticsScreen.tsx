@@ -13,7 +13,7 @@ interface EngagementRow {
   publish_date?: string;
 }
 
-type SortKey = "views" | "shares" | "hearts";
+type SortKey = "views" | "shares" | "hearts" | "publish_date";
 
 export default function AnalyticsScreen({ supabase }: Props) {
   const [data, setData] = useState<EngagementRow[]>([]);
@@ -33,16 +33,21 @@ export default function AnalyticsScreen({ supabase }: Props) {
     const articles = new Map<string, { title: string; slug: string; publish_date: string }>();
     (artRes.data ?? []).forEach((a: any) => articles.set(a.id, a));
 
-    const rows: EngagementRow[] = (engRes.data ?? []).map((e: any) => {
-      const art = articles.get(e.article_id);
+    const engagementByArticle = new Map<string, { views: number; shares: number; hearts: number }>();
+    (engRes.data ?? []).forEach((e: any) => {
+      engagementByArticle.set(e.article_id, {
+        views: e.views ?? 0, shares: e.shares ?? 0, hearts: e.hearts ?? 0,
+      });
+    });
+
+    // Include every published article so "Newest" sort surfaces articles that
+    // haven't accumulated engagement yet.
+    const rows: EngagementRow[] = (artRes.data ?? []).map((a: any) => {
+      const eng = engagementByArticle.get(a.id) ?? { views: 0, shares: 0, hearts: 0 };
       return {
-        article_id: e.article_id,
-        views: e.views ?? 0,
-        shares: e.shares ?? 0,
-        hearts: e.hearts ?? 0,
-        title: art?.title ?? "Unknown",
-        slug: art?.slug,
-        publish_date: art?.publish_date,
+        article_id: a.id,
+        views: eng.views, shares: eng.shares, hearts: eng.hearts,
+        title: a.title, slug: a.slug, publish_date: a.publish_date,
       };
     });
 
@@ -50,7 +55,14 @@ export default function AnalyticsScreen({ supabase }: Props) {
     setLoading(false);
   }
 
-  const sorted = [...data].sort((a, b) => b[tab] - a[tab]);
+  const sorted = [...data].sort((a, b) => {
+    if (tab === "publish_date") {
+      const at = a.publish_date ? new Date(a.publish_date).getTime() : 0;
+      const bt = b.publish_date ? new Date(b.publish_date).getTime() : 0;
+      return bt - at;
+    }
+    return (b[tab] as number) - (a[tab] as number);
+  });
   const displayed = showAll ? sorted : sorted.slice(0, 10);
   const totals = data.reduce((acc, r) => ({
     views: acc.views + r.views,
@@ -78,10 +90,10 @@ export default function AnalyticsScreen({ supabase }: Props) {
         {/* Sort tabs — horizontal-scroll row on mobile so labels never clip */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
           <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
-            {(["views", "shares", "hearts"] as SortKey[]).map(k => (
+            {(["views", "shares", "hearts", "publish_date"] as SortKey[]).map(k => (
               <button key={k} onClick={() => { setTab(k); setShowAll(false); }}
                 className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${k === tab ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}>
-                {k === "views" ? "👁 Most Viewed" : k === "shares" ? "↗ Most Shared" : "❤️ Most Hearted"}
+                {k === "views" ? "👁 Most Viewed" : k === "shares" ? "↗ Most Shared" : k === "hearts" ? "❤️ Most Hearted" : "🗓 Newest"}
               </button>
             ))}
           </div>
@@ -99,11 +111,12 @@ export default function AnalyticsScreen({ supabase }: Props) {
               <th className="text-right px-4 py-2.5 w-20">Views</th>
               <th className="text-right px-4 py-2.5 w-20">Shares</th>
               <th className="text-right px-4 py-2.5 w-20">Hearts</th>
+              <th className="text-right px-4 py-2.5 w-28">Published</th>
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
+              <tr><td colSpan={6} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
             ) : displayed.map((row, i) => (
               <tr key={row.article_id} className="border-b border-[#111] hover:bg-[#0c0c0c] transition-colors">
                 <td className="px-4 py-3 text-[12px] text-[#555] font-mono">{i + 1}</td>
@@ -123,6 +136,9 @@ export default function AnalyticsScreen({ supabase }: Props) {
                 </td>
                 <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "hearts" ? "text-[#ff6b4a] font-bold" : "text-[#666]"}`}>
                   {row.hearts.toLocaleString()}
+                </td>
+                <td className={`px-4 py-3 text-right text-[12px] whitespace-nowrap ${tab === "publish_date" ? "text-white font-bold" : "text-[#666]"}`}>
+                  {row.publish_date ? new Date(row.publish_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                 </td>
               </tr>
             ))}
