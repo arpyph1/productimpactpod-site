@@ -391,7 +391,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
       <div className="w-full max-w-5xl bg-[#0c0c0c] border border-[#222] rounded-2xl shadow-2xl">
 
         {/* Header — sticky so Save / Close stay reachable while scrolling. */}
-        <div className="sticky top-0 z-10 bg-[#0c0c0c]/95 backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-[#1a1a1a] rounded-t-2xl">
+        <div className="sticky top-0 z-20 bg-[#0c0c0c]/95 backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-[#1a1a1a] rounded-t-2xl">
           <h2 className="text-[16px] sm:text-[18px] font-bold text-white flex-1 min-w-0 truncate">{isNew ? "New Article" : "Edit Article"}</h2>
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {!isNew && (
@@ -459,8 +459,13 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
               {tab === "edit" && (
                 <div>
                   {/* Toolbar — sticky below the modal header so formatting
-                       controls stay reachable while scrolling long articles. */}
-                  <div className="sticky top-[56px] sm:top-[68px] z-[5] flex flex-wrap items-center gap-1 p-2 bg-[#111] border border-[#222] border-b-0 rounded-t-lg shadow-[0_4px_8px_-4px_rgba(0,0,0,0.6)]">
+                       controls stay reachable while scrolling long articles.
+                       z-15 so it sits below the z-10 header but above the
+                       editor body. */}
+                  <div
+                    className="flex flex-wrap items-center gap-1 p-2 bg-[#111] border border-[#222] border-b-0 rounded-t-lg shadow-[0_4px_8px_-4px_rgba(0,0,0,0.7)]"
+                    style={{ position: "sticky", top: "60px", zIndex: 15 }}
+                  >
                     <ToolBtn label="B" cmd={() => execCmd("bold")} bold />
                     <ToolBtn label="I" cmd={() => execCmd("italic")} italic />
                     <ToolBtn label="U" cmd={() => execCmd("underline")} />
