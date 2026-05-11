@@ -38,7 +38,8 @@ export type ArticleFormat =
   | "opinion"
   | "explainer"
   | "product-review"
-  | "research-brief";
+  | "research-brief"
+  | "playbook";
 
 export interface Article {
   id: string;
@@ -703,6 +704,7 @@ export function formatLabel(format: ArticleFormat): string {
     explainer: "Explainer",
     "product-review": "Product Review",
     "research-brief": "Research Brief",
+    "playbook": "Playbook",
   };
   return labels[format] ?? format;
 }

@@ -9,7 +9,7 @@ interface Props {
 }
 
 const FORMATS = [
-  "news-analysis", "feature", "data-reports", "case-study", "release-note",
+  "news-analysis", "feature", "playbook", "data-reports", "case-study", "release-note",
   "opinion", "explainer", "news-brief", "product-review", "research-brief",
 ];
 

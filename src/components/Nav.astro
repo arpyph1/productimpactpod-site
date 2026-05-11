@@ -55,12 +55,12 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
               </div>
               <div class="grid grid-cols-2 gap-1">
                 {[
-                  { label: "All News",      href: "/news/",                    desc: "Everything published" },
-                  { label: "Features",      href: "/news/format/feature/",     desc: "In-depth reporting" },
-                  { label: "News Analysis", href: "/news/format/news-analysis/",desc: "What it means" },
-                  { label: "Case Studies",  href: "/news/format/case-study/",  desc: "Real-world impact" },
-                  { label: "Releases",      href: "/news/format/release-note/",desc: "Product launches" },
-                  { label: "Interviews",    href: "/news/format/interview/",   desc: "Conversations with leaders" },
+                  { label: "Insights",     href: "/news/",                    desc: "Everything published" },
+                  { label: "Features",     href: "/news/format/feature/",     desc: "In-depth reporting" },
+                  { label: "Playbooks",    href: "/news/format/playbook/",    desc: "Frameworks you can run" },
+                  { label: "Case Studies", href: "/news/format/case-study/",  desc: "Real-world impact" },
+                  { label: "Releases",     href: "/news/format/release-note/",desc: "Product launches" },
+                  { label: "Episodes",     href: "/episodes/",                desc: "Podcast interviews" },
                 ].map((item) => (
                   <a href={item.href} class="flex flex-col px-4 py-3 rounded-lg hover:bg-white/[0.06] transition-colors">
                     <span class="text-[15px] font-semibold text-[#e0e0e0] hover:text-white">{item.label}</span>

@@ -130,6 +130,13 @@ export const GET: APIRoute = async () => {
     entries.push(urlEntry(`/themes/${slug}/`, today, 0.7, "weekly"));
   }
 
+  // Format hubs surfaced in primary nav. Other format pages stay out of the
+  // sitemap because they're noindex by default (thin or rarely-updated).
+  const NAV_FORMATS = ["playbook", "feature", "case-study", "release-note"];
+  for (const f of NAV_FORMATS) {
+    entries.push(urlEntry(`/news/format/${f}/`, today, 0.6, "weekly"));
+  }
+
   // Articles
   for (const a of articles) {
     const lastmod = (a.last_updated ?? a.publish_date ?? today).slice(0, 10);
