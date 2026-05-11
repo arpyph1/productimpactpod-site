@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import SurveyEditor from "../SurveyEditor";
+import SurveyResultsModal from "../SurveyResultsModal";
 
 interface Props {
   supabase: SupabaseClient;
@@ -22,6 +23,7 @@ export default function SurveysScreen({ supabase }: Props) {
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<SurveyRow | "new" | null>(null);
+  const [viewingResults, setViewingResults] = useState<SurveyRow | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [search, setSearch] = useState("");
@@ -95,6 +97,7 @@ export default function SurveysScreen({ supabase }: Props) {
                 <Th label="Updated"   active={sortKey==="updated_at"}     dir={sortDir} onClick={() => toggleSort("updated_at")} />
                 <th className="px-3 py-2 text-right">Embed</th>
                 <th className="px-3 py-2"></th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -117,6 +120,11 @@ export default function SurveysScreen({ supabase }: Props) {
                     </code>
                   </td>
                   <td className="px-3 py-3 text-right">
+                    <button onClick={() => setViewingResults(s)} className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566]">
+                      Results
+                    </button>
+                  </td>
+                  <td className="px-3 py-3 text-right">
                     <button onClick={() => handleDelete(s.id)} className="text-[12px] text-red-400 hover:text-red-300">
                       Delete
                     </button>
@@ -134,6 +142,14 @@ export default function SurveysScreen({ supabase }: Props) {
           survey={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
+
+      {viewingResults && (
+        <SurveyResultsModal
+          supabase={supabase}
+          survey={viewingResults}
+          onClose={() => setViewingResults(null)}
         />
       )}
     </div>
