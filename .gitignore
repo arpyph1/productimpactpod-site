@@ -24,3 +24,7 @@ pnpm-debug.log*
 .idea/
 *.swp
 public/hero-images/
+
+# Python
+__pycache__/
+*.pyc

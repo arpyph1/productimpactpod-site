@@ -59,10 +59,15 @@
 /podcast/cognitive-sovereignty-helen-dave-edwards-artificiality-institute  /episodes/                301
 /podcast/*          /episodes/:splat               301
 
-# Topic pages whose slug no longer exists (article unpublished, retagged,
-# or never had its own /topics/ entry). Send them to the topic index so
-# they're not 404s in Search Console.
-/topics/*           /topics/                       301
+# Topic pages: no catch-all. /topics/[slug]/ is built for every topic with
+# at least one article, so live slugs serve 200 directly. The previous
+# `/topics/* → /topics/ 301` catch-all flagged ~45 live pages as redirects
+# in Search Console because the non-trailing-slash variant fell through to
+# the wildcard instead of getting Cloudflare's standard trailing-slash 301.
+#
+# When a specific dead topic slug shows up in GSC's "Not found 404" report,
+# add an explicit redirect here, e.g.:
+#   /topics/old-slug    /topics/new-slug              301
 
 # Social/unfurl bot compatibility — some platforms strip trailing slashes
 # and re-append with quotes. These are harmless no-ops if never hit.
