@@ -16,16 +16,21 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-const SYSTEM_PROMPT = `You generate fine-grained, search-optimized tags for product/AI news articles.
+const SYSTEM_PROMPT = `You generate search-optimized tags for product/AI news articles. Tags feed site search and the /tags/ index — they are NOT entity chips for display. The article already has a separate "topics" field for hand-curated entities (people, organizations, products).
 
 Rules:
 - Return ONLY a JSON array of tag strings. No prose, no explanation, no markdown fences.
-- Produce AT LEAST 20 tags so the editor can prune to 16+ usable ones.
+- Return BETWEEN 12 AND 20 tags. Never fewer than 12, never more than 20.
+- Rank by importance — most central theme first, least central last. The list will be truncated from the top if it overflows.
+- The list must surface the article's TOP themes and search-relevant concepts: dominant ideas, technologies, frameworks, use-cases, model categories, industries.
 - Each tag is a short kebab-case slug: lowercase, words separated by hyphens, no punctuation, 1–4 words.
-- Mix tag types: companies/products mentioned, people, technologies, concepts, industries, use-cases, geographies, regulatory frameworks, model names, feature categories.
-- Prefer specific over generic: "agentic-coding" over "ai", "openai-o1" over "openai".
+- Prefer specific over generic: "agentic-coding" over "ai", "context-window-limits" over "context".
+- Avoid one-off proper nouns that belong in the topics field (specific people, companies, products) unless they are clearly the central subject of the article.
 - Every tag must be directly grounded in the article — do not invent facts.
 - No duplicates, no near-duplicates (e.g. don't return both "ai" and "artificial-intelligence").`;
+
+const MIN_TAGS = 12;
+const MAX_TAGS = 20;
 
 function slugify(s: string): string {
   return s
@@ -114,7 +119,10 @@ serve(async (req) => {
       );
     }
 
-    const tags = Array.isArray(parsed)
+    // Dedupe + slugify, then cap at MAX_TAGS preserving rank order from the
+    // model. Order matters — the prompt asks for most-central-first, so the
+    // top N stay as the highest-signal tags.
+    const deduped = Array.isArray(parsed)
       ? Array.from(new Set(
           parsed
             .filter((t): t is string => typeof t === "string")
@@ -122,9 +130,10 @@ serve(async (req) => {
             .filter((t) => t.length >= 2 && t.length <= 60)
         ))
       : [];
+    const tags = deduped.slice(0, MAX_TAGS);
 
     return new Response(
-      JSON.stringify({ tags }),
+      JSON.stringify({ tags, count: tags.length, min: MIN_TAGS, max: MAX_TAGS }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {

@@ -259,6 +259,41 @@ const bcJsonLd = {
         )}
         {cleanedHtml.includes('data-survey-id') && <SurveyWidget />}
 
+        {/* ── Topics + tags — clickable discovery row. Topics are the
+             hand-curated entity labels; tags are AI-generated search
+             slugs. Both are capped at 20 so a runaway generator can't
+             flood the page. ── */}
+        {((article.topics ?? []).length > 0 || (article.tags ?? []).length > 0) && (
+          <div class="mt-10 pt-6 border-t border-[#1a1a1a]">
+            {(article.topics ?? []).length > 0 && (
+              <div class="mb-4">
+                <div class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#666] mb-2">In this article</div>
+                <div class="flex flex-wrap gap-1.5">
+                  {(article.topics ?? []).slice(0, 20).map((t) => (
+                    <a href={`/topics/${t}/`}
+                      class="inline-flex items-center px-2.5 py-1 rounded-md text-[12px] font-medium text-[#ddd] bg-[#141414] border border-[#222] hover:text-white hover:border-[#ff6b4a]/40 hover:bg-[#ff6b4a]/5 transition-colors">
+                      {t.replace(/-/g, " ")}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(article.tags ?? []).length > 0 && (
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#555] mb-2">Related tags</div>
+                <div class="flex flex-wrap gap-1.5">
+                  {(article.tags ?? []).slice(0, 20).map((t) => (
+                    <a href={`/tags/${t}/`}
+                      class="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-[#888] bg-[#101010] border border-[#1a1a1a] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 transition-colors">
+                      {t.replace(/-/g, " ")}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Heart reactions ── */}
         <div class="mt-12 pt-8 border-t border-[#1a1a1a]"
           data-article-id={article.id}

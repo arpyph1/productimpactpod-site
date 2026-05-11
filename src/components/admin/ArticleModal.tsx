@@ -219,8 +219,26 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
       if (newTags.length === 0) {
         setMsg("Model returned 0 tags — try regenerating");
       } else {
-        update("tags", newTags);
-        setMsg(`Generated ${newTags.length} tags`);
+        // Merge: keep existing curated tags first (they win on dedupe),
+        // then append AI tags up to a hard cap of 20.
+        const TAG_CAP = 20;
+        const existing: string[] = Array.isArray(form.tags) ? form.tags : [];
+        const merged: string[] = [];
+        const seen = new Set<string>();
+        for (const t of [...existing, ...newTags]) {
+          const slug = String(t).trim();
+          if (!slug || seen.has(slug)) continue;
+          seen.add(slug);
+          merged.push(slug);
+          if (merged.length >= TAG_CAP) break;
+        }
+        update("tags", merged);
+        const added = merged.length - existing.length;
+        setMsg(
+          added > 0
+            ? `Added ${added} new tags (${merged.length}/${TAG_CAP} total)`
+            : `No new tags — already at ${merged.length}/${TAG_CAP}`,
+        );
       }
     } catch (e: any) {
       setMsg(`Tag generation failed: ${e.message ?? e}`);
