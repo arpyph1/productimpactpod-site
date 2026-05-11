@@ -386,6 +386,8 @@ function CompleteStep({ complete, onChange, onDone }: {
       <div className="p-4 rounded-lg border border-[#1a1a1a] bg-[#0a0a0a]">
         <div className="text-[11px] uppercase tracking-wider text-[#666] mb-2">Preview</div>
         <p className="text-[14px] text-white mb-3">{complete.prompt}</p>
+        <input type="text" disabled placeholder="Employer name (optional)"
+          className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-[#666] mb-2" />
         <input type="email" disabled placeholder="you@example.com"
           className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-[#666] mb-3" />
         <label className="flex items-start gap-2">

@@ -159,13 +159,40 @@ export default function AdminApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>("articles");
+  const VALID_SCREENS: Screen[] = ["branding", "settings", "seo", "homepage", "articles", "surveys", "resources", "podcast", "partners", "social", "analytics"];
+  const readInitialScreen = (): Screen => {
+    if (typeof window === "undefined") return "articles";
+    const fromHash = window.location.hash.replace(/^#/, "");
+    if ((VALID_SCREENS as string[]).includes(fromHash)) return fromHash as Screen;
+    const stored = window.localStorage.getItem("pi_admin_screen");
+    if (stored && (VALID_SCREENS as string[]).includes(stored)) return stored as Screen;
+    return "articles";
+  };
+  const [screen, setScreenState] = useState<Screen>(readInitialScreen);
+  const setScreen = useCallback((s: Screen) => {
+    setScreenState(s);
+    if (typeof window !== "undefined") {
+      try { window.localStorage.setItem("pi_admin_screen", s); } catch {}
+      // history.replaceState avoids cluttering the back button.
+      window.history.replaceState(null, "", `#${s}`);
+    }
+  }, []);
   const [editingArticle, setEditingArticle] = useState<any | undefined>(undefined);
   const [deploying, setDeploying] = useState(false);
   const [deployMsg, setDeployMsg] = useState("");
   const [navOpen, setNavOpen] = useState(false);
 
   const supabase = getAdminClient();
+
+  // Sync the active screen with hash navigation (back/forward).
+  useEffect(() => {
+    function onHash() {
+      const h = window.location.hash.replace(/^#/, "");
+      if ((VALID_SCREENS as string[]).includes(h)) setScreenState(h as Screen);
+    }
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   // Lock body scroll while the off-canvas drawer is open on mobile.
   useEffect(() => {

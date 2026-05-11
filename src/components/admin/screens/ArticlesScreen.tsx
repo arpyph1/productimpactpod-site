@@ -15,10 +15,10 @@ interface Article {
 }
 
 const FORMAT_LABELS: Record<string, string> = {
-  "news-analysis": "News Analysis", feature: "Feature", "data-reports": "Data & Reports",
-  "case-study": "Case Study", "release-note": "Release", opinion: "Opinion",
-  explainer: "Explainer", "news-brief": "Brief", "product-review": "Review",
-  "research-brief": "Research",
+  "news-analysis": "News Analysis", feature: "Feature", playbook: "Playbook",
+  "data-reports": "Data & Reports", "case-study": "Case Study",
+  "release-note": "Release", opinion: "Opinion", explainer: "Explainer",
+  "news-brief": "Brief", "product-review": "Review", "research-brief": "Research",
 };
 
 const AUTHOR_OPTIONS = [

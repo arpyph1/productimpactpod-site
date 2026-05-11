@@ -7,8 +7,9 @@ import { getAllArticles, formatLabel, authorDisplayName, type ArticleFormat } fr
 
 export async function getStaticPaths() {
   return [
-    "news-brief", "release-note", "feature", "data-reports",
+    "news-brief", "news-analysis", "release-note", "feature", "data-reports",
     "case-study", "opinion", "explainer", "product-review", "research-brief",
+    "playbook",
   ].map((f) => ({ params: { format: f } }));
 }
 
@@ -22,7 +23,14 @@ const articles = allArticles.filter((a) =>
 const siteUrl = "https://productimpactpod.com";
 const label = formatLabel(format as ArticleFormat);
 
-const formats: ArticleFormat[] = ["feature", "data-reports", "case-study", "release-note", "opinion", "explainer"];
+const formats: ArticleFormat[] = ["feature", "playbook", "case-study", "release-note", "data-reports", "opinion", "explainer"];
+
+// Format hubs linked from the primary nav (Playbooks, Features, Case Studies,
+// Releases) are real category pages — let Google index them. Thin format
+// hubs with < 3 articles remain noindex so we don't dilute the sitemap with
+// near-empty pages.
+const PRIMARY_FORMATS = new Set(["playbook", "feature", "case-study", "release-note"]);
+const allowIndex = PRIMARY_FORMATS.has(format!) || articles.length >= 3;
 
 function timeAgo(d: string): string {
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -38,7 +46,7 @@ function timeAgo(d: string): string {
   title={`${label} | Product Impact News`}
   description={`${label} articles — AI product impact news, releases, and case studies.`}
   canonicalUrl={`${siteUrl}/news/format/${format}/`}
-  noindex={true}
+  noindex={!allowIndex}
 >
   <Nav />
 
