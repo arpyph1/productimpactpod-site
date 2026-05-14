@@ -644,9 +644,18 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                   return (
                     <button key={f} type="button"
                       onClick={() => {
-                        const next = selected ? form.formats.filter((x: string) => x !== f) : [...form.formats, f];
-                        const safe = next.length ? next : [f];
-                        setForm(prev => ({ ...prev, formats: safe, format: safe[0] }));
+                        let next: string[];
+                        if (selected) {
+                          // Can't remove the last format — require at least one.
+                          if (form.formats.length <= 1) return;
+                          next = form.formats.filter((x: string) => x !== f);
+                        } else {
+                          // If only one format is currently selected, replace it
+                          // (user intent: change format, not add a second one).
+                          // If multiple are selected, append the new one.
+                          next = form.formats.length === 1 ? [f] : [...form.formats, f];
+                        }
+                        setForm(prev => ({ ...prev, formats: next, format: next[0] }));
                       }}
                       className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
                         selected ? "bg-[#ff6b4a]/15 text-[#ff6b4a] border border-[#ff6b4a]/30" : "bg-[#111] text-[#666] border border-[#1a1a1a] hover:text-white"
