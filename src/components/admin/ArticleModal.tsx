@@ -71,6 +71,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     tags: article?.tags ?? [],
     is_lead_story: article?.is_lead_story ?? false,
     read_time_minutes: article?.read_time_minutes ?? 5,
+    overview_bullets: (article?.overview_bullets ?? []) as string[],
   });
   const [generatingTags, setGeneratingTags] = useState(false);
 
@@ -459,6 +460,26 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
               <textarea className="w-full h-20 bg-[#111] border border-[#222] rounded-lg p-3 text-[16px] sm:text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
                 value={form.meta_description} onChange={(e) => update("meta_description", e.target.value)} placeholder="Brief description for search engines and social sharing" />
               <div className="text-[10px] text-[#444] mt-1">{form.meta_description.length}/160 characters</div>
+            </div>
+
+            {/* Overview Bullets — key takeaways shown in the box at the top of
+                 the rendered article. Empty = auto-generated from the content. */}
+            <div>
+              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Overview Bullets</label>
+              <textarea
+                className="w-full h-28 bg-[#111] border border-[#222] rounded-lg p-3 text-[16px] sm:text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+                value={(form.overview_bullets ?? []).join("\n")}
+                onChange={(e) => update(
+                  "overview_bullets",
+                  e.target.value.split("\n").map((s) => s.trim()).filter(Boolean),
+                )}
+                placeholder={"One bullet per line. Leave empty to auto-generate from the article body."}
+              />
+              <div className="text-[10px] text-[#444] mt-1">
+                {(form.overview_bullets ?? []).length === 0
+                  ? "Empty — bullets will be auto-generated from the article body at build time."
+                  : `${(form.overview_bullets ?? []).length} bullet${(form.overview_bullets ?? []).length === 1 ? "" : "s"} (overrides the auto-generator)`}
+              </div>
             </div>
 
             {/* Content — tabbed */}
