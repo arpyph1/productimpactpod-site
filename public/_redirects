@@ -50,14 +50,18 @@
 # /episodes/{slug} doesn't exist — point them at the closest real page
 # so Search Console doesn't see a redirect-then-404.
 #
-# IMPORTANT: explicit /podcast and /podcast/ guards MUST come before the
-# /podcast/* catch-all. Otherwise the catch-all matches the bare podcast
-# index with an empty splat and 301s readers to /episodes/.
+# IMPORTANT: explicit /podcast guard MUST come before the /podcast/:slug
+# catch-all, so the podcast index page is never swallowed by the catch-all.
+# The previous /podcast/ → /podcast/ 200 "guard" used status 200, which
+# Cloudflare Pages does not support in _redirects — it was silently skipped,
+# allowing /podcast/* to match /podcast/ with an empty splat and 301 to
+# /episodes/. Using :slug (a named placeholder) instead of * (splat) avoids
+# that: :slug requires a non-empty path segment so /podcast/ falls through to
+# the static file.
 /podcast                                                              /podcast/                 301
-/podcast/                                                             /podcast/                 200
 /podcast/robert-brunner-physical-ai                                   /people/robert-brunner/   301
 /podcast/cognitive-sovereignty-helen-dave-edwards-artificiality-institute  /episodes/                301
-/podcast/*          /episodes/:splat               301
+/podcast/:slug      /episodes/:slug                301
 
 # Topic & tag pages: trailing-slash-only catch-all for dead slugs.
 #

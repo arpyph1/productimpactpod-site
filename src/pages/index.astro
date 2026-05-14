@@ -26,10 +26,33 @@ const sectionEnabled = (id: string, fallbackKey?: string) => {
   return true;
 };
 
+// Fetch article_engagement if any section uses an engagement sort mode.
+const ENGAGEMENT_THEMES = new Set(["__most-viewed__", "__most-liked__", "__most-shared__"]);
+const needsEngagement = (sections as any[]).some((s) => ENGAGEMENT_THEMES.has(s.theme));
+let engagementMap = new Map<string, { views: number; likes: number; shares: number }>();
+if (needsEngagement) {
+  const { supabase } = await import("@lib/supabase");
+  const { data } = await supabase.from("article_engagement").select("article_id, views, hearts, shares");
+  for (const row of data ?? []) {
+    engagementMap.set(row.article_id, { views: row.views ?? 0, likes: row.hearts ?? 0, shares: row.shares ?? 0 });
+  }
+}
+
 function filterArticles(sectionId: string): typeof articles {
   const s = findSection(sectionId);
   if (!s) return articles;
   let filtered = articles;
+  // Engagement-based sort modes — sort by the relevant metric then return.
+  if (ENGAGEMENT_THEMES.has(s.theme)) {
+    const metric = s.theme === "__most-viewed__" ? "views" : s.theme === "__most-liked__" ? "likes" : "shares";
+    const sorted = [...articles].sort((a, b) => {
+      const ea = engagementMap.get(a.id);
+      const eb = engagementMap.get(b.id);
+      return (eb?.[metric] ?? 0) - (ea?.[metric] ?? 0);
+    });
+    if (s.format) return sorted.filter((a: any) => a.format === s.format);
+    return sorted;
+  }
   if (s.theme) filtered = filtered.filter((a: any) => a.themes?.includes(s.theme));
   if (s.format) filtered = filtered.filter((a: any) => a.format === s.format);
   return filtered.length > 0 ? filtered : articles;
