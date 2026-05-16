@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import SurveyEditor from "../SurveyEditor";
 import SurveyResultsModal from "../SurveyResultsModal";
+import StoryWidgetAdmin from "../StoryWidgetAdmin";
 
 interface Props {
   supabase: SupabaseClient;
@@ -40,6 +41,18 @@ export default function SurveysScreen({ supabase }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
+  async function handleDuplicate(s: SurveyRow) {
+    const { data: full } = await supabase.from("surveys").select("*").eq("id", s.id).single();
+    if (!full) { alert("Failed to load survey for duplication."); return; }
+    const { error } = await supabase.from("surveys").insert({
+      title: `${full.title} (Copy)`,
+      questions: full.questions ?? [],
+      complete: full.complete ?? {},
+    });
+    if (error) { alert(`Duplicate failed: ${error.message}`); return; }
+    load();
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this survey and all its responses? This cannot be undone.")) return;
     const { error } = await supabase.from("surveys").delete().eq("id", id);
@@ -65,6 +78,8 @@ export default function SurveysScreen({ supabase }: Props) {
 
   return (
     <div className="space-y-5">
+      <StoryWidgetAdmin supabase={supabase} />
+
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={() => setEditing("new")}
           className="px-4 py-2 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] transition-colors">
@@ -98,6 +113,7 @@ export default function SurveysScreen({ supabase }: Props) {
                 <th className="px-3 py-2 text-right">Embed</th>
                 <th className="px-3 py-2"></th>
                 <th className="px-3 py-2"></th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -122,6 +138,11 @@ export default function SurveysScreen({ supabase }: Props) {
                   <td className="px-3 py-3 text-right">
                     <button onClick={() => setViewingResults(s)} className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566]">
                       Results
+                    </button>
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <button onClick={() => handleDuplicate(s)} className="text-[12px] text-[#aaa] hover:text-white">
+                      Duplicate
                     </button>
                   </td>
                   <td className="px-3 py-3 text-right">
