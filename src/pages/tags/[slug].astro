@@ -81,7 +81,7 @@ function gradientFor(article: ArticleSummary) {
       <ol class="flex flex-wrap items-center gap-2">
         <li><a href="/" class="hover:text-white">Home</a></li>
         <li class="text-[#707070]">/</li>
-        <li><a href="/tags" class="hover:text-white">Tags</a></li>
+        <li><a href="/tags/" class="hover:text-white">Tags</a></li>
         <li class="text-[#707070]">/</li>
         <li class="text-[#d4d4d4]">{tagName}</li>
       </ol>
@@ -108,7 +108,7 @@ function gradientFor(article: ArticleSummary) {
             const gradient = gradientFor(article);
             return (
               <a
-                href={`/news/${article.slug}`}
+                href={`/news/${article.slug}/`}
                 class="group block bg-background-card rounded-xl overflow-hidden hover:bg-background-hover transition-colors"
               >
                 {article.hero_image_url ? (
@@ -150,7 +150,7 @@ function gradientFor(article: ArticleSummary) {
     ) : (
       <div class="text-center py-16">
         <p class="text-[#a0a0a0]">No articles tagged with this label yet.</p>
-        <a href="/news" class="mt-4 inline-block text-accent hover:text-accent-hover">
+        <a href="/news/" class="mt-4 inline-block text-accent hover:text-accent-hover">
           Browse all news →
         </a>
       </div>

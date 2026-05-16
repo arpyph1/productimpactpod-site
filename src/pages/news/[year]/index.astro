@@ -90,9 +90,9 @@ const breadcrumbJsonLd = {
   <main class="container-wide py-16">
     <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
       <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/news" class="hover:text-white">News</a></li>
+        <li><a href="/news/" class="hover:text-white">News</a></li>
         <li class="text-[#707070]">/</li>
-        <li><a href="/news/archive" class="hover:text-white">Archive</a></li>
+        <li><a href="/news/archive/" class="hover:text-white">Archive</a></li>
         <li class="text-[#707070]">/</li>
         <li class="text-[#d4d4d4]">{year}</li>
       </ol>
@@ -112,7 +112,7 @@ const breadcrumbJsonLd = {
       <div class="flex flex-wrap gap-2 mb-12 pb-6 border-b border-[#2a2a2a]">
         {sortedMonths.map(([iso, list]) => (
           <a
-            href={`/news/${iso.replace("-", "/")}`}
+            href={`/news/${iso.replace("-", "/")}/`}
             class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] bg-background-card hover:text-white hover:bg-background-hover transition-colors"
           >
             {monthName(iso)} <span class="text-[#707070]">· {list.length}</span>

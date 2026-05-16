@@ -12,6 +12,14 @@ import { getSiteSetting } from "@lib/supabase";
 
 interface NavItem { label: string; href: string; visible: boolean; }
 
+interface Props {
+  /** Override the centre logo. Podcast and episodes pages keep the original
+   *  full-text logo; every other page uses the square brand mark by default. */
+  logoSrc?: string;
+}
+
+const { logoSrc = "/logo-pi.png" } = Astro.props;
+
 const DEFAULT_NAV: NavItem[] = [
   { label: "News",    href: "/news/",         visible: true },
   { label: "Themes",  href: "/themes/",        visible: true },
@@ -108,7 +116,7 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
       {/* Center logo */}
       <a href="/" class="flex items-center justify-center flex-shrink-0">
         <img
-          src="/nav-logo-full.png"
+          src={logoSrc}
           alt="Product Impact Podcast"
           class="object-contain transition-all duration-300 w-12 h-12 md:w-[120px] md:h-[120px]"
           id="nav-logo"

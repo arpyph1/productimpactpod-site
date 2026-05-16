@@ -23,6 +23,12 @@ const THEMES = [
   { slug: "go-to-market-distribution", label: "Go-to-Market & Distribution" },
   { slug: "governance-risk-trust", label: "Governance, Risk & Trust" },
   { slug: "ux-experience-design-for-ai", label: "UX & Experience Design for AI" },
+  // Engagement-based sort modes — stored as special __prefixed__ slugs
+  // so the homepage renderer knows to sort by article_engagement rather
+  // than filter by theme.
+  { slug: "__most-viewed__", label: "📈 Most viewed" },
+  { slug: "__most-liked__", label: "❤️ Most liked" },
+  { slug: "__most-shared__", label: "🔗 Most shared" },
 ];
 
 const FORMATS = [

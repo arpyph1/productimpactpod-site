@@ -97,7 +97,7 @@ const isThinPage = !entity.long_form && allArticles.length < 3;
         <li><a href="/" class="hover:text-white">Home</a></li>
         <li class="text-[#707070]">/</li>
         <li>
-          <a href={`/${entityTypePlural[entity.type]}`} class="hover:text-white capitalize">
+          <a href={`/${entityTypePlural[entity.type]}/`} class="hover:text-white capitalize">
             {entityTypeLabel[entity.type]}
           </a>
         </li>
@@ -160,7 +160,7 @@ const isThinPage = !entity.long_form && allArticles.length < 3;
                 });
                 return (
                   <a
-                    href={`/news/${article.slug}`}
+                    href={`/news/${article.slug}/`}
                     class="group flex gap-4 bg-background-card rounded-xl p-5 hover:bg-background-hover transition-colors"
                   >
                     <div class="flex-1 min-w-0">
@@ -244,7 +244,7 @@ const isThinPage = !entity.long_form && allArticles.length < 3;
               <div class="flex flex-col gap-2">
                 {entity.themes.map((t) => (
                   <a
-                    href={`/themes/${t}`}
+                    href={`/themes/${t}/`}
                     class="text-sm text-[#d4d4d4] hover:text-accent transition-colors"
                   >
                     {themeLabel(t)}

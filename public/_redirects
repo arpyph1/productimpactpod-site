@@ -50,23 +50,42 @@
 # /episodes/{slug} doesn't exist — point them at the closest real page
 # so Search Console doesn't see a redirect-then-404.
 #
-# IMPORTANT: explicit /podcast and /podcast/ guards MUST come before the
-# /podcast/* catch-all. Otherwise the catch-all matches the bare podcast
-# index with an empty splat and 301s readers to /episodes/.
+# IMPORTANT: explicit /podcast guard MUST come before the /podcast/:slug
+# catch-all, so the podcast index page is never swallowed by the catch-all.
+# The previous /podcast/ → /podcast/ 200 "guard" used status 200, which
+# Cloudflare Pages does not support in _redirects — it was silently skipped,
+# allowing /podcast/* to match /podcast/ with an empty splat and 301 to
+# /episodes/. Using :slug (a named placeholder) instead of * (splat) avoids
+# that: :slug requires a non-empty path segment so /podcast/ falls through to
+# the static file.
 /podcast                                                              /podcast/                 301
 /podcast/robert-brunner-physical-ai                                   /people/robert-brunner/   301
 /podcast/cognitive-sovereignty-helen-dave-edwards-artificiality-institute  /episodes/                301
-/podcast/*          /episodes/:splat               301
+/podcast/:slug      /episodes/:slug                301
 
-# Topic pages: no catch-all. /topics/[slug]/ is built for every topic with
-# at least one article, so live slugs serve 200 directly. The previous
-# `/topics/* → /topics/ 301` catch-all flagged ~45 live pages as redirects
-# in Search Console because the non-trailing-slash variant fell through to
-# the wildcard instead of getting Cloudflare's standard trailing-slash 301.
+# Topic & tag pages: trailing-slash-only catch-all for dead slugs.
 #
-# When a specific dead topic slug shows up in GSC's "Not found 404" report,
-# add an explicit redirect here, e.g.:
-#   /topics/old-slug    /topics/new-slug              301
+# Background: with format:"directory", Cloudflare Pages serves
+# /topics/foo/ from /topics/foo/index.html. When that file doesn't
+# exist (topic deleted or merged), Cloudflare's auto-trailing-slash
+# logic can ping-pong /topics/foo ↔ /topics/foo/ and Googlebot reports
+# it as "Redirect error" — that's what 100+ topic URLs hit in GSC.
+#
+# The fix is a placeholder rule that matches *only* the trailing-slash
+# form. Static assets take precedence, so live topic hubs serve 200.
+# Dead slugs (no static file) fall through to the rule and 301 to the
+# index. The no-trailing-slash variant /topics/foo doesn't match this
+# pattern, so it still gets Cloudflare's standard auto-301 to
+# /topics/foo/ (which then either serves 200 or matches this rule —
+# either way, no loop).
+#
+# The previous `/topics/* → /topics/ 301` catch-all caused the inverse
+# problem: it matched the no-slash variants of *live* topics and 301'd
+# them to /topics/ instead of the canonical trailing-slash form. The
+# `:slug/` placeholder syntax avoids that by requiring a trailing slash
+# in the request path.
+/topics/:slug/      /topics/                       301
+/tags/:slug/        /tags/                         301
 
 # Social/unfurl bot compatibility — some platforms strip trailing slashes
 # and re-append with quotes. These are harmless no-ops if never hit.
