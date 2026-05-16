@@ -52,7 +52,11 @@ const siteUrl = "https://productimpactpod.com";
 const articleUrl = `${siteUrl}/news/${article.slug}/`;
 
 const cleanedHtml = sanitizeHtml(stripFirstH1(article.content_html));
-const adSplit = splitForAd(cleanedHtml);
+// PH1 sponsor block is gated to a preview slug while we validate the
+// design. Flip `AD_PREVIEW_SLUGS` to null/empty to enable site-wide.
+const AD_PREVIEW_SLUGS: Set<string> | null = new Set(["context-is-the-unlock"]);
+const showAd = AD_PREVIEW_SLUGS === null || AD_PREVIEW_SLUGS.has(article.slug);
+const adSplit = showAd ? splitForAd(cleanedHtml) : { before: cleanedHtml, after: "" };
 const hasTwitterEmbed = cleanedHtml.includes('twitter-tweet');
 const bullets = article.overview_bullets?.length
   ? article.overview_bullets
@@ -258,9 +262,10 @@ const bcJsonLd = {
         {/* ── Article body ── PH1 sponsor block injected before the
              third heading (or appended if the article has fewer than
              three). The ad sits between two prose blocks so its layout
-             doesn't inherit typography styles. ── */}
+             doesn't inherit typography styles. Currently scoped to
+             AD_PREVIEW_SLUGS while we validate the design. ── */}
         <div class="article-prose" set:html={adSplit.before}></div>
-        <Ph1AdWidget />
+        {showAd && <Ph1AdWidget />}
         {adSplit.after && <div class="article-prose" set:html={adSplit.after}></div>}
         {hasTwitterEmbed && (
           <script is:inline async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
