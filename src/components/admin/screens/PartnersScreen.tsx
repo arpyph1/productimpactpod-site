@@ -12,6 +12,15 @@ interface Sponsor {
 
 interface DisplayAd { id: string; name: string; image_url: string; link_url: string; active: boolean }
 
+interface AdBullet { label: string; url: string; }
+interface ArticleAd {
+  id: string; title: string; active: boolean;
+  logo_url: string; logo_link: string; logo_alt: string;
+  headline: string; eyebrow: string;
+  bullets: AdBullet[];
+  position_heading: number; display_order: number;
+}
+
 const SEED_PARTNERS = [
   { slug: "ph1", name: "PH1", tagline: "Ship products that are proven to deliver impact in the AI era", logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true", website_url: "https://ph1.ca", tier: "founding", active: true, display_order: 0 },
   { slug: "ai-value-acceleration", name: "AI Value Acceleration", tagline: "We find exactly where value stalls, why, and whose job it is to fix", logo_url: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png", website_url: "https://aivalueacceleration.com/", tier: "founding", active: true, display_order: 1 },
@@ -30,17 +39,71 @@ export default function PartnersScreen({ supabase }: Props) {
   const logoRef = useRef<HTMLInputElement>(null);
   const adRef = useRef<HTMLInputElement>(null);
 
+  // Article inline ads state
+  const [articleAds, setArticleAds] = useState<ArticleAd[]>([]);
+  const [editingAd, setEditingAd] = useState<Partial<ArticleAd> | null>(null);
+  const [isNewAd, setIsNewAd] = useState(false);
+
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
-    const [spRes, setRes] = await Promise.all([
+    const [spRes, setRes, aaRes] = await Promise.all([
       supabase.from("sponsors").select("*").order("display_order"),
       supabase.from("site_settings").select("*").eq("key", "display_ads"),
+      supabase.from("article_ads").select("*").order("display_order"),
     ]);
     if (spRes.data) setSponsors(spRes.data);
     if (setRes.data?.[0]?.value?.ads) setAds(setRes.data[0].value.ads);
+    if (aaRes.data) setArticleAds(aaRes.data as ArticleAd[]);
     setLoading(false);
+  }
+
+  async function saveArticleAd() {
+    if (!editingAd) return;
+    if (!editingAd.title?.trim()) { setMsg("Internal title is required"); return; }
+    const payload: any = {
+      title: editingAd.title,
+      active: editingAd.active ?? true,
+      logo_url: editingAd.logo_url ?? "",
+      logo_link: editingAd.logo_link ?? "",
+      logo_alt: editingAd.logo_alt ?? "",
+      headline: editingAd.headline ?? "",
+      eyebrow: editingAd.eyebrow ?? "",
+      bullets: editingAd.bullets ?? [],
+      position_heading: editingAd.position_heading ?? 3,
+      display_order: editingAd.display_order ?? articleAds.length,
+      updated_at: new Date().toISOString(),
+    };
+    let error;
+    if (isNewAd) {
+      error = (await supabase.from("article_ads").insert(payload)).error;
+    } else {
+      error = (await supabase.from("article_ads").update(payload).eq("id", editingAd.id)).error;
+    }
+    if (error) setMsg(`Error: ${error.message}`);
+    else { setMsg("Saved — rebuild site to publish"); setEditingAd(null); setTimeout(() => setMsg(""), 3000); loadAll(); }
+  }
+
+  async function deleteArticleAd(id: string) {
+    if (!confirm("Delete this article ad?")) return;
+    await supabase.from("article_ads").delete().eq("id", id);
+    loadAll();
+  }
+
+  async function toggleArticleAdActive(id: string, current: boolean) {
+    await supabase.from("article_ads").update({ active: !current, updated_at: new Date().toISOString() }).eq("id", id);
+    setArticleAds(prev => prev.map(a => a.id === id ? { ...a, active: !current } : a));
+  }
+
+  function newArticleAd(): Partial<ArticleAd> {
+    return {
+      title: "", active: true,
+      logo_url: "", logo_link: "", logo_alt: "",
+      headline: "", eyebrow: "",
+      bullets: [{ label: "", url: "" }],
+      position_heading: 3, display_order: articleAds.length,
+    };
   }
 
   async function seedPartners() {
@@ -179,6 +242,53 @@ export default function PartnersScreen({ supabase }: Props) {
         )}
       </section>
 
+      {/* ─── Article Inline Ads ─── */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-[16px] font-bold text-white">Article Inline Ads</h3>
+            <p className="text-[12px] text-[#555] mt-1">CTA widgets auto-injected into article bodies. Rebuild the site after saving to publish changes.</p>
+          </div>
+          <button onClick={() => { setEditingAd(newArticleAd()); setIsNewAd(true); }}
+            className="px-4 py-2.5 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566] flex items-center gap-1.5">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+            New Ad
+          </button>
+        </div>
+
+        {articleAds.length === 0 ? (
+          <div className="text-[13px] text-[#555] py-6 text-center border border-dashed border-[#222] rounded-xl">
+            No article ads yet. Run the migration (0014_article_ads.sql) to seed the PH1 ad.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {articleAds.map(a => (
+              <div key={a.id} className="flex flex-wrap items-center gap-4 p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a]">
+                {a.logo_url && (
+                  <div className="w-16 h-12 rounded bg-[#111] border border-[#1a1a1a] flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
+                    <img src={a.logo_url} alt="" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[14px] font-semibold text-[#ccc]">{a.title}</span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${a.active ? "bg-green-500/10 text-green-400" : "bg-[#222] text-[#555]"}`}>{a.active ? "Active" : "Inactive"}</span>
+                    <span className="text-[10px] text-[#555]">before heading #{a.position_heading}</span>
+                  </div>
+                  {a.headline && <div className="text-[12px] text-[#666] truncate mt-0.5">{a.headline}</div>}
+                  <div className="text-[11px] text-[#444] mt-0.5">{(a.bullets ?? []).length} CTA{(a.bullets ?? []).length !== 1 ? "s" : ""}</div>
+                </div>
+                <div className="flex items-center gap-3 ml-auto">
+                  <button onClick={() => toggleArticleAdActive(a.id, a.active)} className="text-[12px] text-[#666] hover:text-white">{a.active ? "Deactivate" : "Activate"}</button>
+                  <button onClick={() => { setEditingAd({ ...a, bullets: a.bullets ?? [] }); setIsNewAd(false); }} className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-medium">Edit</button>
+                  <button onClick={() => deleteArticleAd(a.id)} className="text-[12px] text-[#555] hover:text-red-400">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* ─── Display Ads ─── */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-1">Display Ads</h3>
@@ -223,6 +333,108 @@ export default function PartnersScreen({ supabase }: Props) {
           </button>
         </div>
       </section>
+
+      {/* ─── Edit Article Ad Modal ─── */}
+      {editingAd && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-[#0c0c0c] border border-[#222] rounded-xl p-6 space-y-4 my-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[16px] font-bold text-white">{isNewAd ? "New Article Ad" : "Edit Article Ad"}</h3>
+              <button onClick={() => setEditingAd(null)} className="text-[#555] hover:text-white">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <F label="Internal title" value={editingAd.title ?? ""} onChange={v => setEditingAd({ ...editingAd, title: v })} />
+              <div>
+                <label className="block text-[11px] font-medium text-[#666] mb-1">Insert before heading #</label>
+                <input type="number" min={1} max={20}
+                  className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+                  value={editingAd.position_heading ?? 3}
+                  onChange={e => setEditingAd({ ...editingAd, position_heading: parseInt(e.target.value) || 3 })} />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={editingAd.active ?? true}
+                onChange={e => setEditingAd({ ...editingAd, active: e.target.checked })}
+                className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+              <span className="text-[13px] text-[#ccc]">Active</span>
+            </label>
+
+            <div className="border-t border-[#1a1a1a] pt-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#666] mb-3">Left side</div>
+              <div className="grid grid-cols-2 gap-3">
+                <F label="Logo URL" value={editingAd.logo_url ?? ""} onChange={v => setEditingAd({ ...editingAd, logo_url: v })} />
+                <F label="Logo link" value={editingAd.logo_link ?? ""} onChange={v => setEditingAd({ ...editingAd, logo_link: v })} />
+              </div>
+              <div className="mt-3">
+                <F label="Logo alt text" value={editingAd.logo_alt ?? ""} onChange={v => setEditingAd({ ...editingAd, logo_alt: v })} />
+              </div>
+              {editingAd.logo_url && (
+                <div className="mt-2 h-14 bg-[#111] rounded-lg flex items-center p-2">
+                  <img src={editingAd.logo_url} alt="" className="max-h-full object-contain" />
+                </div>
+              )}
+              <div className="mt-3">
+                <label className="block text-[11px] font-medium text-[#666] mb-1">Headline</label>
+                <textarea className="w-full h-16 bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-white focus:outline-none resize-y"
+                  value={editingAd.headline ?? ""}
+                  onChange={e => setEditingAd({ ...editingAd, headline: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="border-t border-[#1a1a1a] pt-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#666] mb-3">Right side</div>
+              <F label="Eyebrow (small orange text)" value={editingAd.eyebrow ?? ""} onChange={v => setEditingAd({ ...editingAd, eyebrow: v })} />
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-medium text-[#666]">CTA links</label>
+                  <button
+                    onClick={() => setEditingAd({ ...editingAd, bullets: [...(editingAd.bullets ?? []), { label: "", url: "" }] })}
+                    className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566]">+ Add link</button>
+                </div>
+                <div className="space-y-2">
+                  {(editingAd.bullets ?? []).map((b, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        className="flex-1 px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+                        placeholder="Label"
+                        value={b.label}
+                        onChange={e => {
+                          const bullets = [...(editingAd.bullets ?? [])];
+                          bullets[i] = { ...b, label: e.target.value };
+                          setEditingAd({ ...editingAd, bullets });
+                        }} />
+                      <input
+                        className="flex-1 px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none font-mono text-[11px] text-[#888]"
+                        placeholder="https://…"
+                        value={b.url}
+                        onChange={e => {
+                          const bullets = [...(editingAd.bullets ?? [])];
+                          bullets[i] = { ...b, url: e.target.value };
+                          setEditingAd({ ...editingAd, bullets });
+                        }} />
+                      <button
+                        onClick={() => setEditingAd({ ...editingAd, bullets: (editingAd.bullets ?? []).filter((_, j) => j !== i) })}
+                        className="text-[#555] hover:text-red-400 flex-shrink-0 px-1">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setEditingAd(null)} className="px-4 py-2 text-[13px] text-[#888] hover:text-white">Cancel</button>
+              <button onClick={saveArticleAd} className="px-5 py-2 bg-[#ff6b4a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#ff8566]">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Edit Partner Modal ─── */}
       {editing && (

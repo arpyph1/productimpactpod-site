@@ -1,0 +1,147 @@
+// Fetch active article_ads from Supabase and inject their HTML into
+// article body strings. Uses the public anon key — ads are public reads.
+
+import { createClient } from "@supabase/supabase-js";
+
+export interface ArticleAdBullet {
+  label: string;
+  url: string;
+}
+
+export interface ArticleAd {
+  id: string;
+  title: string;
+  active: boolean;
+  logo_url: string | null;
+  logo_link: string | null;
+  logo_alt: string | null;
+  headline: string;
+  eyebrow: string | null;
+  bullets: ArticleAdBullet[];
+  position_heading: number;
+  display_order: number;
+}
+
+let _adsCache: ArticleAd[] | null = null;
+
+export async function getActiveArticleAds(): Promise<ArticleAd[]> {
+  if (_adsCache) return _adsCache;
+  const url = import.meta.env.PUBLIC_SUPABASE_URL;
+  const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+  const sb = createClient(url, key);
+  const { data } = await sb
+    .from("article_ads")
+    .select("*")
+    .eq("active", true)
+    .order("position_heading", { ascending: true })
+    .order("display_order", { ascending: true });
+  _adsCache = (data ?? []) as ArticleAd[];
+  return _adsCache;
+}
+
+// Escape HTML entities in attribute values.
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function arrowSvg(): string {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color:#ff6b4a;opacity:0.7;flex-shrink:0"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>`;
+}
+
+export function buildAdHtml(ad: ArticleAd): string {
+  const logoHtml = ad.logo_url
+    ? `<a href="${esc(ad.logo_link ?? "#")}" target="_blank" rel="noopener sponsored" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
+        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" width="220" height="88" style="height:88px;max-width:220px;object-fit:contain;" />
+      </a>`
+    : "";
+
+  const bulletsHtml = (ad.bullets ?? [])
+    .map(b => `<li>
+      <a href="${esc(b.url)}" target="_blank" rel="noopener sponsored"
+        style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;">
+        <span>${esc(b.label)}</span>${arrowSvg()}
+      </a>
+    </li>`)
+    .join("");
+
+  const eyebrowHtml = ad.eyebrow
+    ? `<span style="display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#ff6b4a;margin-bottom:12px;">${esc(ad.eyebrow)}</span>`
+    : "";
+
+  return `
+<aside class="not-prose" aria-label="Sponsored" style="margin:40px 0;">
+  <div style="position:relative;border-radius:16px;overflow:hidden;padding:32px;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(255,107,74,0.1),transparent 50%);pointer-events:none;"></div>
+    <div style="position:relative;display:grid;grid-template-columns:1fr;gap:24px;">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;" class="ph1-ad-grid">
+        <div style="display:flex;flex-direction:column;gap:16px;max-width:260px;">
+          ${logoHtml}
+          <h3 style="margin:0;font-size:18px;font-weight:800;color:#fff;line-height:1.3;letter-spacing:-0.01em;">${esc(ad.headline)}</h3>
+        </div>
+        <div>
+          ${eyebrowHtml}
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;">
+            ${bulletsHtml}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>`;
+}
+
+// Inject ad HTML before the nth h2/h3 in article HTML. Mutiple ads are
+// processed in ascending position_heading order; heading counts are
+// accumulated across prior injections.
+export function injectArticleAds(html: string, ads: ArticleAd[]): string {
+  if (!ads.length) return html;
+
+  const re = /<h[23](\s[^>]*)?>/gi;
+  let result = "";
+  let remaining = html;
+  let headingsSeen = 0;
+  let adIdx = 0;
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+
+  // Work on a clone of the regex against the full string so we can track positions.
+  const fullRe = /<h[23](\s[^>]*)?>/gi;
+
+  // Collect injection points: for each ad, which heading (cumulative) it's before.
+  const targets = [...ads].sort((a, b) => a.position_heading - b.position_heading);
+
+  let out = "";
+  let pos = 0;
+  let headingCount = 0;
+  let targetIdx = 0;
+
+  while (targetIdx < targets.length) {
+    const target = targets[targetIdx];
+    fullRe.lastIndex = pos;
+    let found = false;
+
+    while ((m = fullRe.exec(html)) !== null) {
+      headingCount++;
+      if (headingCount === target.position_heading) {
+        out += html.slice(pos, m.index);
+        out += buildAdHtml(target);
+        pos = m.index;
+        found = true;
+        targetIdx++;
+        break;
+      }
+    }
+
+    if (!found) {
+      // Not enough headings — append this ad at the end.
+      out += html.slice(pos);
+      out += buildAdHtml(target);
+      pos = html.length;
+      targetIdx++;
+    }
+  }
+
+  out += html.slice(pos);
+  return out;
+}
