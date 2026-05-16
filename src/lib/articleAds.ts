@@ -45,20 +45,43 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Append UTM tracking so the target site can attribute traffic back to
+// productimpactpod.com. utm_content carries the bullet label so each
+// CTA is distinguishable in the destination's analytics.
+function withUtm(url: string, campaign: string, content?: string): string {
+  if (!url || url === "#") return url;
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("utm_source"))   u.searchParams.set("utm_source", "productimpactpod");
+    if (!u.searchParams.has("utm_medium"))   u.searchParams.set("utm_medium", "article-ad");
+    if (!u.searchParams.has("utm_campaign")) u.searchParams.set("utm_campaign", campaign);
+    if (content && !u.searchParams.has("utm_content")) u.searchParams.set("utm_content", content);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+function slugify(s: string): string {
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
 function arrowSvg(): string {
   return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color:#ff6b4a;opacity:0.7;flex-shrink:0"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>`;
 }
 
 export function buildAdHtml(ad: ArticleAd): string {
+  const campaign = slugify(ad.title) || "article-ad";
+
   const logoHtml = ad.logo_url
-    ? `<a href="${esc(ad.logo_link ?? "#")}" target="_blank" rel="noopener sponsored" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
+    ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
         <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" width="220" height="88" style="height:88px;max-width:220px;object-fit:contain;" />
       </a>`
     : "";
 
   const bulletsHtml = (ad.bullets ?? [])
     .map(b => `<li>
-      <a href="${esc(b.url)}" target="_blank" rel="noopener sponsored"
+      <a href="${esc(withUtm(b.url, campaign, slugify(b.label)))}" target="_blank" rel="noopener sponsored"
         style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;">
         <span>${esc(b.label)}</span>${arrowSvg()}
       </a>
