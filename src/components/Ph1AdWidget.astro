@@ -1,0 +1,92 @@
+---
+// PH1 sponsor block, auto-injected before the third heading of every
+// article body. Mirrors the "Subscribe to our Substack" gradient card
+// from the homepage but spans the full article column.
+---
+
+<aside class="my-10 not-prose" aria-label="Sponsored — PH1 Product Strategy">
+  <div
+    class="relative rounded-2xl overflow-hidden p-6 md:p-8"
+    style="background: linear-gradient(135deg, #1a0a05 0%, #120808 30%, #0a0812 100%);"
+  >
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,107,74,0.1),transparent_50%)]"></div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
+
+      {/* Left: PH1 logo + headline */}
+      <div class="flex flex-col items-start gap-4 md:max-w-[260px]">
+        <a
+          href="https://ph1.ca"
+          target="_blank"
+          rel="noopener sponsored"
+          class="block opacity-90 hover:opacity-100 transition-opacity"
+          aria-label="Visit ph1.ca"
+        >
+          <img
+            src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
+            alt="PH1 logo"
+            class="h-[88px] max-w-[220px] object-contain"
+            loading="lazy"
+            width="220"
+            height="88"
+          />
+        </a>
+        <h3 class="text-[18px] md:text-[20px] font-extrabold text-white leading-tight tracking-tight">
+          Ship products that are proven to deliver impact in the AI era
+        </h3>
+      </div>
+
+      {/* Right: tagline + CTA list */}
+      <div>
+        <span class="inline-block text-[11px] font-bold uppercase tracking-[0.15em] text-[#ff6b4a] mb-3">
+          Product Strategy consultancy founded in 2012
+        </span>
+        <ul class="space-y-1.5">
+          <li>
+            <a
+              href="https://ph1.ca/improve-ai-performance"
+              target="_blank"
+              rel="noopener sponsored"
+              class="group flex items-center justify-between gap-3 px-3 py-2 -mx-3 rounded-lg text-[15px] font-semibold text-white hover:bg-[#ff6b4a]/10 transition-colors"
+            >
+              <span>Improve AI Product Success</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#ff6b4a] opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0" aria-hidden="true">
+                <line x1="7" y1="17" x2="17" y2="7"/>
+                <polyline points="7 7 17 7 17 17"/>
+              </svg>
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://ph1.ca/accelerate-digital-transformation"
+              target="_blank"
+              rel="noopener sponsored"
+              class="group flex items-center justify-between gap-3 px-3 py-2 -mx-3 rounded-lg text-[15px] font-semibold text-white hover:bg-[#ff6b4a]/10 transition-colors"
+            >
+              <span>Accelerate Digital Transformation</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#ff6b4a] opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0" aria-hidden="true">
+                <line x1="7" y1="17" x2="17" y2="7"/>
+                <polyline points="7 7 17 7 17 17"/>
+              </svg>
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://ph1.ca/ai-90-day-path-to-launch"
+              target="_blank"
+              rel="noopener sponsored"
+              class="group flex items-center justify-between gap-3 px-3 py-2 -mx-3 rounded-lg text-[15px] font-semibold text-white hover:bg-[#ff6b4a]/10 transition-colors"
+            >
+              <span>Launch your first AI agent</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#ff6b4a] opacity-70 group-hover:opacity-100 transition-opacity flex-shrink-0" aria-hidden="true">
+                <line x1="7" y1="17" x2="17" y2="7"/>
+                <polyline points="7 7 17 7 17 17"/>
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</aside>
