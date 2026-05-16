@@ -54,7 +54,6 @@
 # /podcast/* catch-all. Otherwise the catch-all matches the bare podcast
 # index with an empty splat and 301s readers to /episodes/.
 /podcast                                                              /podcast/                 301
-/podcast/                                                             /podcast/                 200
 /podcast/robert-brunner-physical-ai                                   /people/robert-brunner/   301
 /podcast/cognitive-sovereignty-helen-dave-edwards-artificiality-institute  /episodes/                301
 /podcast/*          /episodes/:splat               301
