@@ -130,22 +130,20 @@ export default function AnalyticsScreen({ supabase }: Props) {
 
       {/* Table */}
       <div className="rounded-xl border border-[#1a1a1a] overflow-hidden">
-        {/* Sort tabs — horizontal-scroll row on mobile so labels never clip */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 bg-[#0c0c0c] border-b border-[#1a1a1a]">
-          <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
-            {(["views", "shares", "hearts", "avg_read_pct", "link_clicks", "publish_date"] as SortKey[]).map(k => (
-              <button key={k} onClick={() => { setTab(k); setShowAll(false); }}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${k === tab ? "bg-white/10 text-white" : "text-[#555] hover:text-white"}`}>
-                {k === "views" ? "👁 Most Viewed"
-                  : k === "shares" ? "↗ Most Shared"
-                  : k === "hearts" ? "❤️ Most Hearted"
-                  : k === "avg_read_pct" ? "📖 Most Read"
-                  : k === "link_clicks" ? "🔗 Most Clicks"
-                  : "🗓 Newest"}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-[#0c0c0c] border-b border-[#1a1a1a]">
+          <span className="text-[11px] text-[#555]">
+            Sorted by <span className="text-white font-semibold">
+              {tab === "views" ? "Views" : tab === "shares" ? "Shares" : tab === "hearts" ? "Hearts"
+                : tab === "avg_read_pct" ? "% Read" : tab === "link_clicks" ? "Link Clicks" : "Publish date"}
+            </span>
+          </span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => { setTab(tab === "publish_date" ? "views" : "publish_date"); setShowAll(false); }}
+              className={`text-[11px] transition-colors ${tab === "publish_date" ? "text-[#ff6b4a]" : "text-[#555] hover:text-white"}`}>
+              {tab === "publish_date" ? "✓ Newest first" : "🗓 Sort by newest"}
+            </button>
+            <button onClick={loadData} className="text-[11px] text-[#555] hover:text-white transition-colors">↻ Refresh</button>
           </div>
-          <button onClick={loadData} className="text-[11px] text-[#555] hover:text-white transition-colors">↻ Refresh</button>
         </div>
 
         {/* Engagement table is wider than a phone — wrap in horizontal
