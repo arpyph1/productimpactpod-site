@@ -11,12 +11,14 @@ interface EngagementRow {
   avg_read_pct: number;
   read_pct_count: number;
   link_clicks: number;
+  avg_pages: number;
+  session_count: number;
   title?: string;
   slug?: string;
   publish_date?: string;
 }
 
-type SortKey = "views" | "shares" | "hearts" | "avg_read_pct" | "link_clicks" | "publish_date";
+type SortKey = "views" | "shares" | "hearts" | "avg_read_pct" | "link_clicks" | "avg_pages" | "publish_date";
 
 export default function AnalyticsScreen({ supabase }: Props) {
   const [data, setData] = useState<EngagementRow[]>([]);
@@ -30,10 +32,20 @@ export default function AnalyticsScreen({ supabase }: Props) {
 
   async function loadData() {
     setLoading(true);
-    const [engRes, artRes] = await Promise.all([
+    const [engRes, artRes, sesRes] = await Promise.all([
       supabase.from("article_engagement").select("*"),
       supabase.from("articles").select("id, title, slug, publish_date").eq("published", true),
+      supabase.from("article_sessions").select("landing_article_id, pages_count").not("landing_article_id", "is", null),
     ]);
+
+    const sessionsByArticle = new Map<string, { sum: number; count: number }>();
+    (sesRes.data ?? []).forEach((s: any) => {
+      const id = s.landing_article_id as string;
+      const cur = sessionsByArticle.get(id) ?? { sum: 0, count: 0 };
+      cur.sum += s.pages_count ?? 1;
+      cur.count += 1;
+      sessionsByArticle.set(id, cur);
+    });
 
     const articles = new Map<string, { title: string; slug: string; publish_date: string }>();
     (artRes.data ?? []).forEach((a: any) => articles.set(a.id, a));
@@ -54,11 +66,14 @@ export default function AnalyticsScreen({ supabase }: Props) {
     // haven't accumulated engagement yet.
     const rows: EngagementRow[] = (artRes.data ?? []).map((a: any) => {
       const eng = engagementByArticle.get(a.id) ?? { views: 0, shares: 0, hearts: 0, avg_read_pct: 0, read_pct_count: 0, link_clicks: 0 };
+      const ses = sessionsByArticle.get(a.id) ?? { sum: 0, count: 0 };
       return {
         article_id: a.id,
         views: eng.views, shares: eng.shares, hearts: eng.hearts,
         avg_read_pct: eng.avg_read_pct, read_pct_count: eng.read_pct_count,
         link_clicks: eng.link_clicks,
+        avg_pages: ses.count > 0 ? Math.round((ses.sum / ses.count) * 10) / 10 : 0,
+        session_count: ses.count,
         title: a.title, slug: a.slug, publish_date: a.publish_date,
       };
     });
@@ -86,8 +101,11 @@ export default function AnalyticsScreen({ supabase }: Props) {
     link_clicks: acc.link_clicks + r.link_clicks,
     pct_sum: acc.pct_sum + r.avg_read_pct * r.read_pct_count,
     pct_count: acc.pct_count + r.read_pct_count,
-  }), { views: 0, shares: 0, hearts: 0, link_clicks: 0, pct_sum: 0, pct_count: 0 });
+    pages_sum: acc.pages_sum + r.avg_pages * r.session_count,
+    sessions: acc.sessions + r.session_count,
+  }), { views: 0, shares: 0, hearts: 0, link_clicks: 0, pct_sum: 0, pct_count: 0, pages_sum: 0, sessions: 0 });
   const totalAvgReadPct = totals.pct_count > 0 ? Math.round(totals.pct_sum / totals.pct_count) : 0;
+  const totalAvgPages = totals.sessions > 0 ? Math.round((totals.pages_sum / totals.sessions) * 10) / 10 : 0;
 
   if (loading) return (
     <div className="flex justify-center py-16">
@@ -98,12 +116,13 @@ export default function AnalyticsScreen({ supabase }: Props) {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Total Views" value={totals.views} icon="👁" active={tab === "views"} onClick={() => setTab("views")} />
         <SummaryCard label="Total Shares" value={totals.shares} icon="↗" active={tab === "shares"} onClick={() => setTab("shares")} />
         <SummaryCard label="Total Hearts" value={totals.hearts} icon="❤️" active={tab === "hearts"} onClick={() => setTab("hearts")} />
         <SummaryCard label="Avg % Read" value={totalAvgReadPct} suffix="%" icon="📖" active={tab === "avg_read_pct"} onClick={() => setTab("avg_read_pct")} />
         <SummaryCard label="Link Clicks" value={totals.link_clicks} icon="🔗" active={tab === "link_clicks"} onClick={() => setTab("link_clicks")} />
+        <SummaryCard label="Avg Pages" value={totalAvgPages} icon="📄" active={tab === "avg_pages"} onClick={() => setTab("avg_pages")} />
       </div>
 
       {/* Filters */}
@@ -134,7 +153,8 @@ export default function AnalyticsScreen({ supabase }: Props) {
           <span className="text-[11px] text-[#555]">
             Sorted by <span className="text-white font-semibold">
               {tab === "views" ? "Views" : tab === "shares" ? "Shares" : tab === "hearts" ? "Hearts"
-                : tab === "avg_read_pct" ? "% Read" : tab === "link_clicks" ? "Link Clicks" : "Publish date"}
+                : tab === "avg_read_pct" ? "% Read" : tab === "link_clicks" ? "Link Clicks"
+                : tab === "avg_pages" ? "Avg Pages" : "Publish date"}
             </span>
           </span>
           <div className="flex items-center gap-3">
@@ -159,12 +179,13 @@ export default function AnalyticsScreen({ supabase }: Props) {
               <th className="text-right px-4 py-2.5 w-20">Hearts</th>
               <th className="text-right px-4 py-2.5 w-20">% Read</th>
               <th className="text-right px-4 py-2.5 w-20">Clicks</th>
+              <th className="text-right px-4 py-2.5 w-20">Avg Pages</th>
               <th className="text-right px-4 py-2.5 w-28">Published</th>
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
+              <tr><td colSpan={9} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
             ) : displayed.map((row, i) => (
               <tr key={row.article_id} className="border-b border-[#111] hover:bg-[#0c0c0c] transition-colors">
                 <td className="px-4 py-3 text-[12px] text-[#555] font-mono">{i + 1}</td>
@@ -190,6 +211,9 @@ export default function AnalyticsScreen({ supabase }: Props) {
                 </td>
                 <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "link_clicks" ? "text-white font-bold" : "text-[#666]"}`}>
                   {row.link_clicks.toLocaleString()}
+                </td>
+                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "avg_pages" ? "text-white font-bold" : "text-[#666]"}`}>
+                  {row.session_count > 0 ? row.avg_pages.toFixed(1) : "—"}
                 </td>
                 <td className={`px-4 py-3 text-right text-[12px] whitespace-nowrap ${tab === "publish_date" ? "text-white font-bold" : "text-[#666]"}`}>
                   {row.publish_date ? new Date(row.publish_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}

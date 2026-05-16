@@ -19,6 +19,7 @@ interface ArticleAd {
   headline: string; eyebrow: string;
   bullets: AdBullet[];
   position_heading: number; display_order: number;
+  clicks?: number;
 }
 
 const SEED_PARTNERS = [
@@ -276,7 +277,11 @@ export default function PartnersScreen({ supabase }: Props) {
                     <span className="text-[10px] text-[#555]">before heading #{a.position_heading}</span>
                   </div>
                   {a.headline && <div className="text-[12px] text-[#666] truncate mt-0.5">{a.headline}</div>}
-                  <div className="text-[11px] text-[#444] mt-0.5">{(a.bullets ?? []).length} CTA{(a.bullets ?? []).length !== 1 ? "s" : ""}</div>
+                  <div className="text-[11px] text-[#444] mt-0.5 flex items-center gap-2">
+                    <span>{(a.bullets ?? []).length} CTA{(a.bullets ?? []).length !== 1 ? "s" : ""}</span>
+                    <span>·</span>
+                    <span className="text-[#ff6b4a]">🔗 {(a.clicks ?? 0).toLocaleString()} click{(a.clicks ?? 0) === 1 ? "" : "s"}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 ml-auto">
                   <button onClick={() => toggleArticleAdActive(a.id, a.active)} className="text-[12px] text-[#666] hover:text-white">{a.active ? "Deactivate" : "Activate"}</button>

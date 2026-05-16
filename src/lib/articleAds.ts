@@ -72,16 +72,17 @@ function arrowSvg(): string {
 
 export function buildAdHtml(ad: ArticleAd): string {
   const campaign = slugify(ad.title) || "article-ad";
+  const adId = esc(ad.id);
 
   const logoHtml = ad.logo_url
-    ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
+    ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
         <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" width="220" height="88" style="height:88px;max-width:220px;object-fit:contain;" />
       </a>`
     : "";
 
   const bulletsHtml = (ad.bullets ?? [])
     .map(b => `<li>
-      <a href="${esc(withUtm(b.url, campaign, slugify(b.label)))}" target="_blank" rel="noopener sponsored"
+      <a href="${esc(withUtm(b.url, campaign, slugify(b.label)))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}"
         style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;">
         <span>${esc(b.label)}</span>${arrowSvg()}
       </a>

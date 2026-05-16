@@ -595,13 +595,15 @@ const bcJsonLd = {
 
   // Track outbound link clicks from within the article body. One increment
   // per click; no dedupe needed (clicks are intentional engagement signals).
+  // Ad bullet/logo links also carry data-ad-id and bump per-ad clicks.
   if (body) {
     body.addEventListener('click', function(e) {
       var a = e.target.closest ? e.target.closest('a[href]') : null;
       if (!a) return;
       var href = a.getAttribute('href') || '';
       if (!href || href.charAt(0) === '#') return;
-      // Only count outbound or new-tab links.
+      var adId = a.getAttribute('data-ad-id');
+      if (adId) rpc('increment_ad_click', { p_ad_id: adId });
       var isOutbound = false;
       try {
         var u = new URL(href, window.location.href);
