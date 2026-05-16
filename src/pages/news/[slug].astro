@@ -9,6 +9,7 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import StoryCard from "@components/StoryCard.astro";
 import SurveyWidget from "@components/SurveyWidget.astro";
+import StoryWidget from "@components/StoryWidget.astro";
 import { sanitizeHtml } from "@lib/sanitize";
 import { getActiveArticleAds, injectArticleAds } from "@lib/articleAds";
 import { timeAgo } from "@lib/utils";
@@ -367,6 +368,9 @@ const bcJsonLd = {
           </div>
         </div>
 
+        {/* ── Anonymous story submission widget ── */}
+        <StoryWidget articleSlug={article.slug} />
+
         {/* ── Author card ── */}
         <div class="mt-10 pt-8 border-t border-[#1a1a1a]">
           <div class="flex items-start gap-4">
@@ -587,6 +591,62 @@ const bcJsonLd = {
   if (!localStorage.getItem(viewKey)) {
     rpc('increment_view', { p_article_id: articleId });
     localStorage.setItem(viewKey, '1');
+  }
+
+  // Track max % of article body scrolled into view. Computed against the
+  // article-prose element so the % reflects body content, not page chrome.
+  // Reported once per pagehide via sendBeacon (or fallback fetch with keepalive).
+  var body = document.querySelector('.article-prose');
+  var maxPct = 0;
+  function updateScrollPct() {
+    if (!body) return;
+    var rect = body.getBoundingClientRect();
+    var viewportH = window.innerHeight || document.documentElement.clientHeight;
+    var bodyTop = rect.top + window.scrollY;
+    var bodyHeight = body.scrollHeight;
+    if (bodyHeight <= 0) return;
+    var viewedTo = Math.min(bodyHeight, (window.scrollY + viewportH) - bodyTop);
+    var pct = Math.max(0, Math.min(100, Math.round((viewedTo / bodyHeight) * 100)));
+    if (pct > maxPct) maxPct = pct;
+  }
+  updateScrollPct();
+  window.addEventListener('scroll', updateScrollPct, { passive: true });
+  window.addEventListener('resize', updateScrollPct);
+
+  function reportScroll() {
+    if (maxPct < 1) return;
+    var reportedKey = 'pi_read_reported_' + articleId;
+    if (sessionStorage.getItem(reportedKey)) return;
+    sessionStorage.setItem(reportedKey, '1');
+    var payload = JSON.stringify({ p_article_id: articleId, p_pct: maxPct });
+    // keepalive lets the request complete after unload; auth headers must be
+    // set explicitly (sendBeacon can't carry them).
+    fetch(sbUrl + '/rest/v1/rpc/record_read_pct', {
+      method: 'POST', headers: headers, body: payload, keepalive: true
+    });
+  }
+  window.addEventListener('pagehide', reportScroll);
+  window.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') reportScroll();
+  });
+
+  // Track outbound link clicks from within the article body. One increment
+  // per click; no dedupe needed (clicks are intentional engagement signals).
+  if (body) {
+    body.addEventListener('click', function(e) {
+      var a = e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (!href || href.charAt(0) === '#') return;
+      // Only count outbound or new-tab links.
+      var isOutbound = false;
+      try {
+        var u = new URL(href, window.location.href);
+        isOutbound = u.host !== window.location.host;
+      } catch (e2) { return; }
+      if (!isOutbound && a.getAttribute('target') !== '_blank') return;
+      rpc('increment_link_click', { p_article_id: articleId });
+    });
   }
 
   // Track shares — attach to all share links in the article
