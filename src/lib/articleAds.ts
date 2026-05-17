@@ -76,7 +76,7 @@ export function buildAdHtml(ad: ArticleAd): string {
 
   const logoHtml = ad.logo_url
     ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}" aria-label="${esc(ad.logo_alt ?? "Partner")}" class="ph1-ad-logo-link" style="display:block;opacity:0.9;flex-shrink:0;">
-        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" class="ph1-ad-logo-img" style="object-fit:contain;" />
+        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" style="height:44px;max-width:110px;object-fit:contain;display:block;" />
       </a>`
     : "";
 
