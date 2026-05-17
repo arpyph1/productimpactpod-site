@@ -112,7 +112,7 @@ export function buildAdHtml(ad: ArticleAd): string {
       .ph1-ad-card { padding:24px 28px; }
       .ph1-ad-grid { grid-template-columns:auto 1fr; gap:24px; align-items:center; }
       .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:0; max-width:260px; }
-      .ph1-ad-headline { font-size:18px; line-height:1.3; }
+      .ph1-ad-header .ph1-ad-headline { margin:0; font-size:18px; line-height:1.3; }
     }
   </style>
   <div class="ph1-ad-card" style="position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
@@ -120,7 +120,7 @@ export function buildAdHtml(ad: ArticleAd): string {
     <div style="position:relative;" class="ph1-ad-grid">
       <div class="ph1-ad-header">
         ${logoHtml}
-        <h3 class="ph1-ad-headline" style="margin:0;">${esc(ad.headline)}</h3>
+        <h3 class="ph1-ad-headline">${esc(ad.headline)}</h3>
       </div>
       <div>
         ${eyebrowHtml}
