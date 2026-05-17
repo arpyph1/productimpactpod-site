@@ -75,8 +75,8 @@ export function buildAdHtml(ad: ArticleAd): string {
   const adId = esc(ad.id);
 
   const logoHtml = ad.logo_url
-    ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}" aria-label="${esc(ad.logo_alt ?? "Partner")}" style="display:block;opacity:0.9;">
-        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" width="220" height="88" style="height:88px;max-width:220px;object-fit:contain;" />
+    ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}" aria-label="${esc(ad.logo_alt ?? "Partner")}" class="ph1-ad-logo-link" style="display:block;opacity:0.9;flex-shrink:0;">
+        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" class="ph1-ad-logo-img" style="object-fit:contain;" />
       </a>`
     : "";
 
@@ -93,22 +93,36 @@ export function buildAdHtml(ad: ArticleAd): string {
     ? `<span style="display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#ff6b4a;margin-bottom:12px;">${esc(ad.eyebrow)}</span>`
     : "";
 
+  // Mobile-first: single column with logo + headline side-by-side at the top,
+  // bullets below. ≥768px: two columns with the logo + headline stacked on
+  // the left as originally designed. Styles are embedded once per ad; the
+  // class-scoped rules dedupe at parse and don't conflict between instances.
   return `
-<aside class="not-prose" aria-label="Sponsored" style="margin:40px 0;">
-  <div style="position:relative;border-radius:16px;overflow:hidden;padding:32px;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
+<aside class="not-prose ph1-ad" aria-label="Sponsored" style="margin:40px 0;">
+  <style>
+    .ph1-ad-grid { display:grid; grid-template-columns:1fr; gap:20px; }
+    .ph1-ad-header { display:flex; flex-direction:row; align-items:center; gap:14px; }
+    .ph1-ad-logo-img { height:56px; max-width:140px; }
+    .ph1-ad-headline { margin:0; font-size:17px; font-weight:800; color:#fff; line-height:1.25; letter-spacing:-0.01em; }
+    @media (min-width:768px) {
+      .ph1-ad-grid { grid-template-columns:auto 1fr; gap:24px; align-items:center; }
+      .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:16px; max-width:260px; }
+      .ph1-ad-logo-img { height:88px; max-width:220px; }
+      .ph1-ad-headline { font-size:18px; line-height:1.3; }
+    }
+  </style>
+  <div style="position:relative;border-radius:16px;overflow:hidden;padding:28px;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(255,107,74,0.1),transparent 50%);pointer-events:none;"></div>
-    <div style="position:relative;display:grid;grid-template-columns:1fr;gap:24px;">
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;" class="ph1-ad-grid">
-        <div style="display:flex;flex-direction:column;gap:16px;max-width:260px;">
-          ${logoHtml}
-          <h3 style="margin:0;font-size:18px;font-weight:800;color:#fff;line-height:1.3;letter-spacing:-0.01em;">${esc(ad.headline)}</h3>
-        </div>
-        <div>
-          ${eyebrowHtml}
-          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;">
-            ${bulletsHtml}
-          </ul>
-        </div>
+    <div style="position:relative;" class="ph1-ad-grid">
+      <div class="ph1-ad-header">
+        ${logoHtml}
+        <h3 class="ph1-ad-headline">${esc(ad.headline)}</h3>
+      </div>
+      <div>
+        ${eyebrowHtml}
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;">
+          ${bulletsHtml}
+        </ul>
       </div>
     </div>
   </div>
