@@ -555,6 +555,15 @@ const bcJsonLd = {
   var sbKey = ec.getAttribute('data-sb-key');
   if (!articleId || !sbUrl || !sbKey) return;
 
+  // Skip all engagement tracking when the visitor is signed into the admin.
+  // Supabase persists sessions under "sb-<project-ref>-auth-token" in localStorage.
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i) || '';
+      if (k.indexOf('sb-') === 0 && k.indexOf('-auth-token') > 0 && localStorage.getItem(k)) return;
+    }
+  } catch (e) { /* localStorage blocked — fall through and track */ }
+
   var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sbKey, 'apikey': sbKey };
 
   function rpc(fn, params) {
