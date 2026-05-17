@@ -159,6 +159,7 @@ function LoginScreen({ onLogin, error }: { onLogin: () => void; error: string | 
 export default function AdminApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminAllowed, setAdminAllowed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const VALID_SCREENS: Screen[] = ["branding", "settings", "seo", "homepage", "articles", "surveys", "resources", "podcast", "partners", "social", "analytics"];
   const readInitialScreen = (): Screen => {
@@ -212,16 +213,30 @@ export default function AdminApp() {
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
+      if (data.session) {
+        const allowed = await isAllowedAdmin(data.session.user.email);
+        setAdminAllowed(allowed);
+        if (!allowed) {
+          setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
+          supabase.auth.signOut();
+        }
+      }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, sess) => {
       setSession(sess);
-      if (sess && !isAllowedAdmin(sess.user.email)) {
-        setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
-        supabase.auth.signOut();
+      if (sess) {
+        const allowed = await isAllowedAdmin(sess.user.email);
+        setAdminAllowed(allowed);
+        if (!allowed) {
+          setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
+          supabase.auth.signOut();
+        }
+      } else {
+        setAdminAllowed(false);
       }
     });
 
@@ -280,7 +295,7 @@ export default function AdminApp() {
     );
   }
 
-  if (!session || !isAllowedAdmin(session.user.email)) {
+  if (!session || !adminAllowed) {
     return <LoginScreen onLogin={handleLogin} error={error} />;
   }
 

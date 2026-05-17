@@ -12,13 +12,26 @@ export function getAdminClient(): SupabaseClient {
   return _client;
 }
 
-const ALLOWED_EMAILS = ["arpy@ph1.ca", "brittany@ph1.ca", "info@productimpactpod.com"];
-const ALLOWED_DOMAINS = ["ph1.ca", "productimpactpod.com"];
-
-export function isAllowedAdmin(email: string | undefined): boolean {
+// TODO: Manage allowed admin emails/domains via the `admin_config` key in the
+// Supabase `site_settings` table. Expected value shape:
+//   { allowedEmails: string[], allowedDomains: string[] }
+export async function isAllowedAdmin(email: string | undefined): Promise<boolean> {
   if (!email) return false;
-  const lower = email.toLowerCase();
-  if (ALLOWED_EMAILS.includes(lower)) return true;
-  const domain = lower.split("@")[1];
-  return ALLOWED_DOMAINS.includes(domain);
+  try {
+    const { data, error } = await getAdminClient()
+      .from("site_settings")
+      .select("value")
+      .eq("key", "admin_config")
+      .single();
+    if (error || !data?.value) return false;
+    const config = data.value as { allowedEmails?: string[]; allowedDomains?: string[] };
+    const allowedEmails: string[] = config.allowedEmails ?? [];
+    const allowedDomains: string[] = config.allowedDomains ?? [];
+    const lower = email.toLowerCase();
+    if (allowedEmails.includes(lower)) return true;
+    const domain = lower.split("@")[1];
+    return allowedDomains.includes(domain);
+  } catch {
+    return false;
+  }
 }
