@@ -120,7 +120,7 @@ export function buildAdHtml(ad: ArticleAd): string {
     <div style="position:relative;" class="ph1-ad-grid">
       <div class="ph1-ad-header">
         ${logoHtml}
-        <h3 class="ph1-ad-headline">${esc(ad.headline)}</h3>
+        <h3 class="ph1-ad-headline" style="margin:0;">${esc(ad.headline)}</h3>
       </div>
       <div>
         ${eyebrowHtml}
