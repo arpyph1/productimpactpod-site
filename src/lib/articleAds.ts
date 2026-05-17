@@ -83,7 +83,7 @@ export function buildAdHtml(ad: ArticleAd): string {
   const bulletsHtml = (ad.bullets ?? [])
     .map(b => `<li>
       <a href="${esc(withUtm(b.url, campaign, slugify(b.label)))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}"
-        style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;">
+        class="ph1-ad-bullet-link" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;transition:background 0.15s;">
         <span>${esc(b.label)}</span>${arrowSvg()}
       </a>
     </li>`)
@@ -102,12 +102,14 @@ export function buildAdHtml(ad: ArticleAd): string {
   <style>
     .ph1-ad-grid { display:grid; grid-template-columns:1fr; gap:20px; }
     .ph1-ad-header { display:flex; flex-direction:row; align-items:center; gap:14px; }
-    .ph1-ad-logo-img { height:56px; max-width:140px; }
+    .ph1-ad-logo-img { height:28px; max-width:70px; }
     .ph1-ad-headline { margin:0; font-size:17px; font-weight:800; color:#fff; line-height:1.25; letter-spacing:-0.01em; }
+    .ph1-ad-bullet-link:hover { background:rgba(255,255,255,0.06) !important; }
+    .ph1-ad-logo-link:hover { opacity:0.75 !important; }
     @media (min-width:768px) {
       .ph1-ad-grid { grid-template-columns:auto 1fr; gap:24px; align-items:center; }
       .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:16px; max-width:260px; }
-      .ph1-ad-logo-img { height:88px; max-width:220px; }
+      .ph1-ad-logo-img { height:44px; max-width:110px; }
       .ph1-ad-headline { font-size:18px; line-height:1.3; }
     }
   </style>
