@@ -1,0 +1,105 @@
+---
+// Anonymous story submission widget rendered at the end of every article.
+// Config is loaded at build time from story_widget_config (singleton row).
+// Submissions go to story_submissions via a public RLS insert policy.
+
+import { createClient } from "@supabase/supabase-js";
+
+interface Props {
+  articleSlug: string;
+}
+
+const { articleSlug } = Astro.props;
+
+const sbUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const sbKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+let config = {
+  title: "Have a story to share?",
+  prompt: "Tell us about your experience. Submissions are anonymous.",
+  char_limit: 500,
+  button_label: "Submit anonymously",
+  active: true,
+};
+
+if (sbUrl && sbKey) {
+  const sb = createClient(sbUrl, sbKey);
+  const { data } = await sb.from("story_widget_config").select("*").eq("id", "default").single();
+  if (data) config = { ...config, ...data };
+}
+---
+
+{config.active && (
+  <div class="story-widget mt-10 pt-8 border-t border-[#1a1a1a]"
+    data-article-slug={articleSlug}
+    data-sb-url={sbUrl}
+    data-sb-key={sbKey}
+    data-char-limit={config.char_limit}>
+    <div class="rounded-xl border border-[#1a1a1a] bg-[#0c0c0c] p-5">
+      <p class="text-[14px] font-bold text-white mb-3">{config.title}</p>
+      <textarea class="story-input w-full px-3 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white leading-relaxed resize-none focus:outline-none focus:border-[#ff6b4a]/50"
+        rows="3"
+        maxlength={config.char_limit}
+        placeholder="Share stories, insights, tips anonymously"></textarea>
+      <div class="flex items-center justify-between mt-2">
+        <span class="story-counter text-[11px] text-[#555]">0 / {config.char_limit}</span>
+        <button type="button" class="story-submit px-3 py-1.5 bg-[#ff6b4a] hover:bg-[#ff8566] text-white rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled>
+          {config.button_label}
+        </button>
+      </div>
+      <p class="story-status text-[11px] mt-2 hidden"></p>
+    </div>
+  </div>
+)}
+
+<script is:inline>
+(function() {
+  document.querySelectorAll('.story-widget').forEach(function(root) {
+    var sbUrl = root.getAttribute('data-sb-url');
+    var sbKey = root.getAttribute('data-sb-key');
+    var slug  = root.getAttribute('data-article-slug');
+    var limit = parseInt(root.getAttribute('data-char-limit') || '500');
+    var input = root.querySelector('.story-input');
+    var counter = root.querySelector('.story-counter');
+    var btn = root.querySelector('.story-submit');
+    var status = root.querySelector('.story-status');
+    if (!input || !btn) return;
+
+    input.addEventListener('input', function() {
+      var len = input.value.length;
+      counter.textContent = len + ' / ' + limit;
+      btn.disabled = len < 1;
+    });
+
+    btn.addEventListener('click', function() {
+      var text = (input.value || '').trim();
+      if (!text || !sbUrl || !sbKey) return;
+      btn.disabled = true;
+      fetch(sbUrl + '/rest/v1/story_submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + sbKey,
+          'apikey': sbKey,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ story: text, article_slug: slug })
+      }).then(function(r) {
+        if (!r.ok) throw new Error('submit failed');
+        input.value = '';
+        counter.textContent = '0 / ' + limit;
+        status.textContent = 'Thanks — your story has been submitted anonymously.';
+        status.style.color = '#9ca3af';
+        status.classList.remove('hidden');
+        input.disabled = true;
+      }).catch(function() {
+        status.textContent = 'Submission failed. Please try again.';
+        status.style.color = '#ef4444';
+        status.classList.remove('hidden');
+        btn.disabled = false;
+      });
+    });
+  });
+})();
+</script>

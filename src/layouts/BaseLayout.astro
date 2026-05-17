@@ -135,5 +135,63 @@ const accentHsl = cfg.accentHsl;
   </head>
   <body class="bg-background text-foreground antialiased font-body">
     <slot />
+
+    {/* Per-session page-count tracker. Runs on every page so all pages count
+        towards a session's total. The first article seen in the session is
+        captured as landing_article_id (from [data-article-id] on the
+        engagement container); subsequent navigations within the same tab
+        bump pages_count. */}
+    <script is:inline define:vars={{
+      sbUrl: import.meta.env.PUBLIC_SUPABASE_URL,
+      sbKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    }}>
+      (function() {
+        if (!sbUrl || !sbKey) return;
+        try {
+          var SID_KEY = 'pi_session_id';
+          var PAGES_KEY = 'pi_session_pages';
+          var LAND_KEY = 'pi_session_landing';
+          var sid = sessionStorage.getItem(SID_KEY);
+          if (!sid) {
+            sid = (crypto && crypto.randomUUID) ? crypto.randomUUID()
+              : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  var r = Math.random() * 16 | 0;
+                  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                });
+            sessionStorage.setItem(SID_KEY, sid);
+          }
+          var pages = parseInt(sessionStorage.getItem(PAGES_KEY) || '0', 10) + 1;
+          sessionStorage.setItem(PAGES_KEY, String(pages));
+
+          function send(landingId) {
+            fetch(sbUrl + '/rest/v1/rpc/upsert_session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sbKey, 'apikey': sbKey },
+              body: JSON.stringify({ p_session_id: sid, p_landing_article_id: landingId, p_pages_count: pages }),
+              keepalive: true,
+            }).catch(function() {});
+          }
+
+          var landing = sessionStorage.getItem(LAND_KEY);
+
+          function tick() {
+            if (!landing) {
+              var el = document.querySelector('[data-article-id]');
+              var id = el ? el.getAttribute('data-article-id') : null;
+              if (id) {
+                landing = id;
+                sessionStorage.setItem(LAND_KEY, landing);
+              }
+            }
+            if (landing) send(landing);
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', tick);
+          } else {
+            tick();
+          }
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>

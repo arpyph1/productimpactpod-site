@@ -66,13 +66,13 @@ const themes = [
         Home
       </a>
       <a
-        href="/news"
+        href="/news/"
         class="px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
       >
         Latest news →
       </a>
       <a
-        href="/episodes"
+        href="/episodes/"
         class="px-6 py-3 rounded-full border border-[#3a3a3a] text-sm font-semibold text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
       >
         Episodes →
@@ -87,7 +87,7 @@ const themes = [
       <div class="flex flex-wrap items-center justify-center gap-2">
         {themes.map((t) => (
           <a
-            href={`/themes/${t.slug}`}
+            href={`/themes/${t.slug}/`}
             class="px-4 py-2 rounded-full border border-[#3a3a3a] text-sm text-[#d4d4d4] hover:text-white hover:border-accent transition-colors"
           >
             {t.name}
@@ -105,7 +105,7 @@ const themes = [
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recentArticles.map((article) => (
             <a
-              href={`/news/${article.slug}`}
+              href={`/news/${article.slug}/`}
               class="group block bg-background-card hover:bg-background-hover rounded-xl p-5 transition-colors text-left"
             >
               <div class="flex items-center gap-2 mb-2">

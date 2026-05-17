@@ -84,11 +84,11 @@ const breadcrumbJsonLd = {
   <main class="container-wide py-16">
     <nav aria-label="Breadcrumb" class="text-sm text-[#a0a0a0] mb-6">
       <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/news" class="hover:text-white">News</a></li>
+        <li><a href="/news/" class="hover:text-white">News</a></li>
         <li class="text-[#707070]">/</li>
-        <li><a href="/news/archive" class="hover:text-white">Archive</a></li>
+        <li><a href="/news/archive/" class="hover:text-white">Archive</a></li>
         <li class="text-[#707070]">/</li>
-        <li><a href={`/news/${year}`} class="hover:text-white">{year}</a></li>
+        <li><a href={`/news/${year}/`} class="hover:text-white">{year}</a></li>
         <li class="text-[#707070]">/</li>
         <li class="text-[#d4d4d4]">{monthName}</li>
       </ol>
@@ -110,13 +110,13 @@ const breadcrumbJsonLd = {
     {/* Month nav — prev/next from archive index */}
     <div class="mt-16 pt-8 border-t border-[#2a2a2a] flex items-center justify-between">
       <a
-        href={`/news/archive`}
+        href={`/news/archive/`}
         class="text-sm text-accent hover:text-accent-hover"
       >
         ← All archives
       </a>
       <a
-        href={`/news/${year}`}
+        href={`/news/${year}/`}
         class="text-sm text-accent hover:text-accent-hover"
       >
         All of {year} →

@@ -76,7 +76,7 @@ const jsonLd = {
   <main class="container-wide py-16">
     <header class="mb-12">
       <div class="mb-3">
-        <a href="/news" class="text-sm text-[#a0a0a0] hover:text-white">← Back to News</a>
+        <a href="/news/" class="text-sm text-[#a0a0a0] hover:text-white">← Back to News</a>
       </div>
       <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-white mb-4">
         News
@@ -89,7 +89,7 @@ const jsonLd = {
     {/* Format filter tabs */}
     <div class="flex flex-wrap gap-2 mb-12 border-b border-[#2a2a2a] pb-6">
       <a
-        href="/news"
+        href="/news/"
         class="px-4 py-2 rounded-full text-sm font-semibold bg-background-card text-white border border-accent"
       >
         All
@@ -100,7 +100,7 @@ const jsonLd = {
         "product-review", "research-brief",
       ] as const).map((fmt) => (
         <a
-          href={`/news/format/${fmt}`}
+          href={`/news/format/${fmt}/`}
           class="px-4 py-2 rounded-full text-sm font-semibold text-[#d4d4d4] hover:text-white hover:bg-background-card transition-colors"
         >
           {formatLabel(fmt)}
