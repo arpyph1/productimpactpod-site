@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import ArticleAnalyticsDetail from "../ArticleAnalyticsDetail";
 
 interface Props { supabase: SupabaseClient }
 
@@ -27,6 +28,7 @@ export default function AnalyticsScreen({ supabase }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [minReadPct, setMinReadPct] = useState(0);
   const [minLinkClicks, setMinLinkClicks] = useState(0);
+  const [detailRow, setDetailRow] = useState<EngagementRow | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -187,12 +189,15 @@ export default function AnalyticsScreen({ supabase }: Props) {
             {displayed.length === 0 ? (
               <tr><td colSpan={9} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
             ) : displayed.map((row, i) => (
-              <tr key={row.article_id} className="border-b border-[#111] hover:bg-[#0c0c0c] transition-colors">
+              <tr key={row.article_id} onClick={() => setDetailRow(row)}
+                className="border-b border-[#111] hover:bg-[#101010] cursor-pointer transition-colors">
                 <td className="px-4 py-3 text-[12px] text-[#555] font-mono">{i + 1}</td>
                 <td className="px-4 py-3">
-                  <div className="text-[13px] font-semibold text-white leading-snug line-clamp-1">{row.title}</div>
+                  <div className="text-[13px] font-semibold text-white leading-snug line-clamp-1 hover:text-[#ff6b4a]">{row.title}</div>
                   {row.slug && (
-                    <a href={`/news/${row.slug}/`} target="_blank" rel="noopener" className="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors">
+                    <a href={`/news/${row.slug}/`} target="_blank" rel="noopener"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors">
                       /news/{row.slug}/
                     </a>
                   )}
@@ -241,6 +246,15 @@ export default function AnalyticsScreen({ supabase }: Props) {
           </div>
         )}
       </div>
+
+      {detailRow && (
+        <ArticleAnalyticsDetail
+          supabase={supabase}
+          article={detailRow}
+          allArticles={data}
+          onClose={() => setDetailRow(null)}
+        />
+      )}
     </div>
   );
 }
