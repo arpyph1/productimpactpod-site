@@ -100,19 +100,19 @@ export function buildAdHtml(ad: ArticleAd): string {
   return `
 <aside class="not-prose ph1-ad" aria-label="Sponsored" style="margin:40px 0;">
   <style>
-    .ph1-ad-card { padding:16px 18px; }
+    .ph1-ad-card { padding:1px 18px 16px; }
     .ph1-ad-grid { display:grid; grid-template-columns:1fr; gap:20px; }
     .ph1-ad-header { display:flex; flex-direction:row; align-items:flex-start; gap:14px; }
     .ph1-ad-logo-img { height:28px; max-width:70px; }
-    .ph1-ad-headline { margin:0; font-size:17px; font-weight:800; color:#fff; line-height:1.25; letter-spacing:-0.01em; }
+    .ph1-ad-headline { margin:0; margin-top:9px; font-size:17px; font-weight:800; color:#fff; line-height:1.25; letter-spacing:-0.01em; }
     .ph1-ad-bullet-link:hover { background:rgba(255,255,255,0.06) !important; }
     .ph1-ad-logo-link:hover { opacity:0.75 !important; }
     @media (min-width:768px) {
       .ph1-ad-card { padding:24px 28px; }
       .ph1-ad-grid { grid-template-columns:auto 1fr; gap:24px; align-items:center; }
-      .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:16px; max-width:260px; }
+      .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:0; max-width:260px; }
       .ph1-ad-logo-img { height:44px; max-width:110px; }
-      .ph1-ad-headline { font-size:18px; line-height:1.3; }
+      .ph1-ad-headline { margin-top:0; font-size:18px; line-height:1.3; }
     }
   </style>
   <div class="ph1-ad-card" style="position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
