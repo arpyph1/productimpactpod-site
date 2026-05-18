@@ -76,14 +76,14 @@ export function buildAdHtml(ad: ArticleAd): string {
 
   const logoHtml = ad.logo_url
     ? `<a href="${esc(withUtm(ad.logo_link ?? "#", campaign, "logo"))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}" aria-label="${esc(ad.logo_alt ?? "Partner")}" class="ph1-ad-logo-link" style="display:block;opacity:0.9;flex-shrink:0;">
-        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" class="ph1-ad-logo-img" style="object-fit:contain;" />
+        <img src="${esc(ad.logo_url)}" alt="${esc(ad.logo_alt ?? "")}" loading="lazy" style="display:block;object-fit:contain;width:88px;height:auto;" />
       </a>`
     : "";
 
   const bulletsHtml = (ad.bullets ?? [])
     .map(b => `<li>
       <a href="${esc(withUtm(b.url, campaign, slugify(b.label)))}" target="_blank" rel="noopener sponsored" data-ad-id="${adId}"
-        style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;">
+        class="ph1-ad-bullet-link" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin:0 -12px;border-radius:8px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;transition:background 0.15s;">
         <span>${esc(b.label)}</span>${arrowSvg()}
       </a>
     </li>`)
@@ -98,20 +98,24 @@ export function buildAdHtml(ad: ArticleAd): string {
   // the left as originally designed. Styles are embedded once per ad; the
   // class-scoped rules dedupe at parse and don't conflict between instances.
   return `
-<aside class="not-prose ph1-ad" aria-label="Sponsored" style="margin:40px 0;">
+<aside class="not-prose ph1-ad" aria-label="Sponsored">
   <style>
-    .ph1-ad-grid { display:grid; grid-template-columns:1fr; gap:20px; }
-    .ph1-ad-header { display:flex; flex-direction:row; align-items:center; gap:14px; }
-    .ph1-ad-logo-img { height:56px; max-width:140px; }
+    .ph1-ad { margin:40px 24px; }
+    .ph1-ad-card { padding:0 18px 16px; }
+    .ph1-ad-grid { display:grid; grid-template-columns:1fr; gap:0; }
+    .ph1-ad-header { display:flex; flex-direction:row; align-items:center; gap:14px; margin:0; padding:0; }
     .ph1-ad-headline { margin:0; font-size:17px; font-weight:800; color:#fff; line-height:1.25; letter-spacing:-0.01em; }
+    .ph1-ad-bullet-link:hover { background:rgba(255,255,255,0.06) !important; }
+    .ph1-ad-logo-link:hover { opacity:0.75 !important; }
     @media (min-width:768px) {
+      .ph1-ad { margin:40px 0; }
+      .ph1-ad-card { padding:24px 28px; }
       .ph1-ad-grid { grid-template-columns:auto 1fr; gap:24px; align-items:center; }
-      .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:16px; max-width:260px; }
-      .ph1-ad-logo-img { height:88px; max-width:220px; }
-      .ph1-ad-headline { font-size:18px; line-height:1.3; }
+      .ph1-ad-header { flex-direction:column; align-items:flex-start; gap:0; max-width:260px; }
+      .ph1-ad-header .ph1-ad-headline { margin:0; font-size:18px; line-height:1.3; }
     }
   </style>
-  <div style="position:relative;border-radius:16px;overflow:hidden;padding:28px;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
+  <div class="ph1-ad-card" style="position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a05 0%,#120808 30%,#0a0812 100%);">
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(255,107,74,0.1),transparent 50%);pointer-events:none;"></div>
     <div style="position:relative;" class="ph1-ad-grid">
       <div class="ph1-ad-header">

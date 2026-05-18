@@ -10,6 +10,7 @@ import EntityHeadline from "@components/EntityHeadline.astro";
 import StoryCard from "@components/StoryCard.astro";
 import SurveyWidget from "@components/SurveyWidget.astro";
 import StoryWidget from "@components/StoryWidget.astro";
+import { createClient } from "@supabase/supabase-js";
 import { sanitizeHtml } from "@lib/sanitize";
 import { getActiveArticleAds, injectArticleAds } from "@lib/articleAds";
 import { timeAgo } from "@lib/utils";
@@ -33,10 +34,11 @@ const { allArticles } = Astro.props as { allArticles: ArticleSummary[] };
 const article = await getArticleBySlug(Astro.params.slug!);
 if (!article) return Astro.redirect("/news/");
 
-const related = (() => {
+// Top 3 most related by theme overlap
+const topRelated = (() => {
   const others = allArticles.filter(a => a.slug !== article.slug && a.published);
   if (!article.themes || article.themes.length === 0) {
-    return others.slice(0, 6);
+    return others.slice(0, 3);
   }
   const themeSet = new Set(article.themes);
   const scored = others.map(a => ({
@@ -44,8 +46,33 @@ const related = (() => {
     overlap: (a.themes ?? []).filter(t => themeSet.has(t)).length,
   }));
   scored.sort((a, b) => b.overlap - a.overlap || new Date(b.article.publish_date).getTime() - new Date(a.article.publish_date).getTime());
-  return scored.slice(0, 6).map(s => s.article);
+  return scored.slice(0, 3).map(s => s.article);
 })();
+
+// Top 3 most viewed (excluding current article and already-included related)
+const topRelatedIds = new Set(topRelated.map(a => a.id));
+let topViewed: ArticleSummary[] = [];
+const sbUrlBuild = import.meta.env.PUBLIC_SUPABASE_URL;
+const sbKeyBuild = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+if (sbUrlBuild && sbKeyBuild) {
+  const sbBuild = createClient(sbUrlBuild, sbKeyBuild);
+  const { data: engData } = await sbBuild
+    .from("article_engagement")
+    .select("article_id, views")
+    .order("views", { ascending: false })
+    .limit(30);
+  const viewsMap = new Map<string, number>();
+  (engData ?? []).forEach((e: any) => viewsMap.set(e.article_id, e.views ?? 0));
+  topViewed = allArticles
+    .filter(a => a.published && a.slug !== article.slug && !topRelatedIds.has(a.id))
+    .map(a => ({ article: a, views: viewsMap.get(a.id) ?? 0 }))
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 3)
+    .map(x => x.article);
+}
+
+const sidebarArticles = [...topRelated, ...topViewed];
+
 const latestEpisodes = await fetchPodcastEpisodes(3);
 
 const siteUrl = "https://productimpactpod.com";
@@ -264,25 +291,20 @@ const bcJsonLd = {
         )}
         {cleanedHtml.includes('data-survey-id') && <SurveyWidget />}
 
-        {/* ── Topics + tags — clickable discovery row. Topics are the
-             hand-curated entity labels; tags are AI-generated search
-             slugs. Both are capped at 20 so a runaway generator can't
-             flood the page. ── */}
+        {/* ── Tags — AI-generated search slugs ── */}
         {(article.tags ?? []).length > 0 && (
           <div class="mt-10 pt-6 border-t border-[#1a1a1a]">
-            {(article.tags ?? []).length > 0 && (
-              <div>
-                <div class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#555] mb-2">Related tags</div>
-                <div class="flex flex-wrap gap-1.5">
-                  {(article.tags ?? []).slice(0, 20).map((t) => (
-                    <a href={`/tags/${t}/`}
-                      class="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-[#888] bg-[#101010] border border-[#1a1a1a] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 transition-colors">
-                      {t.replace(/-/g, " ")}
-                    </a>
-                  ))}
-                </div>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#555] mb-2">Related tags</div>
+              <div class="flex flex-wrap gap-1.5">
+                {(article.tags ?? []).slice(0, 20).map((t) => (
+                  <a href={`/tags/${t}/`}
+                    class="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-[#888] bg-[#101010] border border-[#1a1a1a] hover:text-[#ff6b4a] hover:border-[#ff6b4a]/30 transition-colors">
+                    {t.replace(/-/g, " ")}
+                  </a>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -392,20 +414,16 @@ const bcJsonLd = {
       <aside class="hidden lg:block">
         <div class="sticky top-[96px] space-y-6">
 
-          {/* Related articles — first */}
-          {related.length > 0 && (
+          {/* Article list: top 3 related + top 3 most viewed, no title */}
+          {sidebarArticles.length > 0 && (
             <div>
-              <div class="flex items-baseline gap-2 mb-3 pb-2 border-b border-[#181818]">
-                <span class="text-[14px] font-bold text-white">Related</span>
-                <span class="text-[13px] font-bold text-[#ff6b4a]">{related.length}</span>
-              </div>
-              {related.map((r) => (
+              {sidebarArticles.map((r) => (
                 <StoryCard article={r} size="compact" />
               ))}
             </div>
           )}
 
-          {/* Substack subscribe — below related. Input uses 16px to avoid
+          {/* Substack subscribe — below articles. Input uses 16px to avoid
               iOS Safari focus-zoom on the iPad portrait edge of the lg
               breakpoint. */}
           <div class="p-5 rounded-xl border border-[#ff6b4a]/10 bg-[#ff6b4a]/[0.03]">
@@ -463,15 +481,11 @@ const bcJsonLd = {
       </section>
     )}
 
-    {/* ── Mobile related articles (below article body) ── */}
-    {related.length > 0 && (
+    {/* ── Mobile article list (below article body) ── */}
+    {sidebarArticles.length > 0 && (
       <section class="lg:hidden mt-12 pt-8 border-t border-[#1a1a1a] max-w-[760px] mx-auto">
-        <div class="flex items-baseline gap-2 mb-4">
-          <h2 class="text-[15px] font-bold text-white">Related</h2>
-          <span class="text-[13px] font-bold text-[#ff6b4a]">{related.length}</span>
-        </div>
         <div class="space-y-1">
-          {related.map((r) => (
+          {sidebarArticles.map((r) => (
             <StoryCard article={r} size="compact" />
           ))}
         </div>
@@ -540,6 +554,15 @@ const bcJsonLd = {
   var sbUrl = ec.getAttribute('data-sb-url');
   var sbKey = ec.getAttribute('data-sb-key');
   if (!articleId || !sbUrl || !sbKey) return;
+
+  // Skip all engagement tracking when the visitor is signed into the admin.
+  // Supabase persists sessions under "sb-<project-ref>-auth-token" in localStorage.
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i) || '';
+      if (k.indexOf('sb-') === 0 && k.indexOf('-auth-token') > 0 && localStorage.getItem(k)) return;
+    }
+  } catch (e) { /* localStorage blocked — fall through and track */ }
 
   var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sbKey, 'apikey': sbKey };
 
