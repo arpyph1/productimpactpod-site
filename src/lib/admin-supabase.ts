@@ -12,15 +12,61 @@ export function getAdminClient(): SupabaseClient {
   return _client;
 }
 
+// ─── Admin verification cache ─────────────────────────────────────────────────
+// Caches positive admin checks in localStorage so page refreshes don't require
+// a DB round-trip. Only positive results are cached — a false could be a
+// timeout, so we never cache "denied." TTL matches the Supabase access-token
+// lifetime (1 h) minus a small buffer.
+
+const CACHE_TTL_MS = 55 * 60 * 1000; // 55 minutes
+
+function cacheKey(email: string) {
+  return `pi_admin_ok:${email.toLowerCase()}`;
+}
+
+function readCache(email: string): true | null {
+  try {
+    const raw = localStorage.getItem(cacheKey(email));
+    if (!raw) return null;
+    const { expires } = JSON.parse(raw);
+    if (Date.now() > expires) { localStorage.removeItem(cacheKey(email)); return null; }
+    return true;
+  } catch { return null; }
+}
+
+function writeCache(email: string) {
+  try {
+    localStorage.setItem(cacheKey(email), JSON.stringify({ expires: Date.now() + CACHE_TTL_MS }));
+  } catch {}
+}
+
+export function clearAdminCache(email?: string) {
+  try {
+    if (email) {
+      localStorage.removeItem(cacheKey(email));
+    } else {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("pi_admin_ok:")) localStorage.removeItem(k);
+      }
+    }
+  } catch {}
+}
+
+// ─── isAllowedAdmin ───────────────────────────────────────────────────────────
 export async function isAllowedAdmin(email: string | undefined): Promise<boolean> {
   if (!email) return false;
+
+  // Serve from cache — avoids a DB call on every page refresh and eliminates
+  // the risk of a timeout false-negative logging the user out.
+  if (readCache(email)) return true;
+
   const client = getAdminClient();
 
   const check = async (): Promise<boolean> => {
     try {
-      // Primary check: user_roles table (managed via the Settings screen).
-      // The "Users can read own role" RLS policy scopes this to the
-      // currently-authenticated user's own rows automatically.
+      // Primary: user_roles (managed via Settings screen).
+      // "Users can read own role" RLS scopes this to the authenticated user.
       const { data: roleData } = await client
         .from("user_roles")
         .select("role")
@@ -28,7 +74,7 @@ export async function isAllowedAdmin(email: string | undefined): Promise<boolean
         .limit(1);
       if (roleData && roleData.length > 0) return true;
 
-      // Fallback: site_settings admin_config allowlist (email/domain based).
+      // Fallback: site_settings admin_config email/domain allowlist.
       const { data, error } = await client
         .from("site_settings")
         .select("value")
@@ -45,7 +91,11 @@ export async function isAllowedAdmin(email: string | undefined): Promise<boolean
     }
   };
 
-  // Never hang the login flow — resolve false after 5 s if DB is unreachable.
-  const deadline = new Promise<boolean>(resolve => setTimeout(() => resolve(false), 5000));
-  return Promise.race([check(), deadline]);
+  const deadline = new Promise<boolean>(resolve => setTimeout(() => resolve(false), 8000));
+  const allowed = await Promise.race([check(), deadline]);
+
+  // Only cache a positive result — false could be a transient DB timeout.
+  if (allowed) writeCache(email);
+
+  return allowed;
 }

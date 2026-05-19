@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { User, Session } from "@supabase/supabase-js";
-import { getAdminClient, isAllowedAdmin } from "../../lib/admin-supabase";
+import { getAdminClient, isAllowedAdmin, clearAdminCache } from "../../lib/admin-supabase";
 import SettingsScreen from "./screens/SettingsScreen";
 import SEOScreen from "./screens/SEOScreen";
 import HomepageScreen from "./screens/HomepageScreen";
@@ -229,8 +229,10 @@ export default function AdminApp() {
     supabase.auth.getSession()
       .then(async ({ data, error }) => {
         if (error) {
-          // Refresh token invalid/expired — show login screen instead of spinner.
-          await supabase.auth.signOut();
+          // getSession() errors include transient network failures during token
+          // refresh — don't call signOut() here because that permanently destroys
+          // the refresh token. Just show the login screen; the next page load will
+          // retry. Only sign out on an explicit user action.
           return;
         }
         setSession(data.session);
@@ -239,8 +241,6 @@ export default function AdminApp() {
           admit(allowed);
           if (!allowed) {
             setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
-            // Don't signOut here — the result could be a DB timeout false-negative.
-            // The session stays intact so a page refresh retries cleanly.
           }
         }
       })
@@ -291,9 +291,10 @@ export default function AdminApp() {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    clearAdminCache(session?.user?.email);
     await supabase.auth.signOut();
     setSession(null);
-  }, []);
+  }, [session]);
 
   const handleDeploy = useCallback(async () => {
     setDeploying(true);
