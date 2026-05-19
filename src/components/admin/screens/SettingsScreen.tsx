@@ -26,15 +26,15 @@ export default function SettingsScreen({ supabase }: Props) {
 
   async function loadData() {
     const [rolesRes, settingsRes] = await Promise.all([
-      supabase.from("user_roles").select("*, profiles!user_roles_user_id_fkey(email, display_name)"),
+      supabase.rpc("get_admin_users"),
       supabase.from("site_settings").select("*"),
     ]);
 
     if (rolesRes.data) {
       setRoles(rolesRes.data.map((r: any) => ({
         ...r,
-        email: r.profiles?.email ?? "unknown",
-        name: r.profiles?.display_name ?? "",
+        email: r.email ?? "unknown",
+        name: r.display_name ?? "",
       })));
     }
 
