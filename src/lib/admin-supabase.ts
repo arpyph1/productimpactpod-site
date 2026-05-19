@@ -12,25 +12,32 @@ export function getAdminClient(): SupabaseClient {
   return _client;
 }
 
-// TODO: Manage allowed admin emails/domains via the `admin_config` key in the
-// Supabase `site_settings` table. Expected value shape:
-//   { allowedEmails: string[], allowedDomains: string[] }
 export async function isAllowedAdmin(email: string | undefined): Promise<boolean> {
   if (!email) return false;
+  const client = getAdminClient();
   try {
-    const { data, error } = await getAdminClient()
+    // Primary check: user_roles table (managed via the Settings screen).
+    // The "Users can read own role" RLS policy means this query returns only
+    // the currently-authenticated user's own rows — no user_id filter needed.
+    const { data: roleData } = await client
+      .from("user_roles")
+      .select("role")
+      .in("role", ["admin", "editor"])
+      .limit(1);
+    if (roleData && roleData.length > 0) return true;
+
+    // Fallback: site_settings admin_config allowlist (email/domain based).
+    const { data, error } = await client
       .from("site_settings")
       .select("value")
       .eq("key", "admin_config")
       .single();
     if (error || !data?.value) return false;
     const config = data.value as { allowedEmails?: string[]; allowedDomains?: string[] };
-    const allowedEmails: string[] = config.allowedEmails ?? [];
-    const allowedDomains: string[] = config.allowedDomains ?? [];
     const lower = email.toLowerCase();
-    if (allowedEmails.includes(lower)) return true;
+    if ((config.allowedEmails ?? []).includes(lower)) return true;
     const domain = lower.split("@")[1];
-    return allowedDomains.includes(domain);
+    return (config.allowedDomains ?? []).includes(domain);
   } catch {
     return false;
   }
