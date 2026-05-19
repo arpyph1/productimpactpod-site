@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { getAdminClient, isAllowedAdmin } from "../../lib/admin-supabase";
 import SettingsScreen from "./screens/SettingsScreen";
@@ -160,6 +160,9 @@ export default function AdminApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [adminAllowed, setAdminAllowed] = useState(false);
+  // Ref so the onAuthStateChange closure can read the live value without
+  // being re-registered every time adminAllowed state changes.
+  const adminAllowedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const VALID_SCREENS: Screen[] = ["branding", "settings", "seo", "homepage", "articles", "surveys", "resources", "podcast", "partners", "social", "analytics"];
   const readInitialScreen = (): Screen => {
@@ -185,6 +188,12 @@ export default function AdminApp() {
   const [navOpen, setNavOpen] = useState(false);
 
   const supabase = getAdminClient();
+
+  // Keep the ref in sync so the auth callback always reads the live value.
+  const admit = useCallback((allowed: boolean) => {
+    adminAllowedRef.current = allowed;
+    setAdminAllowed(allowed);
+  }, []);
 
   // Sync the active screen with hash navigation (back/forward).
   useEffect(() => {
@@ -227,14 +236,15 @@ export default function AdminApp() {
         setSession(data.session);
         if (data.session) {
           const allowed = await isAllowedAdmin(data.session.user.email);
-          setAdminAllowed(allowed);
+          admit(allowed);
           if (!allowed) {
             setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
-            supabase.auth.signOut();
+            // Don't signOut here — the result could be a DB timeout false-negative.
+            // The session stays intact so a page refresh retries cleanly.
           }
         }
       })
-      .catch(() => { /* isAllowedAdmin has its own deadline; catch network errors */ })
+      .catch(() => {})
       .finally(() => {
         clearTimeout(loadingTimeout);
         setLoading(false);
@@ -242,20 +252,27 @@ export default function AdminApp() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       setSession(sess);
-      if (event === "SIGNED_IN") {
-        // Fresh login after OAuth redirect — verify admin access.
-        const allowed = await isAllowedAdmin(sess?.user.email);
-        setAdminAllowed(allowed);
+
+      if (event === "SIGNED_OUT") {
+        admit(false);
+        return;
+      }
+
+      // If the user is already admitted, skip every re-check. Supabase fires
+      // SIGNED_IN not only after OAuth but also when the page regains focus
+      // after inactivity — re-running isAllowedAdmin there risks a timeout
+      // false-negative that calls signOut() and boots the user mid-session.
+      if (adminAllowedRef.current) return;
+
+      if (event === "SIGNED_IN" && sess) {
+        // Genuine new login: verify access once.
+        const allowed = await isAllowedAdmin(sess.user.email);
+        admit(allowed);
         if (!allowed) {
-          setError(`Access denied for ${sess?.user.email}. Contact an admin to get access.`);
+          setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
           supabase.auth.signOut();
         }
-      } else if (event === "SIGNED_OUT") {
-        setAdminAllowed(false);
       }
-      // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION: session is updated but
-      // access was already verified — re-checking would risk a timeout false-negative
-      // triggering signOut() and logging the user out mid-session.
     });
 
     return () => {
