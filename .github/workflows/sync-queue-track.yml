@@ -1,0 +1,38 @@
+name: Sync queue — track merged PRs
+
+# Every PR merged to main is added to the sync queue so it can be considered
+# for porting to the disrupting-health site during the weekly review.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  queue:
+    if: github.event.pull_request.merged == true
+    name: Add to sync queue
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Ensure sync-pending label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "sync-pending" \
+            --repo "$REPO" \
+            --description "Merged PR awaiting weekly sync review for disrupting-health" \
+            --color "BFD4F2" 2>/dev/null || true
+
+      - name: Label the merged PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "sync-pending"
+          echo "✓ PR #$PR_NUMBER added to sync queue"
