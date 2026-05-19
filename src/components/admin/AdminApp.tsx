@@ -240,18 +240,22 @@ export default function AdminApp() {
         setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       setSession(sess);
-      if (sess) {
-        const allowed = await isAllowedAdmin(sess.user.email);
+      if (event === "SIGNED_IN") {
+        // Fresh login after OAuth redirect — verify admin access.
+        const allowed = await isAllowedAdmin(sess?.user.email);
         setAdminAllowed(allowed);
         if (!allowed) {
-          setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
+          setError(`Access denied for ${sess?.user.email}. Contact an admin to get access.`);
           supabase.auth.signOut();
         }
-      } else {
+      } else if (event === "SIGNED_OUT") {
         setAdminAllowed(false);
       }
+      // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION: session is updated but
+      // access was already verified — re-checking would risk a timeout false-negative
+      // triggering signOut() and logging the user out mid-session.
     });
 
     return () => {
