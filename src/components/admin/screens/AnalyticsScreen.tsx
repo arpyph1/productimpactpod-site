@@ -34,54 +34,56 @@ export default function AnalyticsScreen({ supabase }: Props) {
 
   async function loadData() {
     setLoading(true);
-    const [engRes, artRes, sesRes] = await Promise.all([
-      supabase.from("article_engagement").select("*"),
-      supabase.from("articles").select("id, title, slug, publish_date").eq("published", true),
-      supabase.from("article_sessions").select("landing_article_id, pages_count").not("landing_article_id", "is", null),
-    ]);
+    try {
+      const [engRes, artRes, sesRes] = await Promise.all([
+        supabase.from("article_engagement").select("*"),
+        supabase.from("articles").select("id, title, slug, publish_date").eq("published", true),
+        // Aggregated server-side — avoids downloading every raw session row.
+        supabase.rpc("get_session_stats"),
+      ]);
 
-    const sessionsByArticle = new Map<string, { sum: number; count: number }>();
-    (sesRes.data ?? []).forEach((s: any) => {
-      const id = s.landing_article_id as string;
-      const cur = sessionsByArticle.get(id) ?? { sum: 0, count: 0 };
-      cur.sum += s.pages_count ?? 1;
-      cur.count += 1;
-      sessionsByArticle.set(id, cur);
-    });
-
-    const articles = new Map<string, { title: string; slug: string; publish_date: string }>();
-    (artRes.data ?? []).forEach((a: any) => articles.set(a.id, a));
-
-    const engagementByArticle = new Map<string, { views: number; shares: number; hearts: number; avg_read_pct: number; read_pct_count: number; link_clicks: number }>();
-    (engRes.data ?? []).forEach((e: any) => {
-      const sum = e.read_pct_sum ?? 0;
-      const count = e.read_pct_count ?? 0;
-      engagementByArticle.set(e.article_id, {
-        views: e.views ?? 0, shares: e.shares ?? 0, hearts: e.hearts ?? 0,
-        avg_read_pct: count > 0 ? Math.round(sum / count) : 0,
-        read_pct_count: count,
-        link_clicks: e.link_clicks ?? 0,
+      const sessionsByArticle = new Map<string, { avg_pages: number; session_count: number }>();
+      (sesRes.data ?? []).forEach((s: any) => {
+        sessionsByArticle.set(s.landing_article_id as string, {
+          avg_pages: parseFloat(s.avg_pages) || 0,
+          session_count: parseInt(s.session_count) || 0,
+        });
       });
-    });
 
-    // Include every published article so "Newest" sort surfaces articles that
-    // haven't accumulated engagement yet.
-    const rows: EngagementRow[] = (artRes.data ?? []).map((a: any) => {
-      const eng = engagementByArticle.get(a.id) ?? { views: 0, shares: 0, hearts: 0, avg_read_pct: 0, read_pct_count: 0, link_clicks: 0 };
-      const ses = sessionsByArticle.get(a.id) ?? { sum: 0, count: 0 };
-      return {
-        article_id: a.id,
-        views: eng.views, shares: eng.shares, hearts: eng.hearts,
-        avg_read_pct: eng.avg_read_pct, read_pct_count: eng.read_pct_count,
-        link_clicks: eng.link_clicks,
-        avg_pages: ses.count > 0 ? Math.round((ses.sum / ses.count) * 10) / 10 : 0,
-        session_count: ses.count,
-        title: a.title, slug: a.slug, publish_date: a.publish_date,
-      };
-    });
+      const engagementByArticle = new Map<string, { views: number; shares: number; hearts: number; avg_read_pct: number; read_pct_count: number; link_clicks: number }>();
+      (engRes.data ?? []).forEach((e: any) => {
+        const sum = e.read_pct_sum ?? 0;
+        const count = e.read_pct_count ?? 0;
+        engagementByArticle.set(e.article_id, {
+          views: e.views ?? 0, shares: e.shares ?? 0, hearts: e.hearts ?? 0,
+          avg_read_pct: count > 0 ? Math.round(sum / count) : 0,
+          read_pct_count: count,
+          link_clicks: e.link_clicks ?? 0,
+        });
+      });
 
-    setData(rows);
-    setLoading(false);
+      // Include every published article so "Newest" sort surfaces articles that
+      // haven't accumulated engagement yet.
+      const rows: EngagementRow[] = (artRes.data ?? []).map((a: any) => {
+        const eng = engagementByArticle.get(a.id) ?? { views: 0, shares: 0, hearts: 0, avg_read_pct: 0, read_pct_count: 0, link_clicks: 0 };
+        const ses = sessionsByArticle.get(a.id) ?? { avg_pages: 0, session_count: 0 };
+        return {
+          article_id: a.id,
+          views: eng.views, shares: eng.shares, hearts: eng.hearts,
+          avg_read_pct: eng.avg_read_pct, read_pct_count: eng.read_pct_count,
+          link_clicks: eng.link_clicks,
+          avg_pages: ses.avg_pages,
+          session_count: ses.session_count,
+          title: a.title, slug: a.slug, publish_date: a.publish_date,
+        };
+      });
+
+      setData(rows);
+    } catch (e) {
+      console.error("Analytics loadData failed:", e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const filteredData = data.filter(r =>
