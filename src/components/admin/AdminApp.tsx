@@ -213,18 +213,35 @@ export default function AdminApp() {
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      if (data.session) {
-        const allowed = await isAllowedAdmin(data.session.user.email);
-        setAdminAllowed(allowed);
-        if (!allowed) {
-          setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
-          supabase.auth.signOut();
+    // Bail out of the loading state if getSession stalls (e.g. network timeout
+    // while trying to refresh an expired token).
+    const loadingTimeout = setTimeout(() => setLoading(false), 8000);
+
+    supabase.auth.getSession()
+      .then(async ({ data, error }) => {
+        clearTimeout(loadingTimeout);
+        if (error) {
+          // Refresh token is invalid/expired — clear the stale session so the
+          // login screen is shown instead of an infinite spinner.
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
         }
-      }
-      setLoading(false);
-    });
+        setSession(data.session);
+        if (data.session) {
+          const allowed = await isAllowedAdmin(data.session.user.email);
+          setAdminAllowed(allowed);
+          if (!allowed) {
+            setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
+            supabase.auth.signOut();
+          }
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        clearTimeout(loadingTimeout);
+        setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, sess) => {
       setSession(sess);
@@ -240,7 +257,10 @@ export default function AdminApp() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogin = useCallback(async () => {
