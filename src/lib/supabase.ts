@@ -537,18 +537,26 @@ export async function getArticlesByEntity(
 
 // ── Site Settings ─────────────────────────────────────────────────────────────
 
+const _settingsCache = new Map<string, Promise<any>>();
+
 export async function getSiteSetting(key: string): Promise<any> {
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
-  if (error) {
-    console.warn(`[getSiteSetting] key="${key}" error: ${error.code} ${error.message}`);
-  } else if (!data) {
-    console.warn(`[getSiteSetting] key="${key}" returned no row`);
-  }
-  return data?.value ?? null;
+  const cached = _settingsCache.get(key);
+  if (cached !== undefined) return cached;
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", key)
+      .single();
+    if (error) {
+      console.warn(`[getSiteSetting] key="${key}" error: ${error.code} ${error.message}`);
+    } else if (!data) {
+      console.warn(`[getSiteSetting] key="${key}" returned no row`);
+    }
+    return data?.value ?? null;
+  })();
+  _settingsCache.set(key, promise);
+  return promise;
 }
 
 // ── YouTube Shorts (via Supabase edge function) ─────────────────────────────

@@ -327,7 +327,7 @@ function generateArpyLinkedin(article: Article): string {
     }
   }
 
-  parts.push(`I wrote about this on Product Impact: ${link}`);
+  parts.push(`I wrote about this: ${link}`);
   parts.push("");
 
   const closingPoints = [

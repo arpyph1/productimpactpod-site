@@ -24,7 +24,7 @@ const FORMAT_LABELS: Record<string, string> = {
 const AUTHOR_OPTIONS = [
   { slug: "arpy-dragffy", name: "Arpy Dragffy" },
   { slug: "brittany-hobbs", name: "Brittany Hobbs" },
-  { slug: "product-impact", name: "Product Impact" },
+  { slug: "default", name: "Default" },
 ];
 
 export default function ArticlesScreen({ supabase, onEditArticle }: Props) {

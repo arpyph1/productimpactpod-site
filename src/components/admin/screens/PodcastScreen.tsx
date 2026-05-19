@@ -76,7 +76,7 @@ export default function PodcastScreen({ supabase }: Props) {
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Hero Description</label>
             <textarea className="w-full h-24 bg-[#111] border border-[#222] rounded-lg p-3 text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
-              defaultValue={pc.hero_description ?? "Follow the Product Impact Podcast to learn frameworks and strategies to ensure your product is delivering impact to users, teams, businesses, and communities."}
+              defaultValue={pc.hero_description ?? ""}
               onBlur={(e) => saveSetting("podcast", { ...pc, hero_description: e.target.value })} />
           </div>
           <div>
@@ -88,7 +88,7 @@ export default function PodcastScreen({ supabase }: Props) {
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Apple Podcasts URL</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
-              defaultValue={pc.apple_url ?? "https://podcasts.apple.com/us/podcast/product-impact-podcast-formerly-design-of-ai/id1734499859"}
+              defaultValue={pc.apple_url ?? ""}
               onBlur={(e) => saveSetting("podcast", { ...pc, apple_url: e.target.value })} />
           </div>
           <div>
