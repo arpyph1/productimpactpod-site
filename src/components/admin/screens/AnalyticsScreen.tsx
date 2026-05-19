@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import ArticleAnalyticsDetail from "../ArticleAnalyticsDetail";
+import { Chart, buildDateRange, CHART_COLORS } from "../AdminChart";
+import type { DailyPoint, ChartSeries } from "../AdminChart";
 
 interface Props { supabase: SupabaseClient }
 
@@ -29,6 +31,7 @@ export default function AnalyticsScreen({ supabase }: Props) {
   const [minReadPct, setMinReadPct] = useState(0);
   const [minLinkClicks, setMinLinkClicks] = useState(0);
   const [detailRow, setDetailRow] = useState<EngagementRow | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "graph">("table");
 
   useEffect(() => { loadData(); }, []);
 
@@ -162,90 +165,88 @@ export default function AnalyticsScreen({ supabase }: Props) {
             </span>
           </span>
           <div className="flex items-center gap-3">
-            <button onClick={() => { setTab(tab === "publish_date" ? "views" : "publish_date"); setShowAll(false); }}
-              className={`text-[11px] transition-colors ${tab === "publish_date" ? "text-[#ff6b4a]" : "text-[#555] hover:text-white"}`}>
-              {tab === "publish_date" ? "✓ Newest first" : "🗓 Sort by newest"}
+            <button onClick={() => setViewMode(v => v === "graph" ? "table" : "graph")}
+              className={`text-[11px] transition-colors ${viewMode === "graph" ? "text-[#ff6b4a]" : "text-[#555] hover:text-white"}`}>
+              {viewMode === "graph" ? "✓ Graph view" : "Graph view"}
             </button>
+            {viewMode === "table" && (
+              <button onClick={() => { setTab(tab === "publish_date" ? "views" : "publish_date"); setShowAll(false); }}
+                className={`text-[11px] transition-colors ${tab === "publish_date" ? "text-[#ff6b4a]" : "text-[#555] hover:text-white"}`}>
+                {tab === "publish_date" ? "✓ Newest first" : "🗓 Sort by newest"}
+              </button>
+            )}
             <button onClick={loadData} className="text-[11px] text-[#555] hover:text-white transition-colors">↻ Refresh</button>
           </div>
         </div>
 
-        {/* Engagement table is wider than a phone — wrap in horizontal
-            scroll instead of clipping article titles. */}
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px]">
-          <thead>
-            <tr className="text-[10px] font-bold uppercase tracking-wider text-[#555] border-b border-[#1a1a1a]">
-              <th className="text-left px-4 py-2.5 w-8">#</th>
-              <th className="text-left px-4 py-2.5">Article</th>
-              <th className="text-right px-4 py-2.5 w-20">Views</th>
-              <th className="text-right px-4 py-2.5 w-20">Shares</th>
-              <th className="text-right px-4 py-2.5 w-20">Hearts</th>
-              <th className="text-right px-4 py-2.5 w-20">% Read</th>
-              <th className="text-right px-4 py-2.5 w-20">Clicks</th>
-              <th className="text-right px-4 py-2.5 w-20">Avg Pages</th>
-              <th className="text-right px-4 py-2.5 w-28">Published</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayed.length === 0 ? (
-              <tr><td colSpan={9} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
-            ) : displayed.map((row, i) => (
-              <tr key={row.article_id} onClick={() => setDetailRow(row)}
-                className="border-b border-[#111] hover:bg-[#101010] cursor-pointer transition-colors">
-                <td className="px-4 py-3 text-[12px] text-[#555] font-mono">{i + 1}</td>
-                <td className="px-4 py-3">
-                  <div className="text-[13px] font-semibold text-white leading-snug line-clamp-1 hover:text-[#ff6b4a]">{row.title}</div>
-                  {row.slug && (
-                    <a href={`/news/${row.slug}/`} target="_blank" rel="noopener"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors">
-                      /news/{row.slug}/
-                    </a>
-                  )}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "views" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.views.toLocaleString()}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "shares" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.shares.toLocaleString()}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "hearts" ? "text-[#ff6b4a] font-bold" : "text-[#666]"}`}>
-                  {row.hearts.toLocaleString()}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "avg_read_pct" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.read_pct_count > 0 ? `${row.avg_read_pct}%` : "—"}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "link_clicks" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.link_clicks.toLocaleString()}
-                </td>
-                <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "avg_pages" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.session_count > 0 ? row.avg_pages.toFixed(1) : "—"}
-                </td>
-                <td className={`px-4 py-3 text-right text-[12px] whitespace-nowrap ${tab === "publish_date" ? "text-white font-bold" : "text-[#666]"}`}>
-                  {row.publish_date ? new Date(row.publish_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-
-        {sorted.length > 10 && !showAll && (
-          <div className="px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a] text-center">
-            <button onClick={() => setShowAll(true)}
-              className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold transition-colors">
-              View all {sorted.length} articles →
-            </button>
-          </div>
-        )}
-        {showAll && sorted.length > 10 && (
-          <div className="px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a] text-center">
-            <button onClick={() => setShowAll(false)}
-              className="text-[12px] text-[#555] hover:text-white font-semibold transition-colors">
-              Show top 10 only
-            </button>
-          </div>
+        {viewMode === "graph" ? (
+          <SiteGraphView supabase={supabase} />
+        ) : (
+          <>
+            {/* Engagement table — wider than a phone, wrap in horizontal scroll */}
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
+              <thead>
+                <tr className="text-[10px] font-bold uppercase tracking-wider text-[#555] border-b border-[#1a1a1a]">
+                  <th className="text-left px-4 py-2.5 w-8">#</th>
+                  <th className="text-left px-4 py-2.5">Article</th>
+                  <th className="text-right px-4 py-2.5 w-20">Views</th>
+                  <th className="text-right px-4 py-2.5 w-20">Shares</th>
+                  <th className="text-right px-4 py-2.5 w-20">Hearts</th>
+                  <th className="text-right px-4 py-2.5 w-20">% Read</th>
+                  <th className="text-right px-4 py-2.5 w-20">Clicks</th>
+                  <th className="text-right px-4 py-2.5 w-20">Avg Pages</th>
+                  <th className="text-right px-4 py-2.5 w-28">Published</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayed.length === 0 ? (
+                  <tr><td colSpan={9} className="text-center py-12 text-[#555] text-[13px]">No engagement data yet. Views, shares, and hearts will appear as readers interact with articles.</td></tr>
+                ) : displayed.map((row, i) => (
+                  <tr key={row.article_id} onClick={() => setDetailRow(row)}
+                    className="border-b border-[#111] hover:bg-[#101010] cursor-pointer transition-colors">
+                    <td className="px-4 py-3 text-[12px] text-[#555] font-mono">{i + 1}</td>
+                    <td className="px-4 py-3">
+                      <div className="text-[13px] font-semibold text-white leading-snug line-clamp-1 hover:text-[#ff6b4a]">{row.title}</div>
+                      {row.slug && (
+                        <a href={`/news/${row.slug}/`} target="_blank" rel="noopener"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] text-[#555] hover:text-[#ff6b4a] transition-colors">
+                          /news/{row.slug}/
+                        </a>
+                      )}
+                    </td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "views" ? "text-white font-bold" : "text-[#666]"}`}>{row.views.toLocaleString()}</td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "shares" ? "text-white font-bold" : "text-[#666]"}`}>{row.shares.toLocaleString()}</td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "hearts" ? "text-[#ff6b4a] font-bold" : "text-[#666]"}`}>{row.hearts.toLocaleString()}</td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "avg_read_pct" ? "text-white font-bold" : "text-[#666]"}`}>{row.read_pct_count > 0 ? `${row.avg_read_pct}%` : "—"}</td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "link_clicks" ? "text-white font-bold" : "text-[#666]"}`}>{row.link_clicks.toLocaleString()}</td>
+                    <td className={`px-4 py-3 text-right text-[13px] font-mono ${tab === "avg_pages" ? "text-white font-bold" : "text-[#666]"}`}>{row.session_count > 0 ? row.avg_pages.toFixed(1) : "—"}</td>
+                    <td className={`px-4 py-3 text-right text-[12px] whitespace-nowrap ${tab === "publish_date" ? "text-white font-bold" : "text-[#666]"}`}>
+                      {row.publish_date ? new Date(row.publish_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+            {sorted.length > 10 && !showAll && (
+              <div className="px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a] text-center">
+                <button onClick={() => setShowAll(true)}
+                  className="text-[12px] text-[#ff6b4a] hover:text-[#ff8566] font-semibold transition-colors">
+                  View all {sorted.length} articles →
+                </button>
+              </div>
+            )}
+            {showAll && sorted.length > 10 && (
+              <div className="px-4 py-3 bg-[#0c0c0c] border-t border-[#1a1a1a] text-center">
+                <button onClick={() => setShowAll(false)}
+                  className="text-[12px] text-[#555] hover:text-white font-semibold transition-colors">
+                  Show top 10 only
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -255,6 +256,139 @@ export default function AnalyticsScreen({ supabase }: Props) {
           article={detailRow}
           allArticles={data}
           onClose={() => setDetailRow(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+type GraphMetric = "view" | "share" | "heart" | "read_pct" | "link_click";
+
+const METRIC_OPTIONS: { key: GraphMetric; label: string; unit: string; icon: string }[] = [
+  { key: "view",       label: "Views",       unit: "",  icon: "👁"  },
+  { key: "share",      label: "Shares",      unit: "",  icon: "↗"  },
+  { key: "heart",      label: "Hearts",      unit: "",  icon: "❤️" },
+  { key: "read_pct",   label: "Avg % Read",  unit: "%", icon: "📖" },
+  { key: "link_click", label: "Link Clicks", unit: "",  icon: "🔗" },
+];
+
+function SiteGraphView({ supabase }: { supabase: SupabaseClient }) {
+  const [metric, setMetric] = useState<GraphMetric>("view");
+  const [rangeDays, setRangeDays] = useState<7 | 30 | 90 | null>(30);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [points, setPoints] = useState<DailyPoint[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const metricMeta = METRIC_OPTIONS.find(m => m.key === metric)!;
+
+  const getDateRange = useCallback((): { from: Date; to: Date } => {
+    const to = new Date(); to.setUTCHours(23, 59, 59, 999);
+    if (rangeDays === null && customFrom && customTo) {
+      return { from: new Date(customFrom + "T00:00:00Z"), to: new Date(customTo + "T23:59:59Z") };
+    }
+    const days = rangeDays ?? 30;
+    const from = new Date(to);
+    from.setUTCDate(from.getUTCDate() - (days - 1));
+    from.setUTCHours(0, 0, 0, 0);
+    return { from, to };
+  }, [rangeDays, customFrom, customTo]);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { from, to } = getDateRange();
+      const { data, error } = await supabase.rpc("get_site_daily_stats", {
+        p_event_type: metric,
+        p_from: from.toISOString(),
+        p_to: to.toISOString(),
+      });
+      if (error) throw error;
+
+      const byDay = new Map<string, number>((data ?? []).map((r: any) => [r.day as string, Number(r.total)]));
+      const allDays = buildDateRange(from, to);
+      setPoints(allDays.map(date => ({ date, value: byDay.get(date) ?? 0 })));
+    } catch (e) {
+      console.error("SiteGraphView fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [metric, getDateRange, supabase]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const total = points.reduce((s, p) => s + p.value, 0);
+  const displayTotal = metric === "read_pct"
+    ? (points.filter(p => p.value > 0).length > 0
+        ? Math.round(points.filter(p => p.value > 0).reduce((s, p) => s + p.value, 0) / points.filter(p => p.value > 0).length)
+        : 0)
+    : total;
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Metric selector */}
+      <div className="flex flex-wrap gap-2">
+        {METRIC_OPTIONS.map(m => (
+          <button key={m.key} onClick={() => setMetric(m.key)}
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all border ${
+              metric === m.key
+                ? "border-[#ff6b4a]/50 bg-[#ff6b4a]/10 text-[#ff6b4a]"
+                : "border-[#1a1a1a] bg-[#0c0c0c] text-[#666] hover:text-white hover:border-[#333]"
+            }`}>
+            {m.icon} {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Range selector */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([7, 30, 90] as const).map(d => (
+          <button key={d} onClick={() => setRangeDays(d)}
+            className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+              rangeDays === d
+                ? "border-[#ff6b4a]/50 bg-[#ff6b4a]/10 text-[#ff6b4a]"
+                : "border-[#1a1a1a] bg-[#0c0c0c] text-[#666] hover:text-white hover:border-[#333]"
+            }`}>
+            {d}d
+          </button>
+        ))}
+        <button onClick={() => setRangeDays(null)}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+            rangeDays === null && !customFrom
+              ? "border-[#ff6b4a]/50 bg-[#ff6b4a]/10 text-[#ff6b4a]"
+              : "border-[#1a1a1a] bg-[#0c0c0c] text-[#666] hover:text-white hover:border-[#333]"
+          }`}>
+          All
+        </button>
+        <div className="flex items-center gap-1 ml-2">
+          <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setRangeDays(null); }}
+            className="px-2 py-1 text-[11px] bg-[#111] border border-[#222] rounded text-[#888] focus:outline-none focus:border-[#ff6b4a]/50" />
+          <span className="text-[#555] text-[11px]">→</span>
+          <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setRangeDays(null); }}
+            className="px-2 py-1 text-[11px] bg-[#111] border border-[#222] rounded text-[#888] focus:outline-none focus:border-[#ff6b4a]/50" />
+        </div>
+        <button onClick={fetchData} className="ml-auto text-[11px] text-[#555] hover:text-white transition-colors">↻ Refresh</button>
+      </div>
+
+      {/* Aggregate stat */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-[32px] font-extrabold text-white tabular-nums">
+          {displayTotal.toLocaleString()}{metricMeta.unit}
+        </span>
+        <span className="text-[13px] text-[#555]">
+          {metric === "read_pct" ? "avg across active days" : "total"} · {metricMeta.label.toLowerCase()}
+        </span>
+      </div>
+
+      {/* Chart */}
+      {loading ? (
+        <div className="h-[240px] flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <Chart
+          series={[{ id: "site", label: "All articles", points, color: CHART_COLORS[0] }]}
+          unit={metricMeta.unit}
         />
       )}
     </div>
