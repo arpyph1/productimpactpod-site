@@ -104,6 +104,7 @@ export default function ArticleAnalyticsDetail({ supabase, article, allArticles,
   const [customTo, setCustomTo] = useState<string>("");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showComparePicker, setShowComparePicker] = useState(false);
+  const [compareSearch, setCompareSearch] = useState("");
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -300,19 +301,33 @@ export default function ArticleAnalyticsDetail({ supabase, article, allArticles,
           {showComparePicker && (
             <div className="rounded-xl border border-[#1a1a1a] bg-[#0c0c0c] p-3">
               <div className="text-[11px] uppercase tracking-wider text-[#555] font-bold mb-2">Compare with (max 4)</div>
+              <input
+                type="search"
+                autoFocus
+                placeholder="Search articles…"
+                value={compareSearch}
+                onChange={e => setCompareSearch(e.target.value)}
+                className="w-full mb-2 px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] text-white placeholder:text-[#444] focus:outline-none focus:border-[#ff6b4a]/50"
+              />
               <div className="max-h-[200px] overflow-auto space-y-1">
-                {allArticles
-                  .filter(a => a.article_id !== article.article_id)
-                  .slice(0, 50)
-                  .map(a => (
+                {(() => {
+                  const q = compareSearch.trim().toLowerCase();
+                  const filtered = allArticles
+                    .filter(a => a.article_id !== article.article_id)
+                    .filter(a => !q || (a.title ?? "").toLowerCase().includes(q));
+                  if (!filtered.length) {
+                    return <p className="text-[12px] text-[#555] px-2 py-3">No articles match "{compareSearch}".</p>;
+                  }
+                  return filtered.map(a => (
                     <label key={a.article_id} className="flex items-center gap-2 text-[12px] text-white cursor-pointer hover:bg-[#111] px-2 py-1 rounded">
                       <input type="checkbox" checked={compareIds.includes(a.article_id)}
                         onChange={() => toggleCompare(a.article_id)}
                         disabled={!compareIds.includes(a.article_id) && compareIds.length >= 4} />
                       <span className="truncate flex-1">{a.title}</span>
-                      <span className="text-[#555] text-[10px]">{a.views.toLocaleString()} views</span>
+                      <span className="text-[#555] text-[10px] flex-shrink-0">{a.views.toLocaleString()} views</span>
                     </label>
-                  ))}
+                  ));
+                })()}
               </div>
             </div>
           )}
