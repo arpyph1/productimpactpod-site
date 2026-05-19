@@ -180,7 +180,7 @@ export default function AnalyticsScreen({ supabase }: Props) {
         </div>
 
         {viewMode === "graph" ? (
-          <SiteGraphView supabase={supabase} />
+          <SiteGraphView supabase={supabase} metric={TAB_TO_METRIC[tab] ?? "view"} />
         ) : (
           <>
             {/* Engagement table — wider than a phone, wrap in horizontal scroll */}
@@ -264,23 +264,30 @@ export default function AnalyticsScreen({ supabase }: Props) {
 
 type GraphMetric = "view" | "share" | "heart" | "read_pct" | "link_click";
 
-const METRIC_OPTIONS: { key: GraphMetric; label: string; unit: string; icon: string }[] = [
-  { key: "view",       label: "Views",       unit: "",  icon: "👁"  },
-  { key: "share",      label: "Shares",      unit: "",  icon: "↗"  },
-  { key: "heart",      label: "Hearts",      unit: "",  icon: "❤️" },
-  { key: "read_pct",   label: "Avg % Read",  unit: "%", icon: "📖" },
-  { key: "link_click", label: "Link Clicks", unit: "",  icon: "🔗" },
-];
+const METRIC_META: Record<GraphMetric, { label: string; unit: string }> = {
+  view:       { label: "Views",       unit: ""  },
+  share:      { label: "Shares",      unit: ""  },
+  heart:      { label: "Hearts",      unit: ""  },
+  read_pct:   { label: "Avg % Read",  unit: "%" },
+  link_click: { label: "Link Clicks", unit: ""  },
+};
 
-function SiteGraphView({ supabase }: { supabase: SupabaseClient }) {
-  const [metric, setMetric] = useState<GraphMetric>("view");
+const TAB_TO_METRIC: Partial<Record<SortKey, GraphMetric>> = {
+  views:        "view",
+  shares:       "share",
+  hearts:       "heart",
+  avg_read_pct: "read_pct",
+  link_clicks:  "link_click",
+};
+
+function SiteGraphView({ supabase, metric }: { supabase: SupabaseClient; metric: GraphMetric }) {
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90 | null>(30);
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [points, setPoints] = useState<DailyPoint[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const metricMeta = METRIC_OPTIONS.find(m => m.key === metric)!;
+  const metricMeta = METRIC_META[metric];
 
   const getDateRange = useCallback((): { from: Date; to: Date } => {
     const to = new Date(); to.setUTCHours(23, 59, 59, 999);
@@ -326,20 +333,6 @@ function SiteGraphView({ supabase }: { supabase: SupabaseClient }) {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Metric selector */}
-      <div className="flex flex-wrap gap-2">
-        {METRIC_OPTIONS.map(m => (
-          <button key={m.key} onClick={() => setMetric(m.key)}
-            className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all border ${
-              metric === m.key
-                ? "border-[#ff6b4a]/50 bg-[#ff6b4a]/10 text-[#ff6b4a]"
-                : "border-[#1a1a1a] bg-[#0c0c0c] text-[#666] hover:text-white hover:border-[#333]"
-            }`}>
-            {m.icon} {m.label}
-          </button>
-        ))}
-      </div>
-
       {/* Range selector */}
       <div className="flex flex-wrap items-center gap-2">
         {([7, 30, 90] as const).map(d => (

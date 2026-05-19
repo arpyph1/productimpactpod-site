@@ -222,50 +222,41 @@ export default function AdminApp() {
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    // Covers getSession() + isAllowedAdmin() combined — cleared only after
-    // both finish so neither step can leave the spinner running forever.
     const loadingTimeout = setTimeout(() => setLoading(false), 12000);
 
-    supabase.auth.getSession()
-      .then(async ({ data, error }) => {
-        if (error) {
-          // getSession() errors include transient network failures during token
-          // refresh — don't call signOut() here because that permanently destroys
-          // the refresh token. Just show the login screen; the next page load will
-          // retry. Only sign out on an explicit user action.
-          return;
-        }
-        setSession(data.session);
-        if (data.session) {
-          const allowed = await isAllowedAdmin(data.session.user.email);
-          admit(allowed);
-          if (!allowed) {
-            setError(`Access denied for ${data.session.user.email}. Contact an admin to get access.`);
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        clearTimeout(loadingTimeout);
-        setLoading(false);
-      });
-
+    // onAuthStateChange is the single source of truth for session state.
+    // INITIAL_SESSION fires exactly once on page load with the persisted
+    // session (or null), replacing the old getSession() call which could
+    // return a network error and silently leave the user on the login screen.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       setSession(sess);
 
       if (event === "SIGNED_OUT") {
         admit(false);
+        clearTimeout(loadingTimeout);
+        setLoading(false);
         return;
       }
 
-      // If the user is already admitted, skip every re-check. Supabase fires
-      // SIGNED_IN not only after OAuth but also when the page regains focus
-      // after inactivity — re-running isAllowedAdmin there risks a timeout
-      // false-negative that calls signOut() and boots the user mid-session.
+      if (event === "INITIAL_SESSION") {
+        if (sess && !adminAllowedRef.current) {
+          const allowed = await isAllowedAdmin(sess.user.email);
+          admit(allowed);
+          if (!allowed) {
+            setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
+          }
+        }
+        clearTimeout(loadingTimeout);
+        setLoading(false);
+        return;
+      }
+
+      // Already admitted — skip every subsequent re-check. Supabase fires
+      // SIGNED_IN on focus-regain, not just after OAuth, so re-checking risks
+      // a timeout false-negative that boots the user mid-session.
       if (adminAllowedRef.current) return;
 
       if (event === "SIGNED_IN" && sess) {
-        // Genuine new login: verify access once.
         const allowed = await isAllowedAdmin(sess.user.email);
         admit(allowed);
         if (!allowed) {
