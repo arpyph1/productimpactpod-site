@@ -213,18 +213,15 @@ export default function AdminApp() {
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    // Bail out of the loading state if getSession stalls (e.g. network timeout
-    // while trying to refresh an expired token).
-    const loadingTimeout = setTimeout(() => setLoading(false), 8000);
+    // Covers getSession() + isAllowedAdmin() combined — cleared only after
+    // both finish so neither step can leave the spinner running forever.
+    const loadingTimeout = setTimeout(() => setLoading(false), 12000);
 
     supabase.auth.getSession()
       .then(async ({ data, error }) => {
-        clearTimeout(loadingTimeout);
         if (error) {
-          // Refresh token is invalid/expired — clear the stale session so the
-          // login screen is shown instead of an infinite spinner.
+          // Refresh token invalid/expired — show login screen instead of spinner.
           await supabase.auth.signOut();
-          setLoading(false);
           return;
         }
         setSession(data.session);
@@ -236,9 +233,9 @@ export default function AdminApp() {
             supabase.auth.signOut();
           }
         }
-        setLoading(false);
       })
-      .catch(() => {
+      .catch(() => { /* isAllowedAdmin has its own deadline; catch network errors */ })
+      .finally(() => {
         clearTimeout(loadingTimeout);
         setLoading(false);
       });

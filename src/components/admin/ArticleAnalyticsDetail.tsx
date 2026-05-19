@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface ArticleRow {
@@ -104,6 +104,7 @@ export default function ArticleAnalyticsDetail({ supabase, article, allArticles,
   const [customTo, setCustomTo] = useState<string>("");
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showComparePicker, setShowComparePicker] = useState(false);
+  const [compareSearch, setCompareSearch] = useState("");
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -300,19 +301,33 @@ export default function ArticleAnalyticsDetail({ supabase, article, allArticles,
           {showComparePicker && (
             <div className="rounded-xl border border-[#1a1a1a] bg-[#0c0c0c] p-3">
               <div className="text-[11px] uppercase tracking-wider text-[#555] font-bold mb-2">Compare with (max 4)</div>
+              <input
+                type="search"
+                autoFocus
+                placeholder="Search articles…"
+                value={compareSearch}
+                onChange={e => setCompareSearch(e.target.value)}
+                className="w-full mb-2 px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[12px] text-white placeholder:text-[#444] focus:outline-none focus:border-[#ff6b4a]/50"
+              />
               <div className="max-h-[200px] overflow-auto space-y-1">
-                {allArticles
-                  .filter(a => a.article_id !== article.article_id)
-                  .slice(0, 50)
-                  .map(a => (
+                {(() => {
+                  const q = compareSearch.trim().toLowerCase();
+                  const filtered = allArticles
+                    .filter(a => a.article_id !== article.article_id)
+                    .filter(a => !q || (a.title ?? "").toLowerCase().includes(q));
+                  if (!filtered.length) {
+                    return <p className="text-[12px] text-[#555] px-2 py-3">No articles match "{compareSearch}".</p>;
+                  }
+                  return filtered.map(a => (
                     <label key={a.article_id} className="flex items-center gap-2 text-[12px] text-white cursor-pointer hover:bg-[#111] px-2 py-1 rounded">
                       <input type="checkbox" checked={compareIds.includes(a.article_id)}
                         onChange={() => toggleCompare(a.article_id)}
                         disabled={!compareIds.includes(a.article_id) && compareIds.length >= 4} />
                       <span className="truncate flex-1">{a.title}</span>
-                      <span className="text-[#555] text-[10px]">{a.views.toLocaleString()} views</span>
+                      <span className="text-[#555] text-[10px] flex-shrink-0">{a.views.toLocaleString()} views</span>
                     </label>
-                  ))}
+                  ));
+                })()}
               </div>
             </div>
           )}
@@ -337,44 +352,108 @@ function MetricCard({ label, value, icon, active, onClick, suffix }: {
 }
 
 // Inline SVG line chart. Supports multiple overlaid series sharing the same
-// date axis. No axis labels for compactness — exact values appear in the
-// download markdown.
+// date axis. Hover shows a crosshair + tooltip with values for all series.
 function Chart({ series, unit }: { series: Series[]; unit: string }) {
-  const W = 800, H = 240, P = 28; // viewBox; SVG scales via preserveAspectRatio
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [tooltipLeft, setTooltipLeft] = useState(0);
+  const [flipTooltip, setFlipTooltip] = useState(false);
+
+  const W = 800, H = 240, P = 28;
+
   if (!series.length || !series[0].points.length) {
     return <div className="h-[240px] flex items-center justify-center text-[12px] text-[#555]">No events recorded in this range.</div>;
   }
+
   const days = series[0].points.length;
   const maxV = Math.max(1, ...series.flatMap(s => s.points.map(p => p.value)));
   const xStep = (W - 2 * P) / Math.max(1, days - 1);
 
+  const xFor = (i: number) => P + i * xStep;
+  const yFor = (v: number) => H - P - (v / maxV) * (H - 2 * P);
+
   function pathFor(points: DailyPoint[]) {
-    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${P + i * xStep} ${H - P - (p.value / maxV) * (H - 2 * P)}`).join(" ");
+    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${xFor(i)} ${yFor(p.value)}`).join(" ");
   }
 
-  // Gridlines: 4 horizontal bands.
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ t, v: Math.round(maxV * t), y: H - P - t * (H - 2 * P) }));
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const relX = e.clientX - rect.left;
+    const svgX = (relX / rect.width) * W;
+    const idx = Math.max(0, Math.min(days - 1, Math.round((svgX - P) / xStep)));
+    setHoverIdx(idx);
+    setTooltipLeft(relX);
+    setFlipTooltip(relX > rect.width * 0.55);
+  }
 
-  // Show first, middle, and last x labels.
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => ({ v: Math.round(maxV * t), y: yFor(maxV * t) }));
   const xLabels = [0, Math.floor(days / 2), days - 1].map(i => ({
-    i, label: series[0].points[i]?.date?.slice(5) ?? "", x: P + i * xStep,
+    label: series[0].points[i]?.date?.slice(5) ?? "", x: xFor(i),
   }));
 
+  const hoverDate = hoverIdx !== null ? series[0].points[hoverIdx]?.date : null;
+  const hoverValues = hoverIdx !== null
+    ? series.map(s => ({ title: s.title, color: s.color, value: s.points[hoverIdx]?.value ?? 0 }))
+    : [];
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[240px]" preserveAspectRatio="none">
-      {yTicks.map(({ y, v }, i) => (
-        <g key={i}>
-          <line x1={P} x2={W - P} y1={y} y2={y} stroke="#1a1a1a" strokeWidth="1" />
-          <text x={4} y={y + 4} fontSize="10" fill="#444">{v}{unit}</text>
-        </g>
-      ))}
-      {xLabels.map((l, i) => (
-        <text key={i} x={l.x} y={H - 6} fontSize="10" fill="#444" textAnchor="middle">{l.label}</text>
-      ))}
-      {series.map(s => (
-        <path key={s.articleId} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth="2"
-          vectorEffect="non-scaling-stroke" />
-      ))}
-    </svg>
+    <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-[240px]"
+        preserveAspectRatio="none" onMouseMove={handleMouseMove}>
+        {yTicks.map(({ y, v }, i) => (
+          <g key={i}>
+            <line x1={P} x2={W - P} y1={y} y2={y} stroke="#1a1a1a" strokeWidth="1" />
+            <text x={4} y={y + 4} fontSize="10" fill="#444">{v}{unit}</text>
+          </g>
+        ))}
+        {xLabels.map((l, i) => (
+          <text key={i} x={l.x} y={H - 6} fontSize="10" fill="#444" textAnchor="middle">{l.label}</text>
+        ))}
+        {series.map(s => (
+          <path key={s.articleId} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth="2"
+            vectorEffect="non-scaling-stroke" />
+        ))}
+        {/* Crosshair + dots — rendered in SVG so they follow the data lines exactly */}
+        {hoverIdx !== null && (() => {
+          const cx = xFor(hoverIdx);
+          return (
+            <g pointerEvents="none">
+              <line x1={cx} x2={cx} y1={P} y2={H - P} stroke="#555" strokeWidth="1"
+                strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+              {series.map(s => (
+                <circle key={s.articleId} cx={cx} cy={yFor(s.points[hoverIdx]?.value ?? 0)}
+                  r="4" fill={s.color} stroke="#0a0a0a" strokeWidth="1.5"
+                  vectorEffect="non-scaling-stroke" />
+              ))}
+            </g>
+          );
+        })()}
+      </svg>
+
+      {/* HTML tooltip — avoids SVG text distortion from preserveAspectRatio="none" */}
+      {hoverIdx !== null && hoverDate && (
+        <div
+          className="absolute top-2 pointer-events-none z-10 bg-[#111] border border-[#2a2a2a] rounded-lg px-3 py-2 shadow-xl min-w-[150px]"
+          style={flipTooltip
+            ? { right: `calc(100% - ${tooltipLeft}px + 10px)` }
+            : { left: tooltipLeft + 10 }}
+        >
+          <div className="text-[10px] text-[#666] font-mono mb-1.5">{hoverDate}</div>
+          {hoverValues.map((hv, i) => (
+            <div key={i} className="flex items-center gap-2 py-0.5">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hv.color }} />
+              <span className="text-[12px] font-bold text-white tabular-nums">
+                {hv.value.toLocaleString()}{unit}
+              </span>
+              {series.length > 1 && (
+                <span className="text-[10px] text-[#555] truncate max-w-[120px]">{hv.title}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
