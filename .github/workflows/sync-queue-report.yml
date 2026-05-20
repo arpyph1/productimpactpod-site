@@ -1,0 +1,110 @@
+name: Sync queue — weekly report
+
+# Every Monday at 09:00 UTC, creates a GitHub issue listing all merged PRs
+# that are still in the sync queue (labelled sync-pending). The admin reviews
+# the issue, decides which items to port to disrupting-health, then hands the
+# list to a Claude session to execute the sync.
+#
+# After a sync run, remove the sync-pending label from the PRs that were ported.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # Monday 09:00 UTC
+  workflow_dispatch:        # allow manual trigger from Actions tab
+
+jobs:
+  report:
+    name: Generate weekly sync report
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+
+    steps:
+      - name: Build and post report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Fetch all merged PRs with sync-pending label
+          ITEMS=$(gh pr list \
+            --repo "$REPO" \
+            --state merged \
+            --label "sync-pending" \
+            --limit 100 \
+            --json number,title,mergedAt,files \
+            --jq '.[] | {number, title, mergedAt, fileCount: (.files | length)}' \
+          )
+
+          COUNT=$(echo "$ITEMS" | grep -c '"number"' || true)
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No pending items — skipping report issue"
+            exit 0
+          fi
+
+          # Build checklist rows
+          CHECKLIST=""
+          while IFS= read -r row; do
+            NUM=$(echo "$row" | grep -o '"number":[0-9]*' | grep -o '[0-9]*')
+            TITLE=$(echo "$row" | grep -o '"title":"[^"]*"' | sed 's/"title":"//;s/"//')
+            MERGED=$(echo "$row" | grep -o '"mergedAt":"[^"]*"' | sed 's/"mergedAt":"//;s/T.*//' | sed 's/"//')
+            FILES=$(echo "$row" | grep -o '"fileCount":[0-9]*' | grep -o '[0-9]*')
+            CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (${MERGED}, ${FILES} files)\n"
+          done <<< "$(gh pr list \
+            --repo "$REPO" \
+            --state merged \
+            --label "sync-pending" \
+            --limit 100 \
+            --json number,title,mergedAt,files \
+            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
+
+          # Rebuild checklist cleanly from pipe-delimited output
+          CHECKLIST=""
+          while IFS='|' read -r NUM TITLE MERGED FILES; do
+            CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (\`${MERGED}\`, ${FILES} files)\n"
+          done <<< "$(gh pr list \
+            --repo "$REPO" \
+            --state merged \
+            --label "sync-pending" \
+            --limit 100 \
+            --json number,title,mergedAt,files \
+            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
+
+          WEEK=$(date -u +"%Y-%m-%d")
+
+          BODY="## Sync queue — week of ${WEEK}
+
+${COUNT} merged PR(s) are pending review for porting to **disrupting-health**.
+
+Tick the items you want to include, then start a Claude session with:
+
+> "Port the ticked PRs from this issue to disrupting-health, open a single PR for review, skip anything that touches brand strings or config defaults."
+
+After the sync is complete, remove the \`sync-pending\` label from the ported PRs.
+
+---
+
+### Pending PRs
+
+$(printf '%b' "$CHECKLIST")
+
+---
+
+### Decision guide
+
+| Include | Skip |
+|---|---|
+| Bug fixes, performance, DB query improvements | Brand copy, colors, social links |
+| New admin screens or features | Site-specific config defaults |
+| Security / allowlist changes | Migrations with seed data tied to PIP content |
+| Supabase schema additions (no seed rows) | Anything in \`src/lib/config.ts\` fallbacks |
+"
+
+          gh issue create \
+            --repo "$REPO" \
+            --title "Sync queue review — ${WEEK}" \
+            --body "$BODY" \
+            --label "sync-pending"
+
+          echo "✓ Weekly report issue created for ${COUNT} pending PR(s)"
