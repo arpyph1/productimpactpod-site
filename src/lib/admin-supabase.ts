@@ -15,10 +15,9 @@ export function getAdminClient(): SupabaseClient {
 // ─── Admin verification cache ─────────────────────────────────────────────────
 // Caches positive admin checks in localStorage so page refreshes don't require
 // a DB round-trip. Only positive results are cached — a false could be a
-// timeout, so we never cache "denied." TTL matches the Supabase access-token
-// lifetime (1 h) minus a small buffer.
+// timeout, so we never cache "denied." 23-hour TTL means one DB check per day.
 
-const CACHE_TTL_MS = 55 * 60 * 1000; // 55 minutes
+const CACHE_TTL_MS = 23 * 60 * 60 * 1000; // 23 hours
 
 function cacheKey(email: string) {
   return `pi_admin_ok:${email.toLowerCase()}`;
