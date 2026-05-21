@@ -223,31 +223,41 @@ export default function AdminApp() {
     }
 
     const loadingTimeout = setTimeout(() => setLoading(false), 12000);
+    // When INITIAL_SESSION fires with null (JWT expired but refresh token
+    // still valid), Supabase fires TOKEN_REFRESHED a few hundred ms later.
+    // Hold the loading spinner briefly so the refresh can arrive before we
+    // drop to the login screen.
+    let gracePeriod: ReturnType<typeof setTimeout> | null = null;
 
-    // onAuthStateChange is the single source of truth for session state.
-    // INITIAL_SESSION fires exactly once on page load with the persisted
-    // session (or null), replacing the old getSession() call which could
-    // return a network error and silently leave the user on the login screen.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       setSession(sess);
 
       if (event === "SIGNED_OUT") {
         admit(false);
+        if (gracePeriod) { clearTimeout(gracePeriod); gracePeriod = null; }
         clearTimeout(loadingTimeout);
         setLoading(false);
         return;
       }
 
       if (event === "INITIAL_SESSION") {
-        if (sess && !adminAllowedRef.current) {
+        if (sess) {
           const allowed = await isAllowedAdmin(sess.user.email);
           admit(allowed);
           if (!allowed) {
             setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
           }
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+        } else {
+          // No session yet — JWT may be expired but refresh token still valid.
+          // Wait 1.5 s for TOKEN_REFRESHED before showing the login screen.
+          gracePeriod = setTimeout(() => {
+            gracePeriod = null;
+            clearTimeout(loadingTimeout);
+            setLoading(false);
+          }, 1500);
         }
-        clearTimeout(loadingTimeout);
-        setLoading(false);
         return;
       }
 
@@ -256,18 +266,25 @@ export default function AdminApp() {
       // a timeout false-negative that boots the user mid-session.
       if (adminAllowedRef.current) return;
 
-      if (event === "SIGNED_IN" && sess) {
+      // SIGNED_IN: fresh OAuth login.
+      // TOKEN_REFRESHED: JWT expired between loads but refresh token was valid;
+      //   Supabase silently renewed it — restore the admin session.
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && sess) {
+        if (gracePeriod) { clearTimeout(gracePeriod); gracePeriod = null; }
         const allowed = await isAllowedAdmin(sess.user.email);
         admit(allowed);
         if (!allowed) {
           setError(`Access denied for ${sess.user.email}. Contact an admin to get access.`);
-          supabase.auth.signOut();
+          if (event === "SIGNED_IN") supabase.auth.signOut();
         }
+        clearTimeout(loadingTimeout);
+        setLoading(false);
       }
     });
 
     return () => {
       clearTimeout(loadingTimeout);
+      if (gracePeriod) clearTimeout(gracePeriod);
       subscription.unsubscribe();
     };
   }, []);
