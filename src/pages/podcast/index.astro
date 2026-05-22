@@ -2,10 +2,10 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
 import Footer from "@components/Footer.astro";
-import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
+import { fetchPodcastFeed, fetchSubstackEditions } from "@lib/rss";
 import { getSiteSetting } from "@lib/supabase";
 
-const rssEpisodes = await fetchPodcastEpisodes(50);
+const { episodes: rssEpisodes, totalCount: episodeTotalCount } = await fetchPodcastFeed(10);
 const substackEditions = await fetchSubstackEditions(8);
 const siteUrl = "https://productimpactpod.com";
 
@@ -148,7 +148,7 @@ const jsonLd = [
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-baseline justify-between mb-8">
           <h2 class="text-[20px] md:text-[26px] font-extrabold uppercase tracking-tight text-white">Product Impact Podcast Episodes</h2>
-          <span class="text-[12px] text-[#ff6b4a] font-semibold">{rssEpisodes.length} Live RSS</span>
+          <a href="/episodes/" class="text-[12px] text-[#ff6b4a] font-semibold hover:underline underline-offset-2">{episodeTotalCount} episodes</a>
         </div>
 
         <div class="grid grid-cols-3 md:grid-cols-5 gap-2.5" id="podcast-episode-grid">
@@ -156,10 +156,10 @@ const jsonLd = [
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
-              <a href={ep.link || "#"} target="_blank" rel="noopener" class={`group block ${i >= 10 ? 'hidden' : ''}`} data-ep-card>
+              <a href={ep.link || "#"} target="_blank" rel="noopener" class="group block" data-ep-card>
                 <div class="relative aspect-square rounded-lg overflow-hidden mb-1 border border-[#1c1c1c]">
                   {ep.imageUrl ? (
-                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 10 ? "eager" : "lazy"} />
+                    <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading={i < 6 ? "eager" : "lazy"} />
                   ) : (
                     <div class="w-full h-full bg-[#111] flex items-center justify-center"><span class="text-[22px]">🎙</span></div>
                   )}
@@ -177,7 +177,7 @@ const jsonLd = [
           })}
         </div>
 
-        {rssEpisodes.length > 10 && (
+        {episodeTotalCount > 10 && (
           <div class="text-center mt-8">
             <a href="/episodes/" class="inline-block text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2 transition-colors">
               ↓ Load more episodes
