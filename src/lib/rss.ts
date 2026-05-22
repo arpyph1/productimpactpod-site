@@ -15,6 +15,12 @@ export async function fetchPodcastEpisodes(count = 12): Promise<PodcastEpisode[]
   return result.episodes;
 }
 
+// Returns episodes for display plus the true total item count from the feed.
+export async function fetchPodcastFeed(count = 12): Promise<{ episodes: PodcastEpisode[]; totalCount: number }> {
+  const result = await getPodcastEpisodes(PODCAST_FEED_URL, count);
+  return { episodes: result.episodes, totalCount: result.totalCount };
+}
+
 export async function fetchSubstackEditions(count = 3): Promise<SubstackPost[]> {
   return getSubstackPosts(SUBSTACK_URL, count);
 }
