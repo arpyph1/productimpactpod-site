@@ -179,9 +179,9 @@ const jsonLd = [
 
         {rssEpisodes.length > 10 && (
           <div class="text-center mt-8">
-            <button id="podcast-load-more" class="text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2 transition-colors">
+            <a href="/episodes/" class="inline-block text-[13px] text-[#888] hover:text-white font-medium border border-[#222] rounded-full px-6 py-2 transition-colors">
               ↓ Load more episodes
-            </button>
+            </a>
           </div>
         )}
       </div>
@@ -476,18 +476,6 @@ const jsonLd = [
       e.preventDefault();
       var val = email.value.trim();
       if (val) { window.open('https://productimpactpod.substack.com/subscribe?email=' + encodeURIComponent(val), '_blank'); email.value = ''; }
-    });
-  }
-
-  // Load more episodes — reveal 8 more each click
-  var loadBtn = document.getElementById('podcast-load-more');
-  var grid = document.getElementById('podcast-episode-grid');
-  if (loadBtn && grid) {
-    loadBtn.addEventListener('click', function() {
-      var hidden = grid.querySelectorAll('a.hidden');
-      var toShow = Math.min(10, hidden.length);
-      for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
-      if (grid.querySelectorAll('a.hidden').length === 0) { loadBtn.style.display = 'none'; }
     });
   }
 

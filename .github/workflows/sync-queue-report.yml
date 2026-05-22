@@ -26,85 +26,52 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # Fetch all merged PRs with sync-pending label
-          ITEMS=$(gh pr list \
+          # Fetch merged PRs with sync-pending label (pipe-delimited for easy parsing)
+          PR_LIST=$(gh pr list \
             --repo "$REPO" \
             --state merged \
             --label "sync-pending" \
             --limit 100 \
             --json number,title,mergedAt,files \
-            --jq '.[] | {number, title, mergedAt, fileCount: (.files | length)}' \
-          )
+            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')
 
-          COUNT=$(echo "$ITEMS" | grep -c '"number"' || true)
+          COUNT=$(echo "$PR_LIST" | grep -c '.' || true)
 
           if [ "$COUNT" -eq 0 ]; then
             echo "No pending items — skipping report issue"
             exit 0
           fi
 
-          # Build checklist rows
-          CHECKLIST=""
-          while IFS= read -r row; do
-            NUM=$(echo "$row" | grep -o '"number":[0-9]*' | grep -o '[0-9]*')
-            TITLE=$(echo "$row" | grep -o '"title":"[^"]*"' | sed 's/"title":"//;s/"//')
-            MERGED=$(echo "$row" | grep -o '"mergedAt":"[^"]*"' | sed 's/"mergedAt":"//;s/T.*//' | sed 's/"//')
-            FILES=$(echo "$row" | grep -o '"fileCount":[0-9]*' | grep -o '[0-9]*')
-            CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (${MERGED}, ${FILES} files)\n"
-          done <<< "$(gh pr list \
-            --repo "$REPO" \
-            --state merged \
-            --label "sync-pending" \
-            --limit 100 \
-            --json number,title,mergedAt,files \
-            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
-
-          # Rebuild checklist cleanly from pipe-delimited output
+          # Build checklist from pipe-delimited rows
           CHECKLIST=""
           while IFS='|' read -r NUM TITLE MERGED FILES; do
             CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (\`${MERGED}\`, ${FILES} files)\n"
-          done <<< "$(gh pr list \
-            --repo "$REPO" \
-            --state merged \
-            --label "sync-pending" \
-            --limit 100 \
-            --json number,title,mergedAt,files \
-            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
+          done <<< "$PR_LIST"
 
           WEEK=$(date -u +"%Y-%m-%d")
 
-          BODY="## Sync queue — week of ${WEEK}
-
-${COUNT} merged PR(s) are pending review for porting to **disrupting-health**.
-
-Tick the items you want to include, then start a Claude session with:
-
-> "Port the ticked PRs from this issue to disrupting-health, open a single PR for review, skip anything that touches brand strings or config defaults."
-
-After the sync is complete, remove the \`sync-pending\` label from the ported PRs.
-
----
-
-### Pending PRs
-
-$(printf '%b' "$CHECKLIST")
-
----
-
-### Decision guide
-
-| Include | Skip |
-|---|---|
-| Bug fixes, performance, DB query improvements | Brand copy, colors, social links |
-| New admin screens or features | Site-specific config defaults |
-| Security / allowlist changes | Migrations with seed data tied to PIP content |
-| Supabase schema additions (no seed rows) | Anything in \`src/lib/config.ts\` fallbacks |
-"
+          # Write body to a temp file — avoids multiline bash strings crossing
+          # YAML indentation boundaries, which breaks the workflow parser.
+          {
+            printf '## Sync queue — week of %s\n\n' "${WEEK}"
+            printf '%s merged PR(s) are pending review for porting to **disrupting-health**.\n\n' "${COUNT}"
+            printf 'Tick the items you want to include, then start a Claude session with:\n\n'
+            printf '> "Port the ticked PRs from this issue to disrupting-health, open a single PR for review, skip anything that touches brand strings or config defaults."\n\n'
+            printf 'After the sync is complete, remove the `sync-pending` label from the ported PRs.\n\n'
+            printf '---\n\n### Pending PRs\n\n'
+            printf '%b' "${CHECKLIST}"
+            printf '\n---\n\n### Decision guide\n\n'
+            printf '| Include | Skip |\n|---|---|\n'
+            printf '| Bug fixes, performance, DB query improvements | Brand copy, colors, social links |\n'
+            printf '| New admin screens or features | Site-specific config defaults |\n'
+            printf '| Security / allowlist changes | Migrations with seed data tied to PIP content |\n'
+            printf '| Supabase schema additions (no seed rows) | Anything in `src/lib/config.ts` fallbacks |\n'
+          } > /tmp/sync_report.md
 
           gh issue create \
             --repo "$REPO" \
             --title "Sync queue review — ${WEEK}" \
-            --body "$BODY" \
+            --body-file /tmp/sync_report.md \
             --label "sync-pending"
 
           echo "✓ Weekly report issue created for ${COUNT} pending PR(s)"
