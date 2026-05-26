@@ -16,13 +16,8 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-// Display ad for sidebar — pick a random active ad from CMS, fall back to ph1.ca house ad.
-const displayAdsRaw = await getSiteSetting("display_ads");
-const activeDisplayAds: Array<{ id: string; name: string; image_url: string; link_url: string; media_type?: string }> =
-  (displayAdsRaw?.ads ?? []).filter((a: any) => a.active !== false && a.image_url);
-const sidebarAd = activeDisplayAds.length > 0
-  ? activeDisplayAds[Math.floor(Math.random() * activeDisplayAds.length)]
-  : null;
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL ?? "";
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 const hp = (await getSiteSetting("homepage")) ?? {};
 const sections = hp.sections ?? [];
@@ -33,6 +28,8 @@ const sectionEnabled = (id: string, fallbackKey?: string) => {
   if (fallbackKey) return hp[fallbackKey] !== false;
   return true;
 };
+
+const identityTagline = hp.identity_tagline ?? "Independent analysis and strategy for product builders navigating the AI era.";
 
 // Fetch article_engagement if any section uses an engagement sort mode.
 const ENGAGEMENT_THEMES = new Set(["__most-viewed__", "__most-liked__", "__most-shared__"]);
@@ -130,7 +127,7 @@ const jsonLd = {
   <div class="border-b border-[#161616] bg-[#080808]">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-2.5 flex items-center justify-between gap-4">
       <p class="text-[13px] text-[#666] leading-snug">
-        Independent analysis and strategy for product builders navigating the AI era.
+        {identityTagline}
       </p>
       <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener"
         class="hidden sm:inline-flex items-center gap-1 text-[12px] font-semibold text-[#ff6b4a] hover:text-[#ff8566] transition-colors shrink-0">
@@ -262,42 +259,26 @@ const jsonLd = {
             </div>
           </div>
 
-          {/* Right: display ad (CMS) or ph1.ca house ad fallback. top-[96px] clears scrolled nav. */}
+          {/* Right: ad slot. Client-side script replaces with CMS ad when one is active.
+              Falls back to ph1.ca house ad. top-[96px] clears scrolled nav. */}
           <div class="hidden lg:block">
             <div class="sticky top-[96px]">
-              {sidebarAd ? (
-                <a href={sidebarAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
-                  class="group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block">Advertisement</span>
-                  {sidebarAd.media_type === "video" ? (
-                    <video
-                      src={sidebarAd.image_url}
-                      autoplay muted loop playsinline
-                      class="w-full h-auto mt-3"
-                    />
-                  ) : (
-                    <img src={sidebarAd.image_url} alt={sidebarAd.name}
-                      class="w-full h-auto mt-3" loading="lazy" />
-                  )}
-                </a>
-              ) : (
-                <a href="https://ph1.ca" target="_blank" rel="noopener" id="home-ad-slot"
-                  class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">Presented by</span>
-                  <img src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
-                    alt="PH1" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
-                  <p class="text-[15px] font-bold text-white leading-snug mb-3">
-                    PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.
-                  </p>
-                  <p class="text-[12px] text-[#666] leading-relaxed mb-6">
-                    Ship products proven to deliver impact in the AI era.
-                  </p>
-                  <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
-                    Learn more
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </span>
-                </a>
-              )}
+              <a href="https://ph1.ca" target="_blank" rel="noopener" id="home-ad-slot"
+                class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">Presented by</span>
+                <img src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
+                  alt="PH1" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                <p class="text-[15px] font-bold text-white leading-snug mb-3">
+                  PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.
+                </p>
+                <p class="text-[12px] text-[#666] leading-relaxed mb-6">
+                  Ship products proven to deliver impact in the AI era.
+                </p>
+                <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
+                  Learn more
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
+              </a>
             </div>
           </div>
         </div>
@@ -1002,3 +983,31 @@ const jsonLd = {
     font-weight: 600;
   }
 </style>
+
+{/* Client-side ad slot — fetches active display ad from Supabase at runtime so
+    changes in admin go live immediately without a site rebuild. */}
+<script define:vars={{ supabaseUrl, supabaseKey }}>
+  fetch(supabaseUrl + '/rest/v1/site_settings?key=eq.display_ads&select=value', {
+    headers: { 'apikey': supabaseKey, 'Authorization': 'Bearer ' + supabaseKey },
+  })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      var ads = (data && data[0] && data[0].value && data[0].value.ads) ? data[0].value.ads : [];
+      var active = ads.filter(function(a) { return a.active !== false && a.image_url; });
+      if (!active.length) return;
+      var ad = active[Math.floor(Math.random() * active.length)];
+      var slot = document.getElementById('home-ad-slot');
+      if (!slot) return;
+      var isVideo = ad.media_type === 'video';
+      var media = isVideo
+        ? '<video src="' + ad.image_url + '" autoplay muted loop playsinline class="w-full h-auto mt-3"></video>'
+        : '<img src="' + ad.image_url + '" alt="' + (ad.name || '') + '" class="w-full h-auto mt-3" loading="lazy" />';
+      slot.outerHTML =
+        '<a href="' + ad.link_url + '" target="_blank" rel="noopener" id="home-ad-slot"' +
+        ' class="block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors">' +
+        '<span class="text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block">Advertisement</span>' +
+        media +
+        '</a>';
+    })
+    .catch(function() { /* silently keep fallback */ });
+</script>

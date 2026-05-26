@@ -327,6 +327,12 @@ export default function HomepageScreen({ supabase }: Props) {
         <p className="text-[12px] text-[#555] mb-4">Edit section headings and copy.</p>
         <div className="space-y-4">
           <div>
+            <label className="block text-[12px] font-medium text-[#888] mb-1.5">Identity Tagline <span className="text-[#555] font-normal">(shown in the strip below the nav)</span></label>
+            <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+              defaultValue={hp.identity_tagline ?? "Independent analysis and strategy for product builders navigating the AI era."}
+              onBlur={(e) => save({ ...hp, identity_tagline: e.target.value })} />
+          </div>
+          <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Podcast Section Tagline</label>
             <input type="text" className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
               defaultValue={hp.podcast_tagline ?? "Prove impact. Improve impact. Scale impact."}
