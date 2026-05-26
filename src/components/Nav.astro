@@ -76,6 +76,18 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
                   </a>
                 ))}
               </div>
+              <div class="border-t border-[#222] mt-4 pt-3 flex items-center justify-between">
+                <span class="text-[11px] font-semibold text-[#555] uppercase tracking-wider">Browse by entity</span>
+                <div class="flex gap-0.5">
+                  {[
+                    { label: "People",        href: "/people/" },
+                    { label: "Organizations", href: "/organizations/" },
+                    { label: "Products",      href: "/products/" },
+                  ].map((e) => (
+                    <a href={e.href} class="px-3 py-1.5 rounded-lg text-[13px] text-[#666] hover:text-white hover:bg-white/[0.06] transition-colors">{e.label}</a>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}

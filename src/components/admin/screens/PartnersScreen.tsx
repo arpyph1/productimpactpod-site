@@ -10,7 +10,7 @@ interface Sponsor {
   display_order: number | null; themes: string[] | null; created_at: string;
 }
 
-interface DisplayAd { id: string; name: string; image_url: string; link_url: string; active: boolean }
+interface DisplayAd { id: string; name: string; image_url: string; link_url: string; active: boolean; media_type?: "image" | "video" }
 
 interface AdBullet { label: string; url: string; }
 interface ArticleAd {
@@ -173,7 +173,8 @@ export default function PartnersScreen({ supabase }: Props) {
     const { error } = await supabase.storage.from("resources").upload(path, file, { contentType: file.type });
     if (error) { setMsg(`Upload error: ${error.message}`); setUploading(false); return; }
     const { data } = supabase.storage.from("resources").getPublicUrl(path);
-    const newAd: DisplayAd = { id: crypto.randomUUID(), name: adName || file.name, image_url: data.publicUrl, link_url: adLink || "#", active: true };
+    const media_type: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
+    const newAd: DisplayAd = { id: crypto.randomUUID(), name: adName || file.name, image_url: data.publicUrl, link_url: adLink || "#", active: true, media_type };
     saveAds([...ads, newAd]);
     setAdName(""); setAdLink("");
     setUploading(false);
@@ -299,7 +300,11 @@ export default function PartnersScreen({ supabase }: Props) {
             {ads.map((ad, i) => (
               <div key={ad.id} className="flex items-center gap-4 p-3 rounded-lg bg-[#111] border border-[#1a1a1a]">
                 <div className="w-24 h-16 rounded bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden flex-shrink-0">
-                  <img src={ad.image_url} alt="" className="w-full h-full object-contain" />
+                  {ad.media_type === "video" ? (
+                    <video src={ad.image_url} muted playsInline className="w-full h-full object-contain" />
+                  ) : (
+                    <img src={ad.image_url} alt="" className="w-full h-full object-contain" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium text-[#ccc]">{ad.name}</div>
@@ -324,12 +329,12 @@ export default function PartnersScreen({ supabase }: Props) {
             <input type="text" placeholder="Click-through URL" className="px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white placeholder:text-[#555] focus:outline-none"
               value={adLink} onChange={(e) => setAdLink(e.target.value)} />
           </div>
-          <input ref={adRef} type="file" accept="image/*" className="hidden"
+          <input ref={adRef} type="file" accept="image/*,video/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAd(f); }} />
           <button onClick={() => adRef.current?.click()} disabled={uploading}
             className="px-4 py-2.5 bg-[#1a1a1a] border border-[#222] rounded-lg text-[13px] text-[#ccc] hover:text-white disabled:opacity-50 flex items-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            {uploading ? "Uploading..." : "Upload Ad Image"}
+            {uploading ? "Uploading..." : "Upload Ad (image or video)"}
           </button>
         </div>
       </section>

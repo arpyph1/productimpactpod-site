@@ -16,6 +16,14 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
+// Display ad for sidebar — pick a random active ad from CMS, fall back to ph1.ca house ad.
+const displayAdsRaw = await getSiteSetting("display_ads");
+const activeDisplayAds: Array<{ id: string; name: string; image_url: string; link_url: string; media_type?: string }> =
+  (displayAdsRaw?.ads ?? []).filter((a: any) => a.active !== false && a.image_url);
+const sidebarAd = activeDisplayAds.length > 0
+  ? activeDisplayAds[Math.floor(Math.random() * activeDisplayAds.length)]
+  : null;
+
 const hp = (await getSiteSetting("homepage")) ?? {};
 const sections = hp.sections ?? [];
 const findSection = (id: string) => sections.find((s: any) => s.id === id);
@@ -253,31 +261,67 @@ const jsonLd = {
             </div>
           </div>
 
-          {/* Right: house ad — ph1.ca. top-[96px] clears the scrolled nav. */}
+          {/* Right: display ad (CMS) or ph1.ca house ad fallback. top-[96px] clears scrolled nav. */}
           <div class="hidden lg:block">
             <div class="sticky top-[96px]">
-              <a href="https://ph1.ca" target="_blank" rel="noopener" id="home-ad-slot"
-                class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">Presented by</span>
-                <img src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
-                  alt="PH1" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
-                <p class="text-[15px] font-bold text-white leading-snug mb-3">
-                  PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.
-                </p>
-                <p class="text-[12px] text-[#666] leading-relaxed mb-6">
-                  Ship products proven to deliver impact in the AI era.
-                </p>
-                <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
-                  Learn more
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </span>
-              </a>
+              {sidebarAd ? (
+                <a href={sidebarAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
+                  class="group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block">Advertisement</span>
+                  {sidebarAd.media_type === "video" ? (
+                    <video
+                      src={sidebarAd.image_url}
+                      autoplay muted loop playsinline
+                      class="w-full h-auto mt-3"
+                    />
+                  ) : (
+                    <img src={sidebarAd.image_url} alt={sidebarAd.name}
+                      class="w-full h-auto mt-3" loading="lazy" />
+                  )}
+                </a>
+              ) : (
+                <a href="https://ph1.ca" target="_blank" rel="noopener" id="home-ad-slot"
+                  class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">Presented by</span>
+                  <img src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
+                    alt="PH1" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                  <p class="text-[15px] font-bold text-white leading-snug mb-3">
+                    PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.
+                  </p>
+                  <p class="text-[12px] text-[#666] leading-relaxed mb-6">
+                    Ship products proven to deliver impact in the AI era.
+                  </p>
+                  <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
+                    Learn more
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </span>
+                </a>
+              )}
             </div>
           </div>
         </div>
       </section>
     )}
 
+
+    {/* ── Inline subscribe intercept — compact, sits at peak reading intent ── */}
+    {sectionEnabled("newsletter", "show_newsletter") && (
+    <section class="border-t border-[#141414] bg-[#070707]">
+      <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-5">
+        <form id="substack-form-inline" class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <p class="text-[14px] text-[#888] shrink-0">Get weekly AI strategy for product builders.</p>
+          <div class="flex items-stretch gap-0 w-full sm:max-w-sm">
+            <input type="email" id="substack-email-inline" placeholder="Your email" required
+              class="flex-1 min-w-0 px-4 py-2.5 bg-[#111] border border-[#222] border-r-0 rounded-l-lg text-[14px] text-white placeholder:text-[#555] focus:outline-none focus:border-[#ff6b4a] transition-colors" />
+            <button type="submit"
+              class="px-4 py-2.5 bg-[#ff6b4a] text-white text-[13px] font-bold rounded-r-lg hover:bg-[#ff8566] transition-colors shrink-0">
+              Subscribe
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+    )}
 
     {/* ══════════════════════════════════════════════════════════════
         PODCAST — last 3 episodes prominently
@@ -314,7 +358,18 @@ const jsonLd = {
             const epLabel = ep.episodeNumber ? `EP ${ep.episodeNumber}` : "";
             const date = ep.pubDate ? new Date(ep.pubDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
             return (
-              <a href={ep.link || "/podcast/"} target={ep.link ? "_blank" : undefined} rel="noopener" class="group block rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c]">
+              <button
+                type="button"
+                class="ep-modal-trigger group block w-full text-left rounded-xl overflow-hidden border border-[#161616] hover:border-[#282828] transition-all bg-[#0c0c0c] cursor-pointer"
+                data-title={ep.title}
+                data-desc={ep.fullDescriptionHtml || ep.description}
+                data-audio={ep.audioUrl}
+                data-image={ep.imageUrl}
+                data-date={date}
+                data-ep={epLabel}
+                data-link={ep.link}
+                data-duration={ep.duration}
+              >
                 <div class="relative aspect-square overflow-hidden">
                   {ep.imageUrl ? (
                     <img src={ep.imageUrl} alt={ep.title} class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
@@ -332,7 +387,7 @@ const jsonLd = {
                   <h3 class="text-[12px] font-semibold text-[#ccc] group-hover:text-white leading-snug line-clamp-2 mb-1 transition-colors">{ep.title}</h3>
                   <div class="text-[10px] text-[#555]">{date}</div>
                 </div>
-              </a>
+              </button>
             );
           })}
         </div>
@@ -704,6 +759,35 @@ const jsonLd = {
           submitBtn.textContent = 'Subscribe';
           submitBtn.disabled = false;
         });
+    });
+  }
+
+  // Inline subscribe form (compact intercept after Latest section).
+  var inlineForm = document.getElementById('substack-form-inline');
+  var inlineEmail = document.getElementById('substack-email-inline');
+  if (inlineForm && inlineEmail) {
+    inlineForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = inlineEmail.value.trim();
+      if (!email) return;
+      var btn = inlineForm.querySelector('button[type="submit"]');
+      btn.textContent = 'Subscribing…';
+      btn.disabled = true;
+      fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            inlineForm.innerHTML = '<p class="text-[14px] font-semibold text-[#4ade80]">You\'re in! Check your inbox to confirm.</p>';
+          } else {
+            btn.textContent = 'Subscribe';
+            btn.disabled = false;
+          }
+        })
+        .catch(function() { btn.textContent = 'Subscribe'; btn.disabled = false; });
     });
   }
 
