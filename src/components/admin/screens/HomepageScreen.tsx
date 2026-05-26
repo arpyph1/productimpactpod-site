@@ -43,6 +43,7 @@ const FORMATS = [
   { slug: "news-brief", label: "News Brief" },
   { slug: "product-review", label: "Product Review" },
   { slug: "research-brief", label: "Research Brief" },
+  { slug: "playbook", label: "Playbook" },
 ];
 
 const DEFAULT_SECTIONS: SectionConfig[] = [
@@ -52,6 +53,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
   { id: "carousel2", label: "Carousel 2", enabled: true, type: "carousel", theme: "", format: "" },
   { id: "vertical2", label: "Vertical List 2", enabled: true, type: "vertical-list", theme: "", format: "" },
   { id: "featured", label: "Featured Reading", enabled: true, type: "carousel", theme: "", format: "" },
+  { id: "evergreen", label: "Evergreen / Featured", enabled: true, type: "special", theme: "", format: "" },
   { id: "resources", label: "AI Strategy Resources", enabled: true, type: "special", theme: "", format: "" },
   { id: "newsletter", label: "Newsletter / Substack", enabled: true, type: "special", theme: "", format: "" },
   { id: "partners", label: "Partners", enabled: true, type: "special", theme: "", format: "" },
@@ -63,6 +65,7 @@ export default function HomepageScreen({ supabase }: Props) {
   const [msg, setMsg] = useState("");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -77,6 +80,7 @@ export default function HomepageScreen({ supabase }: Props) {
       setRes.data.forEach((s: any) => { map[s.key] = s.value; });
       setHp(map.homepage ?? {});
     }
+    setLoaded(true);
   }
 
   async function save(newHp: Record<string, any>) {
@@ -91,7 +95,12 @@ export default function HomepageScreen({ supabase }: Props) {
     loadData();
   }
 
-  const sections: SectionConfig[] = hp.sections ?? DEFAULT_SECTIONS;
+  const sections: SectionConfig[] = (() => {
+    const saved: SectionConfig[] = hp.sections ?? DEFAULT_SECTIONS;
+    const savedIds = new Set(saved.map((s) => s.id));
+    const missing = DEFAULT_SECTIONS.filter((s) => !savedIds.has(s.id)).map((s) => ({ ...s, enabled: false }));
+    return [...saved, ...missing];
+  })();
 
   function updateSection(idx: number, patch: Partial<SectionConfig>) {
     const updated = sections.map((s, i) => i === idx ? { ...s, ...patch } : s);
@@ -192,7 +201,9 @@ export default function HomepageScreen({ supabase }: Props) {
         <h3 className="text-[16px] font-bold text-white mb-1">Homepage Sections</h3>
         <p className="text-[12px] text-[#555] mb-4">Drag to reorder. Configure label, theme, and format filters for each section.</p>
         <div className="space-y-2">
-          {sections.map((s, idx) => (
+          {!loaded ? (
+            <div className="text-[13px] text-[#555] py-4">Loading sections…</div>
+          ) : sections.map((s, idx) => (
             <div
               key={s.id}
               draggable
@@ -262,9 +273,10 @@ export default function HomepageScreen({ supabase }: Props) {
       </section>
 
       {/* Evergreen / Featured Reading Carousel */}
+
       <section>
-        <h3 className="text-[16px] font-bold text-white mb-1">Evergreen Carousel (Featured Reading)</h3>
-        <p className="text-[12px] text-[#555] mb-4">Select articles to display in the "Featured Reading" carousel. Edit the section title below.</p>
+        <h3 className="text-[16px] font-bold text-white mb-1">Evergreen / Featured Carousel</h3>
+        <p className="text-[12px] text-[#555] mb-4">Manually pick articles for the "Evergreen / Featured" section. Toggle it on/off and reorder it in the Homepage Sections list above.</p>
 
         <div className="mb-4">
           <label className="block text-[12px] font-medium text-[#888] mb-1.5">Section Title</label>

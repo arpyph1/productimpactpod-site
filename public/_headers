@@ -6,6 +6,23 @@
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://cloudflareinsights.com; frame-src 'self' https://www.youtube.com https://open.spotify.com; media-src 'self' https:; object-src 'none'; base-uri 'self'
 
+# ── Agent / AI discovery ──────────────────────────────────────────────────
+
+/.well-known/api-catalog
+  Content-Type: application/linkset+json
+  Cache-Control: public, max-age=3600
+  Access-Control-Allow-Origin: *
+
+/.well-known/agent-skills/index.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+  Access-Control-Allow-Origin: *
+
+/.well-known/mcp/server-card.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+  Access-Control-Allow-Origin: *
+
 /hero-images/*
   Cache-Control: public, max-age=31536000, immutable
 

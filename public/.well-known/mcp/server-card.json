@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1",
+  "serverInfo": {
+    "name": "Product Impact",
+    "version": "1.0.0",
+    "description": "AI product news, analysis, case studies, and podcast from Product Impact — covering the products transforming how we work."
+  },
+  "transport": null,
+  "capabilities": {
+    "tools": false,
+    "resources": true,
+    "prompts": false
+  },
+  "resources": [
+    {
+      "uri": "https://productimpactpod.com/rss.xml",
+      "name": "Articles RSS",
+      "description": "Latest articles across all formats and themes",
+      "mimeType": "application/rss+xml"
+    },
+    {
+      "uri": "https://productimpactpod.com/news/rss.xml",
+      "name": "News RSS",
+      "description": "News and analysis articles",
+      "mimeType": "application/rss+xml"
+    },
+    {
+      "uri": "https://productimpactpod.com/podcast/rss.xml",
+      "name": "Podcast RSS",
+      "description": "Product Impact Podcast episodes",
+      "mimeType": "application/rss+xml"
+    },
+    {
+      "uri": "https://productimpactpod.com/sitemap.xml",
+      "name": "Sitemap",
+      "description": "Full site content index",
+      "mimeType": "application/xml"
+    },
+    {
+      "uri": "https://productimpactpod.com/llms.txt",
+      "name": "LLM context",
+      "description": "Site overview, taxonomy, and content surfaces for language models",
+      "mimeType": "text/plain"
+    }
+  ],
+  "contact": {
+    "editorial": "info@productimpactpod.com",
+    "partnerships": "partner@productimpactpod.com"
+  }
+}
