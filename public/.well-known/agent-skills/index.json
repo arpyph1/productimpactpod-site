@@ -1,0 +1,49 @@
+{
+  "$schema": "https://agentskills.io/schema/v0.2.0/index.json",
+  "name": "Product Impact",
+  "description": "Agent-accessible skills for the Product Impact AI product news and podcast site",
+  "skills": [
+    {
+      "name": "get-latest-articles",
+      "type": "feed",
+      "description": "Retrieve the latest articles across all topics as an RSS feed",
+      "url": "https://productimpactpod.com/rss.xml",
+      "sha256": ""
+    },
+    {
+      "name": "get-news-feed",
+      "type": "feed",
+      "description": "Retrieve the latest news and analysis articles",
+      "url": "https://productimpactpod.com/news/rss.xml",
+      "sha256": ""
+    },
+    {
+      "name": "get-podcast-feed",
+      "type": "feed",
+      "description": "Retrieve Product Impact Podcast episodes",
+      "url": "https://productimpactpod.com/podcast/rss.xml",
+      "sha256": ""
+    },
+    {
+      "name": "browse-content-index",
+      "type": "sitemap",
+      "description": "Full URL index of all site content for discovery",
+      "url": "https://productimpactpod.com/sitemap.xml",
+      "sha256": ""
+    },
+    {
+      "name": "get-llm-context",
+      "type": "context",
+      "description": "Site overview, taxonomy, themes, and content surfaces optimised for language models",
+      "url": "https://productimpactpod.com/llms.txt",
+      "sha256": ""
+    },
+    {
+      "name": "discover-api",
+      "type": "api-catalog",
+      "description": "Machine-readable API catalog describing all content endpoints (RFC 9727)",
+      "url": "https://productimpactpod.com/.well-known/api-catalog",
+      "sha256": ""
+    }
+  ]
+}

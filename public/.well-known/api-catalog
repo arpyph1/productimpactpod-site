@@ -1,0 +1,32 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://productimpactpod.com/",
+      "service-doc": [
+        { "href": "https://productimpactpod.com/llms.txt", "type": "text/plain", "title": "LLM context" }
+      ],
+      "describedby": [
+        { "href": "https://productimpactpod.com/llms.txt", "type": "text/plain" }
+      ],
+      "alternate": [
+        { "href": "https://productimpactpod.com/rss.xml",          "type": "application/rss+xml", "title": "Product Impact" },
+        { "href": "https://productimpactpod.com/news/rss.xml",     "type": "application/rss+xml", "title": "News feed" },
+        { "href": "https://productimpactpod.com/podcast/rss.xml",  "type": "application/rss+xml", "title": "Podcast feed" },
+        { "href": "https://productimpactpod.com/sitemap.xml",      "type": "application/xml",     "title": "Sitemap" },
+        { "href": "https://productimpactpod.com/news-sitemap.xml", "type": "application/xml",     "title": "News sitemap" }
+      ]
+    },
+    {
+      "anchor": "https://productimpactpod.com/news/",
+      "alternate": [
+        { "href": "https://productimpactpod.com/news/rss.xml", "type": "application/rss+xml" }
+      ]
+    },
+    {
+      "anchor": "https://productimpactpod.com/podcast/",
+      "alternate": [
+        { "href": "https://productimpactpod.com/podcast/rss.xml", "type": "application/rss+xml" }
+      ]
+    }
+  ]
+}

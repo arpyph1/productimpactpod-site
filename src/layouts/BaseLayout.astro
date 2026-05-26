@@ -193,5 +193,51 @@ const accentHsl = cfg.accentHsl;
         } catch (e) {}
       })();
     </script>
+
+    <!-- WebMCP: expose site tools to AI agents in the browser (Chrome 137+) -->
+    <script is:inline>
+      (function () {
+        try {
+          if (!('modelContext' in navigator) ||
+              typeof navigator.modelContext.provideContext !== 'function') return;
+          navigator.modelContext.provideContext({
+            tools: [
+              {
+                name: 'get_latest_articles',
+                description: 'Get the latest articles from Product Impact as an RSS feed.',
+                inputSchema: { type: 'object', properties: {} },
+                execute: async function () {
+                  return fetch('/rss.xml').then(function (r) { return r.text(); });
+                },
+              },
+              {
+                name: 'get_podcast_episodes',
+                description: 'Get Product Impact Podcast episodes as an RSS feed.',
+                inputSchema: { type: 'object', properties: {} },
+                execute: async function () {
+                  return fetch('/podcast/rss.xml').then(function (r) { return r.text(); });
+                },
+              },
+              {
+                name: 'get_site_context',
+                description: 'Get a plain-text overview of Product Impact — topics, taxonomy, content surfaces, and feeds — optimised for language models.',
+                inputSchema: { type: 'object', properties: {} },
+                execute: async function () {
+                  return fetch('/llms.txt').then(function (r) { return r.text(); });
+                },
+              },
+              {
+                name: 'get_content_index',
+                description: 'Get the full sitemap of all published articles, episodes, and pages.',
+                inputSchema: { type: 'object', properties: {} },
+                execute: async function () {
+                  return fetch('/sitemap.xml').then(function (r) { return r.text(); });
+                },
+              },
+            ],
+          });
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>
