@@ -53,6 +53,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
   { id: "carousel2", label: "Carousel 2", enabled: true, type: "carousel", theme: "", format: "" },
   { id: "vertical2", label: "Vertical List 2", enabled: true, type: "vertical-list", theme: "", format: "" },
   { id: "featured", label: "Featured Reading", enabled: true, type: "carousel", theme: "", format: "" },
+  { id: "evergreen", label: "Evergreen / Featured", enabled: true, type: "special", theme: "", format: "" },
   { id: "resources", label: "AI Strategy Resources", enabled: true, type: "special", theme: "", format: "" },
   { id: "newsletter", label: "Newsletter / Substack", enabled: true, type: "special", theme: "", format: "" },
   { id: "partners", label: "Partners", enabled: true, type: "special", theme: "", format: "" },
@@ -274,8 +275,8 @@ export default function HomepageScreen({ supabase }: Props) {
       {/* Evergreen / Featured Reading Carousel */}
 
       <section>
-        <h3 className="text-[16px] font-bold text-white mb-1">Evergreen Carousel (Featured Reading)</h3>
-        <p className="text-[12px] text-[#555] mb-4">Select articles to display in the "Featured Reading" carousel. Edit the section title below.</p>
+        <h3 className="text-[16px] font-bold text-white mb-1">Evergreen / Featured Carousel</h3>
+        <p className="text-[12px] text-[#555] mb-4">Manually pick articles for the "Evergreen / Featured" section. Toggle it on/off and reorder it in the Homepage Sections list above.</p>
 
         <div className="mb-4">
           <label className="block text-[12px] font-medium text-[#888] mb-1.5">Section Title</label>
