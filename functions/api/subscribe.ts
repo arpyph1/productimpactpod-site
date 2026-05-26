@@ -1,4 +1,4 @@
-import type { EventContext } from "@cloudflare/workers-types";
+interface Ctx { request: Request }
 
 const SUBSTACK_URL = "https://productimpactpod.substack.com/api/v1/free";
 const ALLOWED_ORIGIN = "https://productimpactpod.com";
@@ -12,11 +12,11 @@ function corsHeaders(origin: string) {
   };
 }
 
-export async function onRequestOptions({ request }: EventContext<unknown, string, unknown>) {
+export async function onRequestOptions({ request }: Ctx) {
   return new Response(null, { status: 204, headers: corsHeaders(request.headers.get("origin") ?? "") });
 }
 
-export async function onRequestPost({ request }: EventContext<unknown, string, unknown>) {
+export async function onRequestPost({ request }: Ctx) {
   const origin = request.headers.get("origin") ?? "";
   const headers = { ...corsHeaders(origin), "Content-Type": "application/json" };
 
@@ -46,7 +46,6 @@ export async function onRequestPost({ request }: EventContext<unknown, string, u
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
     }
 
-    // Substack returns 200 even for existing subscribers, but handle other cases gracefully.
     const text = await res.text().catch(() => "");
     console.error("Substack error", res.status, text);
     return new Response(JSON.stringify({ error: "Subscription failed. Please try again." }), { status: 502, headers });
