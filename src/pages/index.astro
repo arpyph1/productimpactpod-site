@@ -55,7 +55,7 @@ function filterArticles(sectionId: string): typeof articles {
   }
   if (s.theme) filtered = filtered.filter((a: any) => a.themes?.includes(s.theme));
   if (s.format) filtered = filtered.filter((a: any) => a.format === s.format);
-  return filtered.length > 0 ? filtered : articles;
+  return filtered;
 }
 
 const leadStories = articles.filter((a) => a.is_lead_story);
@@ -362,17 +362,23 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         FEATURED / EVERGREEN ARTICLES — 4 cards (CMS-selected in future)
         ══════════════════════════════════════════════════════════════ */}
-    {sectionEnabled("featured", "show_featured") && articles.length > 2 && (
+    {(() => {
+      const evergreenSlugs: string[] = hp.evergreen_slugs ?? [];
+      const featuredArticles = evergreenSlugs.length > 0
+        ? articles.filter((a: any) => evergreenSlugs.includes(a.slug))
+        : articles.slice(0, 4);
+      const featuredLabel = findSection("featured")?.label ?? hp.evergreen_title ?? "Featured Reading";
+      return sectionEnabled("featured", "show_featured") && featuredArticles.length > 0 ? (
       <section class="py-10 border-t border-[#141414]">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-              Featured Reading <span class="text-[#ff6b4a]">&#8250;</span>
+              {featuredLabel} <span class="text-[#ff6b4a]">&#8250;</span>
             </h2>
             <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">All articles</a>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {articles.slice(0, 4).map((a) => {
+            {featuredArticles.map((a: any) => {
               const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
               const author = authorDisplayName(a.author_slugs?.[0] ?? "");
               return (
@@ -399,7 +405,8 @@ const jsonLd = {
           </div>
         </div>
       </section>
-    )}
+      ) : null;
+    })()}
 
 
     {/* ══════════════════════════════════════════════════════════════
