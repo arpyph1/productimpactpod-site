@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,23 +14,60 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+async function getStoredHookUrl(): Promise<string | null> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return null;
+
+  try {
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "deploy_hook")
+      .single();
+    const url = data?.value?.url;
+    return typeof url === "string" && url.length > 0 ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const cfApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
-  const cfAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
-  const cfProjectName = Deno.env.get("CLOUDFLARE_PROJECT_NAME") ?? "productimpactpod-site";
-
-  if (!cfApiToken) return jsonResponse({ error: "CLOUDFLARE_API_TOKEN not set in Supabase secrets" }, 500);
-  if (!cfAccountId) return jsonResponse({ error: "CLOUDFLARE_ACCOUNT_ID not set in Supabase secrets" }, 500);
-
-  const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}`;
-  const cfHeaders = { "Authorization": `Bearer ${cfApiToken}`, "Content-Type": "application/json" };
-
   try {
-    // Verify project exists
+    // Primary: use the deploy hook URL stored in site_settings
+    const storedHookUrl = await getStoredHookUrl();
+    if (storedHookUrl) {
+      const triggerRes = await fetch(storedHookUrl, { method: "POST" });
+      const triggerText = await triggerRes.text();
+      if (triggerRes.ok) {
+        return jsonResponse({ success: true, message: "Build triggered via stored hook" });
+      }
+      return jsonResponse({
+        error: `Deploy hook returned ${triggerRes.status}`,
+        response: triggerText.slice(0, 500),
+      }, 502);
+    }
+
+    // Fallback: use Cloudflare API to discover/create a deploy hook
+    const cfApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
+    const cfAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+    const cfProjectName = Deno.env.get("CLOUDFLARE_PROJECT_NAME") ?? "productimpactpod-site";
+
+    if (!cfApiToken || !cfAccountId) {
+      return jsonResponse({
+        error: "No deploy hook URL configured in Settings, and Cloudflare API credentials are not set in Supabase secrets.",
+        hint: "Go to Admin → Settings → Deploy Hook and paste your Cloudflare Pages deploy hook URL.",
+      }, 500);
+    }
+
+    const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/pages/projects/${cfProjectName}`;
+    const cfHeaders = { "Authorization": `Bearer ${cfApiToken}`, "Content-Type": "application/json" };
+
     const projRes = await fetch(cfBase, { headers: cfHeaders });
     const projData = await projRes.json();
     if (!projRes.ok) {
@@ -41,7 +79,6 @@ serve(async (req) => {
       }, 502);
     }
 
-    // List existing deploy hooks
     const listRes = await fetch(`${cfBase}/deploy_hooks`, { headers: cfHeaders });
     const listData = await listRes.json();
 
@@ -50,7 +87,6 @@ serve(async (req) => {
     if (listRes.ok && listData.result?.length > 0) {
       hookUrl = listData.result[0].hook_url;
     } else {
-      // Create a deploy hook for main branch
       const createRes = await fetch(`${cfBase}/deploy_hooks`, {
         method: "POST",
         headers: cfHeaders,
@@ -68,12 +104,11 @@ serve(async (req) => {
       }
     }
 
-    // Trigger the deploy hook
     const triggerRes = await fetch(hookUrl!, { method: "POST" });
     const triggerText = await triggerRes.text();
 
     if (triggerRes.ok) {
-      return jsonResponse({ success: true, message: "Build triggered" });
+      return jsonResponse({ success: true, message: "Build triggered via Cloudflare API" });
     }
 
     return jsonResponse({

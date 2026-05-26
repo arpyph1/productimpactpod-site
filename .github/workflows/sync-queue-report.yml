@@ -73,38 +73,27 @@ jobs:
 
           WEEK=$(date -u +"%Y-%m-%d")
 
-          BODY="## Sync queue — week of ${WEEK}
-
-${COUNT} merged PR(s) are pending review for porting to **disrupting-health**.
-
-Tick the items you want to include, then start a Claude session with:
-
-> "Port the ticked PRs from this issue to disrupting-health, open a single PR for review, skip anything that touches brand strings or config defaults."
-
-After the sync is complete, remove the \`sync-pending\` label from the ported PRs.
-
----
-
-### Pending PRs
-
-$(printf '%b' "$CHECKLIST")
-
----
-
-### Decision guide
-
-| Include | Skip |
-|---|---|
-| Bug fixes, performance, DB query improvements | Brand copy, colors, social links |
-| New admin screens or features | Site-specific config defaults |
-| Security / allowlist changes | Migrations with seed data tied to PIP content |
-| Supabase schema additions (no seed rows) | Anything in \`src/lib/config.ts\` fallbacks |
-"
+          # Build body into a temp file — avoids YAML indentation issues with
+          # multi-line bash strings that contain unindented content lines.
+          BODY_FILE=$(mktemp)
+          printf '## Sync queue \xe2\x80\x94 week of %s\n\n' "$WEEK" > "$BODY_FILE"
+          printf '%s merged PR(s) are pending review for porting to **disrupting-health**.\n\n' "$COUNT" >> "$BODY_FILE"
+          printf 'Tick the items you want to include, then start a Claude session with:\n\n' >> "$BODY_FILE"
+          printf '> "Port the ticked PRs from this issue to disrupting-health, open a single PR for review, skip anything that touches brand strings or config defaults."\n\n' >> "$BODY_FILE"
+          printf 'After the sync is complete, remove the `sync-pending` label from the ported PRs.\n\n' >> "$BODY_FILE"
+          printf -- '---\n\n### Pending PRs\n\n' >> "$BODY_FILE"
+          printf '%b' "$CHECKLIST" >> "$BODY_FILE"
+          printf '\n---\n\n### Decision guide\n\n' >> "$BODY_FILE"
+          printf '| Include | Skip |\n|---|---|\n' >> "$BODY_FILE"
+          printf '| Bug fixes, performance, DB query improvements | Brand copy, colors, social links |\n' >> "$BODY_FILE"
+          printf '| New admin screens or features | Site-specific config defaults |\n' >> "$BODY_FILE"
+          printf '| Security / allowlist changes | Migrations with seed data tied to PIP content |\n' >> "$BODY_FILE"
+          printf '| Supabase schema additions (no seed rows) | Anything in `src/lib/config.ts` fallbacks |\n' >> "$BODY_FILE"
 
           gh issue create \
             --repo "$REPO" \
             --title "Sync queue review — ${WEEK}" \
-            --body "$BODY" \
+            --body-file "$BODY_FILE" \
             --label "sync-pending"
 
           echo "✓ Weekly report issue created for ${COUNT} pending PR(s)"

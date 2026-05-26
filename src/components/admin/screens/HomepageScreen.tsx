@@ -43,6 +43,7 @@ const FORMATS = [
   { slug: "news-brief", label: "News Brief" },
   { slug: "product-review", label: "Product Review" },
   { slug: "research-brief", label: "Research Brief" },
+  { slug: "playbook", label: "Playbook" },
 ];
 
 const DEFAULT_SECTIONS: SectionConfig[] = [
