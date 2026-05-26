@@ -71,6 +71,7 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
     tags: article?.tags ?? [],
     is_lead_story: article?.is_lead_story ?? false,
     read_time_minutes: article?.read_time_minutes ?? 5,
+    overview_bullets: (article?.overview_bullets ?? []) as string[],
   });
   const [generatingTags, setGeneratingTags] = useState(false);
 
@@ -461,6 +462,26 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
               <div className="text-[10px] text-[#444] mt-1">{form.meta_description.length}/160 characters</div>
             </div>
 
+            {/* Overview Bullets — key takeaways shown in the box at the top of
+                 the rendered article. Empty = auto-generated from the content. */}
+            <div>
+              <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">Overview Bullets</label>
+              <textarea
+                className="w-full h-28 bg-[#111] border border-[#222] rounded-lg p-3 text-[16px] sm:text-[13px] text-white focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
+                value={(form.overview_bullets ?? []).join("\n")}
+                onChange={(e) => update(
+                  "overview_bullets",
+                  e.target.value.split("\n").map((s) => s.trim()).filter(Boolean),
+                )}
+                placeholder={"One bullet per line. Leave empty to auto-generate from the article body."}
+              />
+              <div className="text-[10px] text-[#444] mt-1">
+                {(form.overview_bullets ?? []).length === 0
+                  ? "Empty — bullets will be auto-generated from the article body at build time."
+                  : `${(form.overview_bullets ?? []).length} bullet${(form.overview_bullets ?? []).length === 1 ? "" : "s"} (overrides the auto-generator)`}
+              </div>
+            </div>
+
             {/* Content — tabbed */}
             <div>
               <div className="flex items-center gap-0.5 mb-3">
@@ -623,9 +644,18 @@ export default function ArticleModal({ supabase, article, onClose, onSaved }: Pr
                   return (
                     <button key={f} type="button"
                       onClick={() => {
-                        const next = selected ? form.formats.filter((x: string) => x !== f) : [...form.formats, f];
-                        const safe = next.length ? next : [f];
-                        setForm(prev => ({ ...prev, formats: safe, format: safe[0] }));
+                        let next: string[];
+                        if (selected) {
+                          // Can't remove the last format — require at least one.
+                          if (form.formats.length <= 1) return;
+                          next = form.formats.filter((x: string) => x !== f);
+                        } else {
+                          // If only one format is currently selected, replace it
+                          // (user intent: change format, not add a second one).
+                          // If multiple are selected, append the new one.
+                          next = form.formats.length === 1 ? [f] : [...form.formats, f];
+                        }
+                        setForm(prev => ({ ...prev, formats: next, format: next[0] }));
                       }}
                       className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
                         selected ? "bg-[#ff6b4a]/15 text-[#ff6b4a] border border-[#ff6b4a]/30" : "bg-[#111] text-[#666] border border-[#1a1a1a] hover:text-white"
