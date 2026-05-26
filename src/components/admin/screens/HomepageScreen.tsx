@@ -94,7 +94,12 @@ export default function HomepageScreen({ supabase }: Props) {
     loadData();
   }
 
-  const sections: SectionConfig[] = hp.sections ?? DEFAULT_SECTIONS;
+  const sections: SectionConfig[] = (() => {
+    const saved: SectionConfig[] = hp.sections ?? DEFAULT_SECTIONS;
+    const savedIds = new Set(saved.map((s) => s.id));
+    const missing = DEFAULT_SECTIONS.filter((s) => !savedIds.has(s.id)).map((s) => ({ ...s, enabled: false }));
+    return [...saved, ...missing];
+  })();
 
   function updateSection(idx: number, patch: Partial<SectionConfig>) {
     const updated = sections.map((s, i) => i === idx ? { ...s, ...patch } : s);
