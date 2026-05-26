@@ -77,6 +77,7 @@ function filterArticlesExcluding(sectionId: string): typeof articles {
 const carousel2Articles = filterArticlesExcluding("carousel2").slice(0, 4);
 carousel2Articles.forEach((a) => shownSlugs.add(a.slug));
 
+const featuredLabel = findSection("featured")?.label ?? "Featured Reading";
 const featuredArticles = articles.filter((a) => !shownSlugs.has(a.slug)).slice(0, 4);
 featuredArticles.forEach((a) => shownSlugs.add(a.slug));
 
@@ -304,8 +305,7 @@ const jsonLd = {
     )}
 
 
-    {/* ── Inline subscribe intercept — compact, sits at peak reading intent ── */}
-    {sectionEnabled("newsletter", "show_newsletter") && (
+    {/* ── Inline subscribe intercept — always visible, peak reading intent ── */}
     <section class="border-t border-[#141414] bg-[#070707]">
       <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-5">
         <form id="substack-form-inline" class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -321,7 +321,6 @@ const jsonLd = {
         </form>
       </div>
     </section>
-    )}
 
     {/* ══════════════════════════════════════════════════════════════
         PODCAST — last 3 episodes prominently
@@ -453,14 +452,7 @@ const jsonLd = {
     {/* ══════════════════════════════════════════════════════════════
         FEATURED — format/theme-filtered carousel (same as carousel2)
         ══════════════════════════════════════════════════════════════ */}
-<<<<<<< HEAD
-    {sectionEnabled("featured", "show_featured") && featuredArticles.length > 0 && (
-=======
-    {(() => {
-      const featuredFiltered = filterArticles("featured");
-      const featuredLabel = findSection("featured")?.label ?? "Featured";
-      return sectionEnabled("featured") && featuredFiltered.length > 0 ? (
->>>>>>> origin/main
+    {sectionEnabled("featured") && featuredArticles.length > 0 && (
       <section class="py-10 border-t border-[#141414]">
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
@@ -470,11 +462,7 @@ const jsonLd = {
             <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-<<<<<<< HEAD
             {featuredArticles.map((a) => {
-=======
-            {featuredFiltered.slice(0, 4).map((a: any) => {
->>>>>>> origin/main
               const entities = [...(a.people ?? []), ...(a.organizations ?? []), ...(a.products ?? [])];
               const author = authorDisplayName(a.author_slugs?.[0] ?? "");
               return (
@@ -501,8 +489,7 @@ const jsonLd = {
           </div>
         </div>
       </section>
-      ) : null;
-    })()}
+    )}
 
 
     {/* ══════════════════════════════════════════════════════════════
@@ -859,47 +846,7 @@ const jsonLd = {
   var dots = document.getElementById('hero-dots');
   var prevBtn = document.getElementById('hero-prev');
   var nextBtn = document.getElementById('hero-next');
-  if (!carousel || !track || !dots) return;
-
-  var slides = track.querySelectorAll('.hero-slide');
-  var dotBtns = dots.querySelectorAll('button');
-  if (!slides.length) return;
-
-  var current = 0;
-  var autoTimer;
-
-  function goTo(i) {
-    current = ((i % slides.length) + slides.length) % slides.length;
-    track.style.transform = 'translateX(-' + (current * 100) + '%)';
-    dotBtns.forEach(function(d, j) {
-      d.className = j === current
-        ? 'h-2 rounded-full bg-white w-6 transition-all'
-        : 'h-2 rounded-full bg-white/30 w-2 hover:bg-white/50 transition-all';
-    });
-  }
-
-  function next() { goTo(current + 1); }
-  function prev() { goTo(current - 1); }
-  function startAuto() { stopAuto(); autoTimer = setInterval(next, 6000); }
-  function stopAuto() { clearInterval(autoTimer); }
-
-  dotBtns.forEach(function(btn, i) {
-    btn.addEventListener('click', function() { goTo(i); startAuto(); });
-  });
-  if (prevBtn) prevBtn.addEventListener('click', function() { prev(); startAuto(); });
-  if (nextBtn) nextBtn.addEventListener('click', function() { next(); startAuto(); });
-
-  var touchStartX = 0;
-  track.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; stopAuto(); }, { passive: true });
-  track.addEventListener('touchend', function(e) {
-    var diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
-    startAuto();
-  }, { passive: true });
-
-  startAuto();
-
-  // Episode modal
+  // Episode modal — wired before carousel guard so it works even if hero is hidden.
   var modal = document.getElementById('ep-modal');
   var closeBtn = document.getElementById('ep-modal-close');
   if (modal && closeBtn) {
@@ -974,6 +921,47 @@ const jsonLd = {
         audioWrap.innerHTML = '';
       }
     });
+  }
+
+  // Hero carousel — auto-rotate, dot navigation, swipe support.
+  if (carousel && track && dots) {
+    var slides = track.querySelectorAll('.hero-slide');
+    var dotBtns = dots.querySelectorAll('button');
+    if (slides.length) {
+      var current = 0;
+      var autoTimer;
+
+      function goTo(i) {
+        current = ((i % slides.length) + slides.length) % slides.length;
+        track.style.transform = 'translateX(-' + (current * 100) + '%)';
+        dotBtns.forEach(function(d, j) {
+          d.className = j === current
+            ? 'h-2 rounded-full bg-white w-6 transition-all'
+            : 'h-2 rounded-full bg-white/30 w-2 hover:bg-white/50 transition-all';
+        });
+      }
+
+      function next() { goTo(current + 1); }
+      function prev() { goTo(current - 1); }
+      function startAuto() { stopAuto(); autoTimer = setInterval(next, 6000); }
+      function stopAuto() { clearInterval(autoTimer); }
+
+      dotBtns.forEach(function(btn, i) {
+        btn.addEventListener('click', function() { goTo(i); startAuto(); });
+      });
+      if (prevBtn) prevBtn.addEventListener('click', function() { prev(); startAuto(); });
+      if (nextBtn) nextBtn.addEventListener('click', function() { next(); startAuto(); });
+
+      var touchStartX = 0;
+      track.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; stopAuto(); }, { passive: true });
+      track.addEventListener('touchend', function(e) {
+        var diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+        startAuto();
+      }, { passive: true });
+
+      startAuto();
+    }
   }
 })();
 </script>
