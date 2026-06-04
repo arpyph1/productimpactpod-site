@@ -1,0 +1,24 @@
+# Supabase project configuration.
+#
+# The `verify_jwt` settings below are a defense-in-depth layer: the platform
+# rejects requests without a valid project JWT before they reach our code, and
+# each privileged function additionally verifies admin/editor role internally
+# (see supabase/functions/_shared/auth.ts). Do NOT deploy these functions with
+# `--no-verify-jwt`.
+
+project_id = "pgsljoqwfhufubodlqjk"
+
+# Privileged: spend the Anthropic key / trigger deploys. Admin-only — enforced
+# both by JWT verification here and the verifyAdmin() check in each function.
+[functions.regenerate-social-post]
+verify_jwt = true
+
+[functions.generate-article-tags]
+verify_jwt = true
+
+[functions.trigger-deploy]
+verify_jwt = true
+
+# Read-only YouTube data, invoked at build time with the anon key.
+[functions.get-latest-short]
+verify_jwt = true
