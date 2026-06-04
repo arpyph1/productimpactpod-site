@@ -125,7 +125,8 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
         )}
       </div>
 
-      {/* Center logo */}
+      {/* Center logo — compact on mobile, large on desktop. JS only adjusts
+          desktop sizes on scroll; mobile sticks at 48px. */}
       <a href="/" class="flex items-center justify-center flex-shrink-0">
         <img
           src={logoSrc}
@@ -211,6 +212,7 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
       logo.style.width = scrolled ? '80px' : '120px';
       logo.style.height = scrolled ? '80px' : '120px';
     } else {
+      // Mobile: clear any inline desktop overrides so Tailwind classes win.
       inner.style.height = '';
       logo.style.width = '';
       logo.style.height = '';
@@ -227,24 +229,30 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
   }
   window.addEventListener('scroll', onScroll, { passive: true });
 
+  // On resize across the desktop breakpoint, reapply sizing so we don't
+  // leak desktop inline px-values into mobile.
   window.addEventListener('resize', function() {
     applyScrollState(scrolled);
   }, { passive: true });
 
+  // Initial paint
   applyScrollState(false);
 
+  // Mobile toggle (with aria-expanded)
   if (toggle && menu) {
     toggle.addEventListener('click', function() {
       var isOpen = !menu.classList.contains('hidden');
       menu.classList.toggle('hidden');
       toggle.setAttribute('aria-expanded', String(!isOpen));
     });
+    // Close menu when any link inside it is tapped
     menu.querySelectorAll('.nav-menu-link').forEach(function(link) {
       link.addEventListener('click', function() {
         menu.classList.add('hidden');
         toggle.setAttribute('aria-expanded', 'false');
       });
     });
+    // Close on resize past mobile breakpoint
     window.addEventListener('resize', function() {
       if (window.innerWidth >= DESKTOP_BP) {
         menu.classList.add('hidden');
@@ -253,6 +261,7 @@ const rightItems = allItems.filter(i => i.href !== "/news/" && i.href !== "/them
     }, { passive: true });
   }
 
+  // Mega menu dropdowns (desktop only)
   function setupDropdown(triggerId, dropdownId, wrapId) {
     var trigger = document.getElementById(triggerId);
     var dropdown = document.getElementById(dropdownId);
