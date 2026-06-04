@@ -309,12 +309,21 @@ export default function AdminApp() {
     setDeployMsg("");
     try {
       const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      // Send the logged-in user's access token — the edge function verifies
+      // admin/editor role and rejects the bare anon key.
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const accessToken = sess?.access_token;
+      if (!accessToken) {
+        setDeployMsg("Deploy error: not signed in.");
+        setDeploying(false);
+        return;
+      }
       const res = await fetch(
         `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/trigger-deploy`,
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${anonKey}`,
+            "Authorization": `Bearer ${accessToken}`,
             "apikey": anonKey,
             "Content-Type": "application/json",
           },

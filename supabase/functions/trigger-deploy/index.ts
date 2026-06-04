@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyAdmin } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +37,13 @@ async function getStoredHookUrl(): Promise<string | null> {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Gate: triggering a deploy uses the service-role key and burns build
+  // minutes, so only authenticated admins/editors may call it.
+  const auth = await verifyAdmin(req);
+  if (!auth.ok) {
+    return jsonResponse({ error: auth.error }, auth.status);
   }
 
   try {

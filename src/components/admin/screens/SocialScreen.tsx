@@ -837,6 +837,7 @@ export default function SocialScreen({ supabase }: Props) {
       {/* Revision modal */}
       {revisionModal && (
         <RevisionModal
+          supabase={supabase}
           postType={revisionModal.postType}
           initialText={revisionModal.text}
           customPrompt={prompts[revisionModal.postType]}
@@ -1241,7 +1242,8 @@ function InstagramCard({ article, voice, onVoiceChange, text, onTextChange, onEd
   );
 }
 
-function RevisionModal({ postType, initialText, customPrompt, onClose, onSave }: {
+function RevisionModal({ supabase, postType, initialText, customPrompt, onClose, onSave }: {
+  supabase: SupabaseClient;
   postType: string;
   initialText: string;
   customPrompt?: string;
@@ -1271,11 +1273,21 @@ function RevisionModal({ postType, initialText, customPrompt, onClose, onSave }:
       const sbUrl = import.meta.env.PUBLIC_SUPABASE_URL;
       const sbKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+      // Send the logged-in user's access token — the edge function verifies
+      // admin/editor role and rejects the bare anon key.
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const accessToken = sess?.access_token;
+      if (!accessToken) {
+        setError("Not signed in.");
+        setLoading(false);
+        return;
+      }
+
       const resp = await fetch(`${sbUrl}/functions/v1/regenerate-social-post`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${sbKey}`,
+          "Authorization": `Bearer ${accessToken}`,
           "apikey": sbKey,
         },
         body: JSON.stringify({

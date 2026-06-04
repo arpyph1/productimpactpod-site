@@ -1,7 +1,30 @@
-import type { EventContext } from "@cloudflare/workers-types";
+import type { EventContext, KVNamespace } from "@cloudflare/workers-types";
 
 const SUBSTACK_URL = "https://productimpactpod.substack.com/api/v1/free";
 const ALLOWED_ORIGIN = "https://productimpactpod.com";
+
+// Per-IP rate limit on the subscribe relay. Without this, the endpoint can be
+// scripted to fire unlimited signups at our Substack (mailbombing third parties
+// through our origin). Backed by an optional KV namespace binding named
+// SUBSCRIBE_RL — bind it in Cloudflare Pages → Settings → Functions → KV
+// namespace bindings. If the binding is absent the limiter fails open so the
+// form keeps working, but production should configure it.
+const RATE_LIMIT_MAX = 5; // submissions
+const RATE_LIMIT_WINDOW_S = 600; // per 10 minutes
+
+interface Env {
+  SUBSCRIBE_RL?: KVNamespace;
+}
+
+async function isRateLimited(env: Env | undefined, ip: string): Promise<boolean> {
+  const kv = env?.SUBSCRIBE_RL;
+  if (!kv || !ip) return false; // fail open when unconfigured
+  const key = `sub:${ip}`;
+  const count = parseInt((await kv.get(key)) ?? "0", 10) || 0;
+  if (count >= RATE_LIMIT_MAX) return true;
+  await kv.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
+  return false;
+}
 
 function corsHeaders(origin: string) {
   const allowed = origin === ALLOWED_ORIGIN || origin === "http://localhost:4321";
@@ -12,13 +35,21 @@ function corsHeaders(origin: string) {
   };
 }
 
-export async function onRequestOptions({ request }: EventContext<unknown, string, unknown>) {
+export async function onRequestOptions({ request }: EventContext<Env, string, unknown>) {
   return new Response(null, { status: 204, headers: corsHeaders(request.headers.get("origin") ?? "") });
 }
 
-export async function onRequestPost({ request }: EventContext<unknown, string, unknown>) {
+export async function onRequestPost({ request, env }: EventContext<Env, string, unknown>) {
   const origin = request.headers.get("origin") ?? "";
   const headers = { ...corsHeaders(origin), "Content-Type": "application/json" };
+
+  const ip = request.headers.get("CF-Connecting-IP") ?? "";
+  if (await isRateLimited(env, ip)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please try again in a few minutes." }),
+      { status: 429, headers },
+    );
+  }
 
   let email: string;
   try {

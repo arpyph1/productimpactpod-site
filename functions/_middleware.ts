@@ -9,7 +9,13 @@ const LINK_HEADER = [
   '</llms.txt>; rel="describedby"; type="text/plain"',
 ].join(", ");
 
-export const onRequest: PagesFunction = async ({ request, next }) => {
+// Typed against the standard Web platform APIs (Request/Response from the DOM
+// lib) rather than the global `PagesFunction`, which requires
+// @cloudflare/workers-types and pulls in conflicting Response/ReadableStream
+// globals.
+export const onRequest = async (
+  { request, next }: { request: Request; next: () => Promise<Response> },
+): Promise<Response> => {
   const response = await next();
   const contentType = response.headers.get("Content-Type") ?? "";
 

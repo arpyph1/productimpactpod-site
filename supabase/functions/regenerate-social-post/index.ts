@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { verifyAdmin } from "../_shared/auth.ts";
 
 const ALLOWED_ORIGINS = [
   "https://productimpactpod.com",
@@ -31,6 +32,16 @@ const DEFAULT_PROMPTS: Record<string, string> = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
+  }
+
+  // Gate: this function spends the Anthropic API key, so only authenticated
+  // admins/editors may call it — never the public anon key.
+  const auth = await verifyAdmin(req);
+  if (!auth.ok) {
+    return new Response(
+      JSON.stringify({ error: auth.error }),
+      { status: auth.status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+    );
   }
 
   try {

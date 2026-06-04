@@ -28,3 +28,6 @@ public/hero-images/
 # Python
 __pycache__/
 *.pyc
+
+# Supabase CLI scratch state
+supabase/.temp/
