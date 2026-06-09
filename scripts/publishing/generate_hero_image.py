@@ -58,18 +58,30 @@ SUPABASE_BUCKET = "article-heroes"
 OUTPUT_WIDTH = 1200
 OUTPUT_HEIGHT = 628   # OG social-card aspect; hero_image_url serves both
 
-# Locked editorial style — prepended to every prompt.
-# This is intentionally verbose: Flux responds better to descriptive cues
-# than to keyword soup.
-EDITORIAL_STYLE = (
+# Default prompts — used only when site_settings.hero_prompts is not set.
+# Edit these via Admin → Settings → Hero Image Generation instead.
+_DEFAULT_DISTILLATION_SYSTEM = (
+    "You distill news article headers into short photographic concepts "
+    "for a hero image. Output ONE sentence describing what to photograph. "
+    "\n\nHard rules:\n"
+    "- PHOTOGRAPHIC subject — real objects, spaces, natural phenomena, "
+    "documentary moments. No abstractions.\n"
+    "- Prefer scenes with NO people. If the article's about a person, "
+    "photograph their workspace / tool / environment instead.\n"
+    "- NEVER include: futuristic scenes, sci-fi, robots, screens with "
+    "readable content, text, logos, signage, or crowds.\n"
+    "- Concrete nouns + lighting/setting adjective. ~15 words.\n"
+    "- Output ONLY the sentence. No preamble, no quotes."
+)
+
+_DEFAULT_EDITORIAL_STYLE = (
     "Editorial photograph, documentary photojournalism style, natural "
     "lighting, shallow depth of field, muted colour grade, fine grain. "
     "Shot on a 35mm prime lens. Composition follows rule of thirds. "
     "Analogue, understated, restrained."
 )
 
-# Negative prompt — what Flux should avoid.
-NEGATIVE = (
+_DEFAULT_NEGATIVE = (
     "text, letters, numbers, logos, watermarks, signage, captions, "
     "subtitles, futuristic, sci-fi, cyberpunk, neon, holographic, "
     "robotic, android, cyborg, glowing elements, lens flare, HDR, "
@@ -88,32 +100,38 @@ class GenerateResult:
     elapsed_s: float
 
 
+# ── CMS prompt loading ──────────────────────────────────────────────────────
+
+def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
+    """Fetch hero_prompts from site_settings. Returns {} on any error."""
+    url = (
+        f"{supabase_url}/rest/v1/site_settings"
+        "?key=eq.hero_prompts&select=value&limit=1"
+    )
+    req = urllib.request.Request(
+        url,
+        headers={
+            "apikey": service_key,
+            "Authorization": f"Bearer {service_key}",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            rows = json.loads(resp.read())
+        return rows[0]["value"] if rows else {}
+    except Exception:
+        return {}
+
+
 # ── Prompt distillation ─────────────────────────────────────────────────────
 
-def _distill_prompt(article: dict, *, api_key: str) -> str:
-    """Ask Claude to condense the article into a short photographic concept.
-
-    Deliberately keeps output to one sentence — Flux does better with
-    specific-but-concise scene descriptions than long paragraphs.
-    """
+def _distill_prompt(article: dict, *, api_key: str, system: str) -> str:
+    """Ask Claude to condense the article into a short photographic concept."""
     title = article.get("title", "").strip()
     subtitle = article.get("subtitle", "") or ""
     meta_desc = article.get("meta_description", "") or ""
     first_theme = (article.get("themes") or ["ai-product-strategy"])[0]
-
-    system = (
-        "You distill news article headers into short photographic concepts "
-        "for a hero image. Output ONE sentence describing what to photograph. "
-        "\n\nHard rules:\n"
-        "- PHOTOGRAPHIC subject — real objects, spaces, natural phenomena, "
-        "documentary moments. No abstractions.\n"
-        "- Prefer scenes with NO people. If the article's about a person, "
-        "photograph their workspace / tool / environment instead.\n"
-        "- NEVER include: futuristic scenes, sci-fi, robots, screens with "
-        "readable content, text, logos, signage, or crowds.\n"
-        "- Concrete nouns + lighting/setting adjective. ~15 words.\n"
-        "- Output ONLY the sentence. No preamble, no quotes."
-    )
 
     user = (
         f"Article title: {title}\n"
@@ -142,30 +160,27 @@ def _distill_prompt(article: dict, *, api_key: str) -> str:
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read())
-    # Response shape: { content: [{ type: "text", text: "..." }] }
     blocks = data.get("content", [])
     text_blocks = [b.get("text", "") for b in blocks if b.get("type") == "text"]
     distilled = " ".join(text_blocks).strip()
-    # Strip any accidental quote marks
     distilled = re.sub(r'^["\']|["\']$', "", distilled).strip()
     if not distilled:
         raise RuntimeError("Claude returned empty distilled prompt")
     return distilled
 
 
-def _build_full_prompt(subject: str) -> str:
-    """Combine distilled subject with the locked editorial style."""
-    return f"{subject}. {EDITORIAL_STYLE}"
+def _build_full_prompt(subject: str, style: str) -> str:
+    return f"{subject}. {style}"
 
 
 # ── Image generation ────────────────────────────────────────────────────────
 
-def _generate_image(prompt: str, *, replicate_token: str) -> bytes:
+def _generate_image(prompt: str, negative: str, *, replicate_token: str) -> bytes:
     """Call Replicate's Flux 1.1 Pro. Polls prediction until complete."""
     create_body = json.dumps({
         "input": {
             "prompt": prompt,
-            "negative_prompt": NEGATIVE,
+            "negative_prompt": negative,
             "aspect_ratio": "16:9",       # close to 1200×628 OG (1.91:1)
             "output_format": "png",
             "output_quality": 95,
@@ -283,10 +298,17 @@ def generate(
     if not slug:
         raise RuntimeError("article.slug required for hero image object path")
 
+    # Load prompts from CMS (Admin → Settings → Hero Image Generation).
+    # Falls back to hardcoded defaults if the setting is absent or unreachable.
+    cms_prompts = _load_hero_prompts(supabase_url, supabase_service_key or "")
+    distillation_system = cms_prompts.get("distillation") or _DEFAULT_DISTILLATION_SYSTEM
+    editorial_style     = cms_prompts.get("style")        or _DEFAULT_EDITORIAL_STYLE
+    negative_prompt     = cms_prompts.get("negative")     or _DEFAULT_NEGATIVE
+
     t0 = time.time()
-    subject = _distill_prompt(article, api_key=anthropic_key)
-    full_prompt = _build_full_prompt(subject)
-    png = _generate_image(full_prompt, replicate_token=replicate_token)
+    subject = _distill_prompt(article, api_key=anthropic_key, system=distillation_system)
+    full_prompt = _build_full_prompt(subject, editorial_style)
+    png = _generate_image(full_prompt, negative_prompt, replicate_token=replicate_token)
 
     if out_path:
         with open(out_path, "wb") as fh:
