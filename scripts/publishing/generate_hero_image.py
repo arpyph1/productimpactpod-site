@@ -102,8 +102,21 @@ class GenerateResult:
 
 # ── CMS prompt loading ──────────────────────────────────────────────────────
 
-def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
-    """Fetch hero_prompts from site_settings. Returns {} on any error."""
+def _load_hero_prompts(supabase_url: str, anon_key: str) -> dict:
+    """Fetch hero_prompts from site_settings using the anon key.
+
+    hero_prompts is in the public-read allowlist (migration 0023) so the anon
+    key is sufficient — no service role required. Returns {} on any error so
+    the caller falls back to hardcoded defaults.
+    """
+    if not anon_key:
+        print(
+            "  warning: PUBLIC_SUPABASE_ANON_KEY not set — cannot read hero_prompts from CMS. "
+            "Using hardcoded defaults.",
+            file=sys.stderr,
+        )
+        return {}
+
     url = (
         f"{supabase_url}/rest/v1/site_settings"
         "?key=eq.hero_prompts&select=value&limit=1"
@@ -111,15 +124,18 @@ def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
     req = urllib.request.Request(
         url,
         headers={
-            "apikey": service_key,
-            "Authorization": f"Bearer {service_key}",
+            "apikey": anon_key,
+            "Authorization": f"Bearer {anon_key}",
             "Accept": "application/json",
         },
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             rows = json.loads(resp.read())
-        return rows[0]["value"] if rows else {}
+        if not rows:
+            print("  info: hero_prompts not saved in admin yet — using hardcoded defaults.", file=sys.stderr)
+            return {}
+        return rows[0]["value"]
     except Exception as e:
         print(f"  warning: could not load hero_prompts from CMS ({e}), using defaults", file=sys.stderr)
         return {}
@@ -289,6 +305,7 @@ def generate(
     supabase_url = supabase_url or os.environ.get("PUBLIC_SUPABASE_URL") \
         or "https://cyqkfkvsrdbbjuaqiglx.supabase.co"
     supabase_service_key = supabase_service_key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_anon_key = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
 
     if not anthropic_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
@@ -301,12 +318,18 @@ def generate(
 
     # Load prompts from CMS (Admin → Settings → Hero Image Generation).
     # Falls back to hardcoded defaults if the setting is absent or unreachable.
-    cms_prompts = _load_hero_prompts(supabase_url, supabase_service_key or "")
+    cms_prompts = _load_hero_prompts(supabase_url, supabase_anon_key)
     distillation_system = cms_prompts.get("distillation") or _DEFAULT_DISTILLATION_SYSTEM
     editorial_style     = cms_prompts.get("style")        or _DEFAULT_EDITORIAL_STYLE
     negative_prompt     = cms_prompts.get("negative")     or _DEFAULT_NEGATIVE
-    source = "CMS" if cms_prompts else "defaults"
-    print(f"  prompts source: {source}", file=sys.stderr)
+
+    def _src(key: str) -> str:
+        return "CMS" if cms_prompts.get(key) else "default"
+    print(
+        f"  prompts: distillation={_src('distillation')} style={_src('style')} negative={_src('negative')}",
+        file=sys.stderr,
+    )
+    print(f"  distillation system: {distillation_system[:120].strip()}…", file=sys.stderr)
 
     t0 = time.time()
     subject = _distill_prompt(article, api_key=anthropic_key, system=distillation_system)
@@ -340,7 +363,36 @@ def generate(
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
+def _check_prompts() -> int:
+    """Print the prompts that would be used without generating an image."""
+    supabase_url = os.environ.get("PUBLIC_SUPABASE_URL") or "https://cyqkfkvsrdbbjuaqiglx.supabase.co"
+    anon_key     = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
+    cms = _load_hero_prompts(supabase_url, anon_key)
+
+    def _src(key: str) -> str:
+        return "CMS ✓" if cms.get(key) else "default (not set in admin)"
+
+    d = cms.get("distillation") or _DEFAULT_DISTILLATION_SYSTEM
+    s = cms.get("style")        or _DEFAULT_EDITORIAL_STYLE
+    n = cms.get("negative")     or _DEFAULT_NEGATIVE
+
+    print(f"\n── Hero Prompt Verification ────────────────────────────────")
+    print(f"Supabase URL : {supabase_url}")
+    print(f"Anon key     : {'set (' + anon_key[:12] + '…)' if anon_key else 'NOT SET — check .env'}")
+    print(f"\n[distillation] source={_src('distillation')}")
+    print(d)
+    print(f"\n[style] source={_src('style')}")
+    print(s)
+    print(f"\n[negative] source={_src('negative')}")
+    print(n)
+    print()
+    return 0
+
+
 def _main(argv: list[str]) -> int:
+    if "--check-prompts" in argv:
+        return _check_prompts()
+
     source = "stdin"
     out_path: str | None = None
 
