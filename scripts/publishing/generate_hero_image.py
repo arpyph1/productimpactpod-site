@@ -120,7 +120,8 @@ def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
         with urllib.request.urlopen(req, timeout=10) as resp:
             rows = json.loads(resp.read())
         return rows[0]["value"] if rows else {}
-    except Exception:
+    except Exception as e:
+        print(f"  warning: could not load hero_prompts from CMS ({e}), using defaults", file=sys.stderr)
         return {}
 
 
@@ -304,6 +305,8 @@ def generate(
     distillation_system = cms_prompts.get("distillation") or _DEFAULT_DISTILLATION_SYSTEM
     editorial_style     = cms_prompts.get("style")        or _DEFAULT_EDITORIAL_STYLE
     negative_prompt     = cms_prompts.get("negative")     or _DEFAULT_NEGATIVE
+    source = "CMS" if cms_prompts else "defaults"
+    print(f"  prompts source: {source}", file=sys.stderr)
 
     t0 = time.time()
     subject = _distill_prompt(article, api_key=anthropic_key, system=distillation_system)

@@ -21,6 +21,11 @@ export default function SettingsScreen({ supabase }: Props) {
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [msg, setMsg] = useState("");
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV);
+  const [heroPrompts, setHeroPrompts] = useState<{ distillation: string; style: string; negative: string }>({
+    distillation: "",
+    style: "",
+    negative: "",
+  });
 
   useEffect(() => { loadData(); }, []);
 
@@ -43,6 +48,12 @@ export default function SettingsScreen({ supabase }: Props) {
       settingsRes.data.forEach((s: any) => { map[s.key] = s.value; });
       setSettings(map);
       if (map.nav_items?.items) setNavItems(map.nav_items.items);
+      const hp = map.hero_prompts ?? {};
+      setHeroPrompts({
+        distillation: hp.distillation ?? "",
+        style: hp.style ?? "",
+        negative: hp.negative ?? "",
+      });
     }
   }
 
@@ -248,21 +259,32 @@ export default function SettingsScreen({ supabase }: Props) {
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Claude Distillation System Prompt</label>
             <textarea className="w-full h-40 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
-              defaultValue={settings.hero_prompts?.distillation ?? "You distill news article headers into short photographic concepts for a hero image. Output ONE sentence describing what to photograph.\n\nHard rules:\n- PHOTOGRAPHIC subject — real objects, spaces, natural phenomena, documentary moments. No abstractions.\n- Prefer scenes with NO people. If the article's about a person, photograph their workspace / tool / environment instead.\n- NEVER include: futuristic scenes, sci-fi, robots, screens with readable content, text, logos, signage, or crowds.\n- Concrete nouns + lighting/setting adjective. ~15 words.\n- Output ONLY the sentence. No preamble, no quotes."}
-              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, distillation: e.target.value })} />
+              value={heroPrompts.distillation}
+              onChange={(e) => setHeroPrompts((p) => ({ ...p, distillation: e.target.value }))}
+              onBlur={() => saveSetting("hero_prompts", heroPrompts)}
+              placeholder="You distill news article headers into short photographic concepts for a hero image..." />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Editorial Style (appended to every image prompt)</label>
             <textarea className="w-full h-24 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
-              defaultValue={settings.hero_prompts?.style ?? "Editorial photograph, documentary photojournalism style, natural lighting, shallow depth of field, muted colour grade, fine grain. Shot on a 35mm prime lens. Composition follows rule of thirds. Analogue, understated, restrained."}
-              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, style: e.target.value })} />
+              value={heroPrompts.style}
+              onChange={(e) => setHeroPrompts((p) => ({ ...p, style: e.target.value }))}
+              onBlur={() => saveSetting("hero_prompts", heroPrompts)}
+              placeholder="Editorial photograph, documentary photojournalism style..." />
           </div>
           <div>
             <label className="block text-[12px] font-medium text-[#888] mb-1.5">Negative Prompt (what to avoid)</label>
             <textarea className="w-full h-24 bg-[#111] border border-[#222] rounded-lg p-4 text-[13px] text-[#ccc] font-mono focus:outline-none focus:border-[#ff6b4a]/50 resize-y"
-              defaultValue={settings.hero_prompts?.negative ?? "text, letters, numbers, logos, watermarks, signage, captions, subtitles, futuristic, sci-fi, cyberpunk, neon, holographic, robotic, android, cyborg, glowing elements, lens flare, HDR, oversaturated, cartoon, illustration, 3D render, CGI, painting, anime, stylised, multiple people, crowd, group, extra fingers, extra limbs, distorted anatomy, deformed hands, blurry faces, low quality, artefacts, JPEG compression, uncanny"}
-              onBlur={(e) => saveSetting("hero_prompts", { ...settings.hero_prompts, negative: e.target.value })} />
+              value={heroPrompts.negative}
+              onChange={(e) => setHeroPrompts((p) => ({ ...p, negative: e.target.value }))}
+              onBlur={() => saveSetting("hero_prompts", heroPrompts)}
+              placeholder="text, letters, numbers, logos, watermarks..." />
           </div>
+          <button
+            onClick={() => saveSetting("hero_prompts", heroPrompts)}
+            className="px-4 py-2 bg-[#ff6b4a] text-white rounded-lg text-[12px] font-semibold hover:bg-[#ff8566]">
+            Save Hero Prompts
+          </button>
         </div>
       </section>
 
