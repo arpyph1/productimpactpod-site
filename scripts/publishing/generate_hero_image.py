@@ -102,16 +102,17 @@ class GenerateResult:
 
 # ── CMS prompt loading ──────────────────────────────────────────────────────
 
-def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
-    """Fetch hero_prompts from site_settings.
+def _load_hero_prompts(supabase_url: str, anon_key: str) -> dict:
+    """Fetch hero_prompts from site_settings using the anon key.
 
-    Requires SUPABASE_SERVICE_ROLE_KEY — hero_prompts is RLS-protected and not
-    readable by the anon key. Returns {} (uses hardcoded defaults) on any error.
+    hero_prompts is in the public-read allowlist (migration 0023) so the anon
+    key is sufficient — no service role required. Returns {} on any error so
+    the caller falls back to hardcoded defaults.
     """
-    if not service_key:
+    if not anon_key:
         print(
-            "  warning: SUPABASE_SERVICE_ROLE_KEY not set — cannot read hero_prompts "
-            "from CMS (RLS blocks anon access). Using hardcoded defaults.",
+            "  warning: PUBLIC_SUPABASE_ANON_KEY not set — cannot read hero_prompts from CMS. "
+            "Using hardcoded defaults.",
             file=sys.stderr,
         )
         return {}
@@ -123,8 +124,8 @@ def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
     req = urllib.request.Request(
         url,
         headers={
-            "apikey": service_key,
-            "Authorization": f"Bearer {service_key}",
+            "apikey": anon_key,
+            "Authorization": f"Bearer {anon_key}",
             "Accept": "application/json",
         },
     )
@@ -132,7 +133,7 @@ def _load_hero_prompts(supabase_url: str, service_key: str) -> dict:
         with urllib.request.urlopen(req, timeout=10) as resp:
             rows = json.loads(resp.read())
         if not rows:
-            print("  warning: hero_prompts row not found in site_settings — using defaults.", file=sys.stderr)
+            print("  info: hero_prompts not saved in admin yet — using hardcoded defaults.", file=sys.stderr)
             return {}
         return rows[0]["value"]
     except Exception as e:
@@ -304,6 +305,7 @@ def generate(
     supabase_url = supabase_url or os.environ.get("PUBLIC_SUPABASE_URL") \
         or "https://cyqkfkvsrdbbjuaqiglx.supabase.co"
     supabase_service_key = supabase_service_key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_anon_key = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
 
     if not anthropic_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
@@ -316,7 +318,7 @@ def generate(
 
     # Load prompts from CMS (Admin → Settings → Hero Image Generation).
     # Falls back to hardcoded defaults if the setting is absent or unreachable.
-    cms_prompts = _load_hero_prompts(supabase_url, supabase_service_key or "")
+    cms_prompts = _load_hero_prompts(supabase_url, supabase_anon_key)
     distillation_system = cms_prompts.get("distillation") or _DEFAULT_DISTILLATION_SYSTEM
     editorial_style     = cms_prompts.get("style")        or _DEFAULT_EDITORIAL_STYLE
     negative_prompt     = cms_prompts.get("negative")     or _DEFAULT_NEGATIVE
@@ -364,8 +366,8 @@ def generate(
 def _check_prompts() -> int:
     """Print the prompts that would be used without generating an image."""
     supabase_url = os.environ.get("PUBLIC_SUPABASE_URL") or "https://cyqkfkvsrdbbjuaqiglx.supabase.co"
-    service_key  = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-    cms = _load_hero_prompts(supabase_url, service_key)
+    anon_key     = os.environ.get("PUBLIC_SUPABASE_ANON_KEY", "")
+    cms = _load_hero_prompts(supabase_url, anon_key)
 
     def _src(key: str) -> str:
         return "CMS ✓" if cms.get(key) else "default (not set in admin)"
@@ -376,7 +378,7 @@ def _check_prompts() -> int:
 
     print(f"\n── Hero Prompt Verification ────────────────────────────────")
     print(f"Supabase URL : {supabase_url}")
-    print(f"Service key  : {'set (' + service_key[:12] + '…)' if service_key else 'NOT SET — will use defaults'}")
+    print(f"Anon key     : {'set (' + anon_key[:12] + '…)' if anon_key else 'NOT SET — check .env'}")
     print(f"\n[distillation] source={_src('distillation')}")
     print(d)
     print(f"\n[style] source={_src('style')}")
