@@ -37,12 +37,13 @@ const {
   articleSection,
   articleTags = [],
   articleAuthor,
-  twitterSite = cfg.social.twitter,
+  twitterSite = seo.twitter_handle || cfg.social.twitter,
   jsonLd,
   noindex = false,
 } = Astro.props;
 
-const fullOgImage = ogImage ?? `${cfg.url}/og-default.png`;
+const defaultOgImage = seo.og_image || `${cfg.url}/og-default.png`;
+const fullOgImage = ogImage ?? defaultOgImage;
 
 const publisherSchema = buildPublisherSchema(cfg);
 const websiteSchema = buildWebsiteSchema(cfg);

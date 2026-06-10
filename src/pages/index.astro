@@ -16,14 +16,37 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-// Display ad for sidebar — pick a random active ad from CMS, fall back to ph1.ca house ad.
+// Display ad for sidebar — pick randomly from active CMS banner ads + optional house ad.
 const displayAdsRaw = await getSiteSetting("display_ads");
 const activeDisplayAds: Array<{ id: string; name: string; image_url: string; link_url: string; media_type?: string }> =
   (displayAdsRaw?.ads ?? []).filter((a: any) => a.active !== false && a.image_url);
-const sidebarAd = activeDisplayAds.length > 0
-  ? activeDisplayAds[Math.floor(Math.random() * activeDisplayAds.length)]
-  : null;
 
+const DEFAULT_HOUSE_AD = {
+  enabled: true,
+  presented_by_label: "Presented by",
+  logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
+  logo_alt: "PH1",
+  link_url: "https://ph1.ca",
+  headline: "PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.",
+  tagline: "Ship products proven to deliver impact in the AI era.",
+  cta_text: "Learn more",
+};
+const houseAdRaw = await getSiteSetting("house_ad");
+const houseAdConfig = houseAdRaw ? { ...DEFAULT_HOUSE_AD, ...houseAdRaw } : DEFAULT_HOUSE_AD;
+
+// Build combined pool: banner ads + house ad if enabled.
+// Each entry tagged with kind so the template can branch on banner vs house.
+const adPool: any[] = [
+  ...activeDisplayAds.map((a) => ({ kind: "banner", ...a })),
+  ...(houseAdConfig.enabled ? [{ kind: "house", ...houseAdConfig }] : []),
+];
+const sidebarAdEntry = adPool.length > 0
+  ? adPool[Math.floor(Math.random() * adPool.length)]
+  : null;
+const sidebarAd = sidebarAdEntry?.kind === "banner" ? sidebarAdEntry : null;
+const sidebarHouseAd = sidebarAdEntry?.kind === "house" ? sidebarAdEntry : null;
+
+const seoSettings = (await getSiteSetting("seo")) ?? {};
 const hp = (await getSiteSetting("homepage")) ?? {};
 const sections = hp.sections ?? [];
 const findSection = (id: string) => sections.find((s: any) => s.id === id);
@@ -119,8 +142,8 @@ const jsonLd = {
 ---
 
 <BaseLayout
-  title="Product Impact — AI strategy, analysis, and playbooks for product builders"
-  description="Independent analysis, strategic playbooks, and original research for product builders navigating the AI era."
+  title={seoSettings.default_title ?? "Product Impact — AI strategy, analysis, and playbooks for product builders"}
+  description={seoSettings.default_description ?? "Independent analysis, strategic playbooks, and original research for product builders navigating the AI era."}
   canonicalUrl={`${siteUrl}/`}
   jsonLd={jsonLd}
 >
@@ -130,7 +153,7 @@ const jsonLd = {
   <div class="border-b border-[#161616] bg-[#080808]">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-2.5 flex items-center justify-between gap-4">
       <p class="text-[13px] text-[#666] leading-snug">
-        Independent analysis and strategy for product builders navigating the AI era.
+        {hp.tagline ?? "Independent analysis and strategy for product builders navigating the AI era."}
       </p>
       <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener"
         class="hidden sm:inline-flex items-center gap-1 text-[12px] font-semibold text-[#ff6b4a] hover:text-[#ff8566] transition-colors shrink-0">
@@ -280,24 +303,26 @@ const jsonLd = {
                       class="w-full h-auto mt-3" loading="lazy" />
                   )}
                 </a>
-              ) : (
-                <a href="https://ph1.ca" target="_blank" rel="noopener" id="home-ad-slot"
+              ) : sidebarHouseAd ? (
+                <a href={sidebarHouseAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
                   class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">Presented by</span>
-                  <img src="https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true"
-                    alt="PH1" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">{sidebarHouseAd.presented_by_label}</span>
+                  {sidebarHouseAd.logo_url && (
+                    <img src={sidebarHouseAd.logo_url} alt={sidebarHouseAd.logo_alt}
+                      class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                  )}
                   <p class="text-[15px] font-bold text-white leading-snug mb-3">
-                    PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.
+                    {sidebarHouseAd.headline}
                   </p>
                   <p class="text-[12px] text-[#666] leading-relaxed mb-6">
-                    Ship products proven to deliver impact in the AI era.
+                    {sidebarHouseAd.tagline}
                   </p>
                   <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
-                    Learn more
+                    {sidebarHouseAd.cta_text}
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </span>
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
