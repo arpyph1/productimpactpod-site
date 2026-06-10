@@ -143,6 +143,19 @@ export default function HomepageScreen({ supabase }: Props) {
     <div className="space-y-8 max-w-4xl">
       {msg && <div className={`px-4 py-2 rounded-lg text-[13px] font-medium ${msg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>{msg}</div>}
 
+      {/* Site Tagline */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">Site Tagline</h3>
+        <p className="text-[12px] text-[#555] mb-4">The one-line description shown at the top of the homepage beneath the nav.</p>
+        <input
+          type="text"
+          className="w-full px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-[14px] text-white focus:outline-none focus:border-[#ff6b4a]/50"
+          defaultValue={hp.tagline ?? "Independent analysis and strategy for product builders navigating the AI era."}
+          key={hp.tagline ?? "default-tagline"}
+          onBlur={(e) => save({ ...hp, tagline: e.target.value })}
+        />
+      </section>
+
       {/* Hero Carousel */}
       <section>
         <h3 className="text-[16px] font-bold text-white mb-1">Hero Carousel</h3>

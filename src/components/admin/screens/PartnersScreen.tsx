@@ -12,6 +12,17 @@ interface Sponsor {
 
 interface DisplayAd { id: string; name: string; image_url: string; link_url: string; active: boolean; media_type?: "image" | "video" }
 
+interface HouseAd {
+  enabled: boolean;
+  presented_by_label: string;
+  logo_url: string;
+  logo_alt: string;
+  link_url: string;
+  headline: string;
+  tagline: string;
+  cta_text: string;
+}
+
 interface AdBullet { label: string; url: string; }
 interface ArticleAd {
   id: string; title: string; active: boolean;
@@ -20,6 +31,17 @@ interface ArticleAd {
   bullets: AdBullet[];
   position_heading: number; display_order: number;
 }
+
+const DEFAULT_HOUSE_AD: HouseAd = {
+  enabled: true,
+  presented_by_label: "Presented by",
+  logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
+  logo_alt: "PH1",
+  link_url: "https://ph1.ca",
+  headline: "PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.",
+  tagline: "Ship products proven to deliver impact in the AI era.",
+  cta_text: "Learn more",
+};
 
 const SEED_PARTNERS = [
   { slug: "ph1", name: "PH1", tagline: "Ship products that are proven to deliver impact in the AI era", logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true", website_url: "https://ph1.ca", tier: "founding", active: true, display_order: 0 },
@@ -39,6 +61,8 @@ export default function PartnersScreen({ supabase }: Props) {
   const logoRef = useRef<HTMLInputElement>(null);
   const adRef = useRef<HTMLInputElement>(null);
 
+  const [houseAd, setHouseAd] = useState<HouseAd>(DEFAULT_HOUSE_AD);
+
   // Article inline ads state
   const [articleAds, setArticleAds] = useState<ArticleAd[]>([]);
   const [editingAd, setEditingAd] = useState<Partial<ArticleAd> | null>(null);
@@ -48,14 +72,16 @@ export default function PartnersScreen({ supabase }: Props) {
 
   async function loadAll() {
     setLoading(true);
-    const [spRes, setRes, aaRes] = await Promise.all([
+    const [spRes, setRes, aaRes, haRes] = await Promise.all([
       supabase.from("sponsors").select("*").order("display_order"),
       supabase.from("site_settings").select("*").eq("key", "display_ads"),
       supabase.from("article_ads").select("*").order("display_order"),
+      supabase.from("site_settings").select("*").eq("key", "house_ad"),
     ]);
     if (spRes.data) setSponsors(spRes.data);
     if (setRes.data?.[0]?.value?.ads) setAds(setRes.data[0].value.ads);
     if (aaRes.data) setArticleAds(aaRes.data as ArticleAd[]);
+    if (haRes.data?.[0]?.value) setHouseAd({ ...DEFAULT_HOUSE_AD, ...haRes.data[0].value });
     setLoading(false);
   }
 
@@ -165,6 +191,12 @@ export default function PartnersScreen({ supabase }: Props) {
     setAds(updatedAds);
     await supabase.from("site_settings").upsert({ key: "display_ads", value: { ads: updatedAds }, updated_at: new Date().toISOString() }, { onConflict: "key" });
     setMsg("Ads saved"); setTimeout(() => setMsg(""), 2000);
+  }
+
+  async function saveHouseAd(updated: HouseAd) {
+    setHouseAd(updated);
+    await supabase.from("site_settings").upsert({ key: "house_ad", value: updated, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setMsg("House ad saved"); setTimeout(() => setMsg(""), 2000);
   }
 
   async function uploadAd(file: File) {
@@ -336,6 +368,68 @@ export default function PartnersScreen({ supabase }: Props) {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
             {uploading ? "Uploading..." : "Upload Ad (image or video)"}
           </button>
+        </div>
+      </section>
+
+      {/* ─── House Ad ─── */}
+      <section>
+        <h3 className="text-[16px] font-bold text-white mb-1">House Ad</h3>
+        <p className="text-[12px] text-[#555] mb-4">
+          Fallback ad shown in the homepage sidebar when no uploaded display ads are active. Also participates in the random rotation when enabled.
+        </p>
+
+        <label className="flex items-center gap-2 mb-4">
+          <input type="checkbox" checked={houseAd.enabled}
+            onChange={(e) => saveHouseAd({ ...houseAd, enabled: e.target.checked })}
+            className="w-4 h-4 rounded border-[#333] bg-[#0a0a0a] text-[#ff6b4a]" />
+          <span className="text-[13px] text-[#ccc]">Include in ad rotation</span>
+        </label>
+
+        <div className="space-y-3 p-4 rounded-xl bg-[#0c0c0c] border border-[#1a1a1a]">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-[#666] mb-1">Presented-by label</label>
+              <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+                defaultValue={houseAd.presented_by_label} key={houseAd.presented_by_label + "-pbl"}
+                onBlur={(e) => saveHouseAd({ ...houseAd, presented_by_label: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-[#666] mb-1">Logo alt text</label>
+              <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+                defaultValue={houseAd.logo_alt} key={houseAd.logo_alt + "-alt"}
+                onBlur={(e) => saveHouseAd({ ...houseAd, logo_alt: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-[#666] mb-1">Logo URL</label>
+            <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+              defaultValue={houseAd.logo_url} key={houseAd.logo_url + "-logo"}
+              onBlur={(e) => saveHouseAd({ ...houseAd, logo_url: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-[#666] mb-1">Click-through URL</label>
+            <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+              defaultValue={houseAd.link_url} key={houseAd.link_url + "-link"}
+              onBlur={(e) => saveHouseAd({ ...houseAd, link_url: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-[#666] mb-1">Headline</label>
+            <textarea rows={2} className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none resize-none"
+              defaultValue={houseAd.headline} key={houseAd.headline + "-head"}
+              onBlur={(e) => saveHouseAd({ ...houseAd, headline: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-[#666] mb-1">Tagline / subtext</label>
+            <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+              defaultValue={houseAd.tagline} key={houseAd.tagline + "-tag"}
+              onBlur={(e) => saveHouseAd({ ...houseAd, tagline: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-[#666] mb-1">CTA button label</label>
+            <input type="text" className="w-full px-3 py-2 bg-[#111] border border-[#222] rounded-lg text-[13px] text-white focus:outline-none"
+              defaultValue={houseAd.cta_text} key={houseAd.cta_text + "-cta"}
+              onBlur={(e) => saveHouseAd({ ...houseAd, cta_text: e.target.value })} />
+          </div>
         </div>
       </section>
 
