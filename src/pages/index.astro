@@ -5,7 +5,7 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import {
   getAllArticles, getAllThemes,
-  formatLabel, authorDisplayName, getSiteSetting,
+  formatLabel, authorDisplayName, getSiteSetting, supabase,
 } from "@lib/supabase";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
 import { sanitizeHtml } from "@lib/sanitize";
@@ -106,33 +106,21 @@ featuredArticles.forEach((a) => shownSlugs.add(a.slug));
 
 const vertical2Articles = filterArticlesExcluding("vertical2").slice(0, 5);
 
-// Partners — real data from Lovable CMS
-const partners = [
-  {
-    name: "PH1",
-    tagline: "Ship products that are proven to deliver impact in the AI era",
-    cta: "",
-    url: "https://ph1.ca",
-    logoUrl: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
-    color: "#ff6b4a",
-  },
-  {
-    name: "AI Value Acceleration",
-    tagline: "We find exactly where value stalls, why, and whose job it is to fix",
-    cta: "",
-    url: "https://aivalueacceleration.com/",
-    logoUrl: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png",
-    color: "#9b7bff",
-  },
-  {
-    name: "Become a Partner",
-    tagline: "Reach thousands of product leaders and organizational product adoption leaders",
-    cta: "",
-    url: "/partnerships/",
-    logoUrl: "",
-    color: "#4ab8c9",
-  },
-];
+// Partners — live from sponsors table in Supabase
+const { data: sponsorsData } = await supabase
+  .from("sponsors")
+  .select("name, tagline, logo_url, website_url, cta_text, tier")
+  .eq("active", true)
+  .order("display_order");
+const PARTNER_COLORS = ["#ff6b4a", "#9b7bff", "#4ab8c9", "#f4a261", "#52b788"];
+const partners = (sponsorsData ?? []).map((s: any, i: number) => ({
+  name: s.name,
+  tagline: s.tagline ?? "",
+  cta: s.cta_text ?? "",
+  url: s.website_url ?? "#",
+  logoUrl: s.logo_url ?? "",
+  color: PARTNER_COLORS[i % PARTNER_COLORS.length],
+}));
 
 
 const jsonLd = {
@@ -745,6 +733,16 @@ const jsonLd = {
               <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
             </a>
           ))}
+          {/* Static "Become a Partner" CTA card always appended after CMS partners */}
+          <a href="/partnerships/"
+            class="group block p-8 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden min-h-[200px] flex flex-col justify-between" style="background: linear-gradient(160deg, #4ab8c908, #0c0c0c 50%)">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-2.5 h-2.5 rounded-full" style="background: #4ab8c9; box-shadow: 0 0 8px #4ab8c930"></div>
+              <h3 class="text-[16px] font-bold text-white group-hover:text-[#ff6b4a] transition-colors">Become a Partner</h3>
+            </div>
+            <p class="text-[15px] text-[#888] leading-relaxed">Reach thousands of product leaders and organizational product adoption leaders</p>
+            <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </a>
         </div>
       </div>
     </section>
