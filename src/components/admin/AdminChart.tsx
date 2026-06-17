@@ -15,7 +15,12 @@ export function buildDateRange(from: Date, to: Date): string[] {
   return out;
 }
 
-export function Chart({ series, unit }: { series: ChartSeries[]; unit: string }) {
+export function Chart({ series, unit, onPointClick, selectedDate }: {
+  series: ChartSeries[];
+  unit: string;
+  onPointClick?: (date: string) => void;
+  selectedDate?: string | null;
+}) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [tooltipLeft, setTooltipLeft] = useState(0);
@@ -65,10 +70,18 @@ export function Chart({ series, unit }: { series: ChartSeries[]; unit: string })
     ? series.map(s => ({ label: s.label, color: s.color, value: s.points[hoverIdx]?.value ?? 0 }))
     : [];
 
+  function handleClick() {
+    if (hoverIdx !== null && onPointClick) {
+      const date = series[0].points[hoverIdx]?.date;
+      if (date) onPointClick(date);
+    }
+  }
+
   return (
     <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full h-[240px]"
-        preserveAspectRatio="none" onMouseMove={handleMouseMove}>
+        preserveAspectRatio="none" onMouseMove={handleMouseMove}
+        onClick={handleClick} style={{ cursor: onPointClick ? "pointer" : "default" }}>
         {yTicks.map(({ y, v }, i) => (
           <g key={i}>
             <line x1={P} x2={W - P} y1={y} y2={y} stroke="#1a1a1a" strokeWidth="1" />
@@ -82,6 +95,23 @@ export function Chart({ series, unit }: { series: ChartSeries[]; unit: string })
           <path key={s.id} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth="2"
             vectorEffect="non-scaling-stroke" />
         ))}
+        {/* Selected date marker */}
+        {selectedDate && (() => {
+          const selIdx = series[0].points.findIndex(p => p.date === selectedDate);
+          if (selIdx < 0) return null;
+          const cx = xFor(selIdx);
+          return (
+            <g pointerEvents="none">
+              <line x1={cx} x2={cx} y1={P} y2={H - P} stroke="#ff6b4a" strokeWidth="1"
+                strokeDasharray="3 3" vectorEffect="non-scaling-stroke" opacity="0.6" />
+              {series.map(s => (
+                <circle key={s.id} cx={cx} cy={yFor(s.points[selIdx]?.value ?? 0)}
+                  r="5" fill="#ff6b4a" stroke="#0a0a0a" strokeWidth="2"
+                  vectorEffect="non-scaling-stroke" />
+              ))}
+            </g>
+          );
+        })()}
         {hoverIdx !== null && (() => {
           const cx = xFor(hoverIdx);
           return (
@@ -117,6 +147,7 @@ export function Chart({ series, unit }: { series: ChartSeries[]; unit: string })
               )}
             </div>
           ))}
+          {onPointClick && <div className="text-[9px] text-[#444] mt-1.5">Click to drill down</div>}
         </div>
       )}
     </div>
