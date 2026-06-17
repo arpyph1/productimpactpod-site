@@ -16,35 +16,8 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-// Display ad for sidebar — pick randomly from active CMS banner ads + optional house ad.
-const displayAdsRaw = await getSiteSetting("display_ads");
-const activeDisplayAds: Array<{ id: string; name: string; image_url: string; link_url: string; media_type?: string }> =
-  (displayAdsRaw?.ads ?? []).filter((a: any) => a.active !== false && a.image_url);
-
-const DEFAULT_HOUSE_AD = {
-  enabled: true,
-  presented_by_label: "Presented by",
-  logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
-  logo_alt: "PH1",
-  link_url: "https://ph1.ca",
-  headline: "PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.",
-  tagline: "Ship products proven to deliver impact in the AI era.",
-  cta_text: "Learn more",
-};
-const houseAdRaw = await getSiteSetting("house_ad");
-const houseAdConfig = houseAdRaw ? { ...DEFAULT_HOUSE_AD, ...houseAdRaw } : DEFAULT_HOUSE_AD;
-
-// Build combined pool: banner ads + house ad if enabled.
-// Each entry tagged with kind so the template can branch on banner vs house.
-const adPool: any[] = [
-  ...activeDisplayAds.map((a) => ({ kind: "banner", ...a })),
-  ...(houseAdConfig.enabled ? [{ kind: "house", ...houseAdConfig }] : []),
-];
-const sidebarAdEntry = adPool.length > 0
-  ? adPool[Math.floor(Math.random() * adPool.length)]
-  : null;
-const sidebarAd = sidebarAdEntry?.kind === "banner" ? sidebarAdEntry : null;
-const sidebarHouseAd = sidebarAdEntry?.kind === "house" ? sidebarAdEntry : null;
+// Display ad slot is populated client-side so it always reflects the latest CMS
+// data on every page load, not just at build time.
 
 const seoSettings = (await getSiteSetting("seo")) ?? {};
 const hp = (await getSiteSetting("homepage")) ?? {};
@@ -273,44 +246,11 @@ const jsonLd = {
             </div>
           </div>
 
-          {/* Right: display ad (CMS) or ph1.ca house ad fallback. top-[96px] clears scrolled nav. */}
+          {/* Right: display ad slot — populated client-side from CMS so it's always fresh. */}
           <div class="hidden lg:block">
-            <div class="sticky top-[96px]">
-              {sidebarAd ? (
-                <a href={sidebarAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
-                  class="group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block">Advertisement</span>
-                  {sidebarAd.media_type === "video" ? (
-                    <video
-                      src={sidebarAd.image_url}
-                      autoplay muted loop playsinline
-                      class="w-full h-auto mt-3"
-                    />
-                  ) : (
-                    <img src={sidebarAd.image_url} alt={sidebarAd.name}
-                      class="w-full h-auto mt-3" loading="lazy" />
-                  )}
-                </a>
-              ) : sidebarHouseAd ? (
-                <a href={sidebarHouseAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
-                  class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">{sidebarHouseAd.presented_by_label}</span>
-                  {sidebarHouseAd.logo_url && (
-                    <img src={sidebarHouseAd.logo_url} alt={sidebarHouseAd.logo_alt}
-                      class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
-                  )}
-                  <p class="text-[15px] font-bold text-white leading-snug mb-3">
-                    {sidebarHouseAd.headline}
-                  </p>
-                  <p class="text-[12px] text-[#666] leading-relaxed mb-6">
-                    {sidebarHouseAd.tagline}
-                  </p>
-                  <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
-                    {sidebarHouseAd.cta_text}
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </span>
-                </a>
-              ) : null}
+            <div class="sticky top-[96px]" id="home-ad-container">
+              {/* Skeleton shown until JS renders the ad */}
+              <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] min-h-[400px]"></div>
             </div>
           </div>
         </div>
@@ -1025,3 +965,99 @@ const jsonLd = {
     font-weight: 600;
   }
 </style>
+
+{/* ── Sidebar ad — client-side so CMS changes show without a rebuild ── */}
+<script is:inline define:vars={{
+  _sbUrl: import.meta.env.PUBLIC_SUPABASE_URL,
+  _sbKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+}}>
+(function() {
+  var sbUrl = _sbUrl, sbKey = _sbKey;
+  if (!sbUrl || !sbKey) return;
+
+  var DEFAULT_HOUSE_AD = {
+    enabled: true,
+    presented_by_label: "Presented by",
+    logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
+    logo_alt: "PH1",
+    link_url: "https://ph1.ca",
+    headline: "PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.",
+    tagline: "Ship products proven to deliver impact in the AI era.",
+    cta_text: "Learn more",
+  };
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function renderBanner(ad, container) {
+    var a = document.createElement("a");
+    a.href = ad.link_url || "#";
+    a.target = "_blank"; a.rel = "noopener"; a.id = "home-ad-slot";
+    a.className = "group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors";
+    var label = document.createElement("span");
+    label.className = "text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block";
+    label.textContent = "Advertisement";
+    a.appendChild(label);
+    if (ad.media_type === "video") {
+      var v = document.createElement("video");
+      v.src = ad.image_url; v.autoplay = true; v.muted = true; v.loop = true;
+      v.setAttribute("playsinline",""); v.className = "w-full h-auto mt-3";
+      a.appendChild(v);
+    } else {
+      var img = document.createElement("img");
+      img.src = ad.image_url; img.alt = esc(ad.name);
+      img.className = "w-full h-auto mt-3"; img.loading = "lazy";
+      a.appendChild(img);
+    }
+    container.innerHTML = ""; container.appendChild(a);
+  }
+
+  function renderHouseAd(ad, container) {
+    var arrowSvg = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    var logoHtml = ad.logo_url
+      ? '<img src="' + esc(ad.logo_url) + '" alt="' + esc(ad.logo_alt) + '" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />'
+      : "";
+    container.innerHTML =
+      '<a href="' + esc(ad.link_url) + '" target="_blank" rel="noopener" id="home-ad-slot"' +
+      ' class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">' +
+      '<span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">' + esc(ad.presented_by_label) + '</span>' +
+      logoHtml +
+      '<p class="text-[15px] font-bold text-white leading-snug mb-3">' + esc(ad.headline) + '</p>' +
+      '<p class="text-[12px] text-[#666] leading-relaxed mb-6">' + esc(ad.tagline) + '</p>' +
+      '<span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">' +
+      esc(ad.cta_text) + arrowSvg + '</span>' +
+      '</a>';
+  }
+
+  fetch(sbUrl + "/rest/v1/site_settings?key=in.(display_ads,house_ad)&select=key,value", {
+    headers: { apikey: sbKey, Authorization: "Bearer " + sbKey },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(rows) {
+    var settings = {};
+    (rows || []).forEach(function(r) { settings[r.key] = r.value; });
+
+    var activeAds = ((settings.display_ads || {}).ads || []).filter(function(a) {
+      return a.active !== false && a.image_url;
+    });
+    var houseAdConfig = Object.assign({}, DEFAULT_HOUSE_AD, settings.house_ad || {});
+
+    var pool = activeAds.map(function(a) { return Object.assign({ kind: "banner" }, a); });
+    if (houseAdConfig.enabled !== false) pool.push(Object.assign({ kind: "house" }, houseAdConfig));
+    if (!pool.length) return;
+
+    var ad = pool[Math.floor(Math.random() * pool.length)];
+    var container = document.getElementById("home-ad-container");
+    if (!container) return;
+
+    if (ad.kind === "banner") renderBanner(ad, container);
+    else renderHouseAd(ad, container);
+  })
+  .catch(function() {
+    // On error, render the house ad default silently
+    var container = document.getElementById("home-ad-container");
+    if (container) renderHouseAd(DEFAULT_HOUSE_AD, container);
+  });
+})();
+</script>

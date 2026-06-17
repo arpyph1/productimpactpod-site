@@ -180,7 +180,7 @@ export default function AnalyticsScreen({ supabase }: Props) {
         </div>
 
         {viewMode === "graph" ? (
-          <SiteGraphView supabase={supabase} metric={TAB_TO_METRIC[tab] ?? "view"} />
+          <SiteGraphView supabase={supabase} metric={TAB_TO_METRIC[tab] ?? "view"} allArticles={data} />
         ) : (
           <>
             {/* Engagement table — wider than a phone, wrap in horizontal scroll */}
@@ -280,12 +280,21 @@ const TAB_TO_METRIC: Partial<Record<SortKey, GraphMetric>> = {
   link_clicks:  "link_click",
 };
 
-function SiteGraphView({ supabase, metric }: { supabase: SupabaseClient; metric: GraphMetric }) {
+interface DrilldownRow { article_id: string; title: string; slug: string; value: number }
+
+function SiteGraphView({ supabase, metric, allArticles }: {
+  supabase: SupabaseClient;
+  metric: GraphMetric;
+  allArticles: EngagementRow[];
+}) {
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90 | null>(30);
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [points, setPoints] = useState<DailyPoint[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [drilldown, setDrilldown] = useState<DrilldownRow[]>([]);
+  const [loadingDrilldown, setLoadingDrilldown] = useState(false);
 
   const metricMeta = METRIC_META[metric];
 
@@ -301,6 +310,38 @@ function SiteGraphView({ supabase, metric }: { supabase: SupabaseClient; metric:
     return { from, to };
   }, [rangeDays, customFrom, customTo]);
 
+  const fetchArticleStats = useCallback(async (from: Date, to: Date) => {
+    setLoadingDrilldown(true);
+    try {
+      const { data, error } = await supabase
+        .from("article_events")
+        .select("article_id, amount")
+        .eq("event_type", metric)
+        .gte("created_at", from.toISOString())
+        .lte("created_at", to.toISOString());
+      if (error) throw error;
+
+      const totals = new Map<string, number>();
+      (data ?? []).forEach((e: any) => {
+        totals.set(e.article_id, (totals.get(e.article_id) ?? 0) + (e.amount ?? 0));
+      });
+
+      const rows: DrilldownRow[] = [];
+      totals.forEach((value, article_id) => {
+        const art = allArticles.find(a => a.article_id === article_id);
+        if (art && value > 0) {
+          rows.push({ article_id, title: art.title ?? article_id, slug: art.slug ?? "", value });
+        }
+      });
+      rows.sort((a, b) => b.value - a.value);
+      setDrilldown(rows);
+    } catch (e) {
+      console.error("SiteGraphView drilldown error:", e);
+    } finally {
+      setLoadingDrilldown(false);
+    }
+  }, [supabase, metric, allArticles]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -315,14 +356,31 @@ function SiteGraphView({ supabase, metric }: { supabase: SupabaseClient; metric:
       const byDay = new Map<string, number>((data ?? []).map((r: any) => [r.day as string, Number(r.total)]));
       const allDays = buildDateRange(from, to);
       setPoints(allDays.map(date => ({ date, value: byDay.get(date) ?? 0 })));
+
+      // Always reset to full-range article list when range changes
+      setSelectedDate(null);
+      fetchArticleStats(from, to);
     } catch (e) {
       console.error("SiteGraphView fetch error:", e);
     } finally {
       setLoading(false);
     }
-  }, [metric, getDateRange, supabase]);
+  }, [metric, getDateRange, supabase, fetchArticleStats]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  function handlePointClick(date: string) {
+    setSelectedDate(date);
+    const from = new Date(date + "T00:00:00Z");
+    const to = new Date(date + "T23:59:59Z");
+    fetchArticleStats(from, to);
+  }
+
+  function clearSelection() {
+    setSelectedDate(null);
+    const { from, to } = getDateRange();
+    fetchArticleStats(from, to);
+  }
 
   const total = points.reduce((s, p) => s + p.value, 0);
   const displayTotal = metric === "read_pct"
@@ -382,8 +440,66 @@ function SiteGraphView({ supabase, metric }: { supabase: SupabaseClient; metric:
         <Chart
           series={[{ id: "site", label: "All articles", points, color: CHART_COLORS[0] }]}
           unit={metricMeta.unit}
+          onPointClick={handlePointClick}
+          selectedDate={selectedDate}
         />
       )}
+
+      {/* Article drilldown */}
+      <div className="border-t border-[#1a1a1a] pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className="text-[12px] font-bold text-white">
+              {selectedDate
+                ? `Articles — ${selectedDate}`
+                : `Articles in range`}
+            </span>
+            {selectedDate && (
+              <button onClick={clearSelection}
+                className="text-[10px] text-[#ff6b4a] hover:text-[#ff8566] transition-colors">
+                ← Show full range
+              </button>
+            )}
+          </div>
+          <span className="text-[10px] text-[#444]">
+            {selectedDate ? "Click the graph to change date" : "Click any graph point to drill into a day"}
+          </span>
+        </div>
+
+        {loadingDrilldown ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-5 h-5 border-2 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : drilldown.length === 0 ? (
+          <div className="text-[12px] text-[#555] py-4 text-center">
+            No {metricMeta.label.toLowerCase()} events recorded {selectedDate ? "on this day" : "in this range"}.
+          </div>
+        ) : (
+          <div className="space-y-0.5">
+            {drilldown.map((row, i) => (
+              <div key={row.article_id}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#111] transition-colors group">
+                <span className="text-[11px] text-[#444] font-mono w-5 text-right flex-shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-[#ccc] group-hover:text-white transition-colors leading-snug truncate">
+                    {row.title}
+                  </div>
+                  {row.slug && (
+                    <a href={`/news/${row.slug}/`} target="_blank" rel="noopener"
+                      onClick={e => e.stopPropagation()}
+                      className="text-[10px] text-[#444] hover:text-[#ff6b4a] transition-colors">
+                      /news/{row.slug}/
+                    </a>
+                  )}
+                </div>
+                <span className="text-[13px] font-mono font-bold text-white tabular-nums flex-shrink-0">
+                  {row.value.toLocaleString()}{metricMeta.unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
