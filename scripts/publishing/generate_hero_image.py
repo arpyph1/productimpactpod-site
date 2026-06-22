@@ -52,7 +52,7 @@ from dataclasses import dataclass
 
 # ── Configuration ───────────────────────────────────────────────────────────
 
-ANTHROPIC_MODEL = "claude-opus-4-6"  # latest, strongest for visual reasoning
+ANTHROPIC_MODEL = "claude-opus-4-8"  # latest Opus — strongest for visual reasoning
 REPLICATE_MODEL = "black-forest-labs/flux-1.1-pro"
 SUPABASE_BUCKET = "article-heroes"
 OUTPUT_WIDTH = 1200
@@ -175,8 +175,12 @@ def _distill_prompt(article: dict, *, api_key: str, system: str) -> str:
             "content-type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Anthropic API error {e.code}: {body[:400]}") from e
     blocks = data.get("content", [])
     text_blocks = [b.get("text", "") for b in blocks if b.get("type") == "text"]
     distilled = " ".join(text_blocks).strip()
@@ -217,11 +221,17 @@ def _generate_image(prompt: str, negative: str, *, replicate_token: str) -> byte
         },
     )
 
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        prediction = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            prediction = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Replicate API error {e.code}: {body[:400]}") from e
 
     # If not yet complete, poll
     get_url = prediction.get("urls", {}).get("get")
+    if not get_url:
+        raise RuntimeError(f"Replicate response missing urls.get: {prediction}")
     deadline = time.time() + 180
     while prediction.get("status") not in ("succeeded", "failed", "canceled"):
         if time.time() > deadline:
