@@ -199,6 +199,7 @@ def _build_full_prompt(subject: str, style: str) -> str:
 def _generate_image(prompt: str, negative: str, *, replicate_token: str) -> bytes:
     """Call Replicate's Flux 1.1 Pro. Polls prediction until complete."""
     create_body = json.dumps({
+        "model": REPLICATE_MODEL,
         "input": {
             "prompt": prompt,
             "negative_prompt": negative,
@@ -211,7 +212,7 @@ def _generate_image(prompt: str, negative: str, *, replicate_token: str) -> byte
     }).encode("utf-8")
 
     req = urllib.request.Request(
-        f"https://api.replicate.com/v1/models/{REPLICATE_MODEL}/predictions",
+        "https://api.replicate.com/v1/predictions",
         data=create_body,
         method="POST",
         headers={
