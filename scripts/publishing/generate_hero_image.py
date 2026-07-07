@@ -190,19 +190,19 @@ def _distill_prompt(article: dict, *, api_key: str, system: str) -> str:
     return distilled
 
 
-def _build_full_prompt(subject: str, style: str) -> str:
-    return f"{subject}. {style}"
+def _build_full_prompt(subject: str, style: str, negative: str) -> str:
+    # Flux 1.1 Pro has no negative_prompt input — encode avoidances in the text.
+    return f"{subject}. {style} Avoid: {negative}"
 
 
 # ── Image generation ────────────────────────────────────────────────────────
 
-def _generate_image(prompt: str, negative: str, *, replicate_token: str) -> bytes:
+def _generate_image(prompt: str, *, replicate_token: str) -> bytes:
     """Call Replicate's Flux 1.1 Pro. Polls prediction until complete."""
     create_body = json.dumps({
         "model": REPLICATE_MODEL,
         "input": {
             "prompt": prompt,
-            "negative_prompt": negative,
             "aspect_ratio": "16:9",       # close to 1200×628 OG (1.91:1)
             "output_format": "png",
             "output_quality": 95,
@@ -344,8 +344,8 @@ def generate(
 
     t0 = time.time()
     subject = _distill_prompt(article, api_key=anthropic_key, system=distillation_system)
-    full_prompt = _build_full_prompt(subject, editorial_style)
-    png = _generate_image(full_prompt, negative_prompt, replicate_token=replicate_token)
+    full_prompt = _build_full_prompt(subject, editorial_style, negative_prompt)
+    png = _generate_image(full_prompt, replicate_token=replicate_token)
 
     if out_path:
         with open(out_path, "wb") as fh:
