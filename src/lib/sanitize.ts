@@ -22,7 +22,7 @@ const ALLOWED_ATTRS: Record<string, string[]> = {
     "frameborder", "allow", "allowfullscreen",
     "referrerpolicy", "loading",
   ],
-  div: ["data-survey-id", "style"],
+  div: ["data-survey-id"],
   "*": ["class", "id", "lang", "dir"],
 };
 
