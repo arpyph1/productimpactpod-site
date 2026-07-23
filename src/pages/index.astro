@@ -46,8 +46,9 @@ if (needsEngagement) {
 const leadStories = articles.filter((a) => a.is_lead_story);
 const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
 
-// Running exclusion set — prevents the same article appearing in multiple sections.
-const shownSlugs = new Set<string>(carouselArticles.map((a) => a.slug));
+// Running exclusion set — hero slider and featured reading carousel are allowed
+// to repeat in other sections, so their slugs are not seeded here.
+const shownSlugs = new Set<string>();
 
 const latestArticles = articles.filter((a) => !shownSlugs.has(a.slug)).slice(0, 5);
 latestArticles.forEach((a) => shownSlugs.add(a.slug));
@@ -74,8 +75,8 @@ const carousel2Articles = filterArticlesExcluding("carousel2").slice(0, 4);
 carousel2Articles.forEach((a) => shownSlugs.add(a.slug));
 
 const featuredLabel = findSection("featured")?.label ?? "Featured Reading";
+// Don't add to shownSlugs — featured reading items are allowed to repeat in later sections.
 const featuredArticles = articles.filter((a) => !shownSlugs.has(a.slug)).slice(0, 4);
-featuredArticles.forEach((a) => shownSlugs.add(a.slug));
 
 const vertical2Articles = filterArticlesExcluding("vertical2").slice(0, 5);
 
