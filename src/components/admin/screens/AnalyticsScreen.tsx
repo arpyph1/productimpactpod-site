@@ -300,12 +300,18 @@ function SiteGraphView({ supabase, metric, allArticles }: {
 
   const getDateRange = useCallback((): { from: Date; to: Date } => {
     const to = new Date(); to.setUTCHours(23, 59, 59, 999);
-    if (rangeDays === null && customFrom && customTo) {
-      return { from: new Date(customFrom + "T00:00:00Z"), to: new Date(customTo + "T23:59:59Z") };
+    if (rangeDays === null) {
+      // Custom date range — fall back to epoch/today for whichever end is unset
+      const from = customFrom
+        ? new Date(customFrom + "T00:00:00Z")
+        : new Date("2020-01-01T00:00:00Z");
+      const toDate = customTo
+        ? new Date(customTo + "T23:59:59Z")
+        : to;
+      return { from, to: toDate };
     }
-    const days = rangeDays ?? 30;
     const from = new Date(to);
-    from.setUTCDate(from.getUTCDate() - (days - 1));
+    from.setUTCDate(from.getUTCDate() - (rangeDays - 1));
     from.setUTCHours(0, 0, 0, 0);
     return { from, to };
   }, [rangeDays, customFrom, customTo]);
