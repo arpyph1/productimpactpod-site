@@ -26,6 +26,7 @@ interface FetchResult {
   episodes: PodcastEpisode[];
   channelTitle: string;
   channelImage: string;
+  totalCount: number;
 }
 
 /**
@@ -40,7 +41,7 @@ export async function getPodcastEpisodes(
   limit = 8,
 ): Promise<FetchResult> {
   if (!feedUrl) {
-    return { episodes: [], channelTitle: "", channelImage: "" };
+    return { episodes: [], channelTitle: "", channelImage: "", totalCount: 0 };
   }
 
   let xml: string;
@@ -54,12 +55,12 @@ export async function getPodcastEpisodes(
     });
     if (!res.ok) {
       console.warn(`Podcast feed fetch ${feedUrl} → ${res.status}`);
-      return { episodes: [], channelTitle: "", channelImage: "" };
+      return { episodes: [], channelTitle: "", channelImage: "", totalCount: 0 };
     }
     xml = await res.text();
   } catch (err) {
     console.warn(`Podcast feed fetch failed (${feedUrl}):`, err);
-    return { episodes: [], channelTitle: "", channelImage: "" };
+    return { episodes: [], channelTitle: "", channelImage: "", totalCount: 0 };
   }
 
   // Channel-level metadata (used as fallbacks for episode imageUrl)
@@ -138,7 +139,7 @@ export async function getPodcastEpisodes(
     });
   });
 
-  return { episodes, channelTitle, channelImage };
+  return { episodes, channelTitle, channelImage, totalCount: itemBlocks.length };
 }
 
 /**

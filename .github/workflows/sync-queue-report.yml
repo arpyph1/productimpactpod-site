@@ -26,50 +26,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # Fetch all merged PRs with sync-pending label
-          ITEMS=$(gh pr list \
+          # Fetch merged PRs with sync-pending label (pipe-delimited for easy parsing)
+          PR_LIST=$(gh pr list \
             --repo "$REPO" \
             --state merged \
             --label "sync-pending" \
             --limit 100 \
             --json number,title,mergedAt,files \
-            --jq '.[] | {number, title, mergedAt, fileCount: (.files | length)}' \
-          )
+            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')
 
-          COUNT=$(echo "$ITEMS" | grep -c '"number"' || true)
+          COUNT=$(echo "$PR_LIST" | grep -c '.' || true)
 
           if [ "$COUNT" -eq 0 ]; then
             echo "No pending items — skipping report issue"
             exit 0
           fi
 
-          # Build checklist rows
-          CHECKLIST=""
-          while IFS= read -r row; do
-            NUM=$(echo "$row" | grep -o '"number":[0-9]*' | grep -o '[0-9]*')
-            TITLE=$(echo "$row" | grep -o '"title":"[^"]*"' | sed 's/"title":"//;s/"//')
-            MERGED=$(echo "$row" | grep -o '"mergedAt":"[^"]*"' | sed 's/"mergedAt":"//;s/T.*//' | sed 's/"//')
-            FILES=$(echo "$row" | grep -o '"fileCount":[0-9]*' | grep -o '[0-9]*')
-            CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (${MERGED}, ${FILES} files)\n"
-          done <<< "$(gh pr list \
-            --repo "$REPO" \
-            --state merged \
-            --label "sync-pending" \
-            --limit 100 \
-            --json number,title,mergedAt,files \
-            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
-
-          # Rebuild checklist cleanly from pipe-delimited output
+          # Build checklist from pipe-delimited rows
           CHECKLIST=""
           while IFS='|' read -r NUM TITLE MERGED FILES; do
             CHECKLIST="${CHECKLIST}- [ ] #${NUM} — ${TITLE} (\`${MERGED}\`, ${FILES} files)\n"
-          done <<< "$(gh pr list \
-            --repo "$REPO" \
-            --state merged \
-            --label "sync-pending" \
-            --limit 100 \
-            --json number,title,mergedAt,files \
-            --jq '.[] | "\(.number)|\(.title)|\(.mergedAt // "" | split("T")[0])|\(.files | length)"')"
+          done <<< "$PR_LIST"
 
           WEEK=$(date -u +"%Y-%m-%d")
 

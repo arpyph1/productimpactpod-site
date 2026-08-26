@@ -1,0 +1,38 @@
+name: Site Health Monitor
+
+# Runs every 6 hours and on manual trigger.
+# Checks ~80 indicators across HTTP status, page content, feeds,
+# Supabase tables, the YouTube Shorts edge function, SEO schema, and admin.
+# Creates a GitHub issue labelled "monitoring-alert" on first failure;
+# appends a comment on repeat failures; auto-closes when all checks pass.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # 00:00, 06:00, 12:00, 18:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write      # create / update / close monitoring-alert issues
+  contents: read
+
+jobs:
+  health-check:
+    name: "Health check — productimpactpod.com"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run health checks
+        id: checks
+        env:
+          SITE_URL:           https://productimpactpod.com
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY:  ${{ secrets.SUPABASE_ANON_KEY }}
+          GH_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY:  ${{ github.repository }}
+        run: node .github/scripts/health-check.mjs
