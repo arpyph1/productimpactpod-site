@@ -148,7 +148,7 @@ const jsonLd = [
       <div class="max-w-[1200px] mx-auto px-4 md:px-6">
         <div class="flex items-baseline justify-between mb-8">
           <h2 class="text-[20px] md:text-[26px] font-extrabold uppercase tracking-tight text-white">Product Impact Podcast Episodes</h2>
-          <span class="text-[12px] text-[#ff6b4a] font-semibold">{rssEpisodes.length} Live RSS</span>
+          <a href="/podcast/rss.xml" target="_blank" rel="noopener" class="text-[12px] text-[#ff6b4a] font-semibold hover:text-[#ff8566] transition-colors">{rssEpisodes.length} Live RSS</a>
         </div>
 
         <div class="grid grid-cols-3 md:grid-cols-5 gap-2.5" id="podcast-episode-grid">
@@ -529,10 +529,10 @@ const jsonLd = [
   var grid = document.getElementById('podcast-episode-grid');
   if (loadBtn && grid) {
     loadBtn.addEventListener('click', function() {
-      var hidden = grid.querySelectorAll('a.hidden');
+      var hidden = grid.querySelectorAll('[data-ep-card].hidden');
       var toShow = Math.min(10, hidden.length);
       for (var i = 0; i < toShow; i++) { hidden[i].classList.remove('hidden'); }
-      if (grid.querySelectorAll('a.hidden').length === 0) { loadBtn.style.display = 'none'; }
+      if (grid.querySelectorAll('[data-ep-card].hidden').length === 0) { loadBtn.style.display = 'none'; }
     });
   }
 
