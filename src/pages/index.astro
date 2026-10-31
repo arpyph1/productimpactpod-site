@@ -5,7 +5,7 @@ import Footer from "@components/Footer.astro";
 import EntityHeadline from "@components/EntityHeadline.astro";
 import {
   getAllArticles, getAllThemes,
-  formatLabel, authorDisplayName, getSiteSetting, supabase,
+  formatLabel, authorDisplayName, getSiteSetting,
 } from "@lib/supabase";
 import { fetchPodcastEpisodes, fetchSubstackEditions } from "@lib/rss";
 import { sanitizeHtml } from "@lib/sanitize";
@@ -16,11 +16,23 @@ const rssEpisodes = await fetchPodcastEpisodes(12);
 const substackEditions = await fetchSubstackEditions(3);
 const siteUrl = "https://productimpactpod.com";
 
-// Display ad slot is populated client-side so it always reflects the latest CMS
-// data on every page load, not just at build time.
+// Display ad for sidebar — build pool of all active ads (image ads + house ad), pick random.
+const displayAdsRaw = await getSiteSetting("display_ads");
+type ImageAd = { type: "image"; id: string; name: string; image_url: string; link_url: string; media_type?: string };
+type HouseAd = { type: "house"; eyebrow: string; logo_url: string; headline: string; body: string; link_url: string; link_text: string };
+const adPool: Array<ImageAd | HouseAd> = [
+  ...(displayAdsRaw?.ads ?? [])
+    .filter((a: any) => a.active !== false && a.image_url)
+    .map((a: any) => ({ type: "image" as const, ...a })),
+];
+const houseAdCms = displayAdsRaw?.house_ad;
+if (houseAdCms?.active !== false && houseAdCms?.headline) {
+  adPool.push({ type: "house" as const, ...houseAdCms });
+}
+const sidebarAd = adPool.length > 0 ? adPool[Math.floor(Math.random() * adPool.length)] : null;
 
-const seoSettings = (await getSiteSetting("seo")) ?? {};
 const hp = (await getSiteSetting("homepage")) ?? {};
+const seo = (await getSiteSetting("seo")) ?? {};
 const sections = hp.sections ?? [];
 const findSection = (id: string) => sections.find((s: any) => s.id === id);
 const sectionEnabled = (id: string, fallbackKey?: string) => {
@@ -46,9 +58,8 @@ if (needsEngagement) {
 const leadStories = articles.filter((a) => a.is_lead_story);
 const carouselArticles = leadStories.length > 0 ? leadStories.slice(0, 8) : articles.slice(0, 6);
 
-// Running exclusion set — hero slider and featured reading carousel are allowed
-// to repeat in other sections, so their slugs are not seeded here.
-const shownSlugs = new Set<string>();
+// Running exclusion set — prevents the same article appearing in multiple sections.
+const shownSlugs = new Set<string>(carouselArticles.map((a) => a.slug));
 
 const latestArticles = articles.filter((a) => !shownSlugs.has(a.slug)).slice(0, 5);
 latestArticles.forEach((a) => shownSlugs.add(a.slug));
@@ -75,26 +86,38 @@ const carousel2Articles = filterArticlesExcluding("carousel2").slice(0, 4);
 carousel2Articles.forEach((a) => shownSlugs.add(a.slug));
 
 const featuredLabel = findSection("featured")?.label ?? "Featured Reading";
-// Don't add to shownSlugs — featured reading items are allowed to repeat in later sections.
 const featuredArticles = articles.filter((a) => !shownSlugs.has(a.slug)).slice(0, 4);
+featuredArticles.forEach((a) => shownSlugs.add(a.slug));
 
 const vertical2Articles = filterArticlesExcluding("vertical2").slice(0, 5);
 
-// Partners — live from sponsors table in Supabase
-const { data: sponsorsData } = await supabase
-  .from("sponsors")
-  .select("name, tagline, logo_url, website_url, cta_text, tier")
-  .eq("active", true)
-  .order("display_order");
-const PARTNER_COLORS = ["#ff6b4a", "#9b7bff", "#4ab8c9", "#f4a261", "#52b788"];
-const partners = (sponsorsData ?? []).map((s: any, i: number) => ({
-  name: s.name,
-  tagline: s.tagline ?? "",
-  cta: s.cta_text ?? "",
-  url: s.website_url ?? "#",
-  logoUrl: s.logo_url ?? "",
-  color: PARTNER_COLORS[i % PARTNER_COLORS.length],
-}));
+// Partners — real data from Lovable CMS
+const partners = [
+  {
+    name: "PH1",
+    tagline: "Ship products that are proven to deliver impact in the AI era",
+    cta: "",
+    url: "https://ph1.ca",
+    logoUrl: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
+    color: "#ff6b4a",
+  },
+  {
+    name: "AI Value Acceleration",
+    tagline: "We find exactly where value stalls, why, and whose job it is to fix",
+    cta: "",
+    url: "https://aivalueacceleration.com/",
+    logoUrl: "https://aivalueacceleration.com/assets/logo-horizontal-dark-bg-B7ZF_V6_.png",
+    color: "#9b7bff",
+  },
+  {
+    name: "Become a Partner",
+    tagline: "Reach thousands of product leaders and organizational product adoption leaders",
+    cta: "",
+    url: "/partnerships/",
+    logoUrl: "",
+    color: "#4ab8c9",
+  },
+];
 
 
 const jsonLd = {
@@ -104,8 +127,8 @@ const jsonLd = {
 ---
 
 <BaseLayout
-  title={seoSettings.default_title ?? "Product Impact — AI strategy, analysis, and playbooks for product builders"}
-  description={seoSettings.default_description ?? "Independent analysis, strategic playbooks, and original research for product builders navigating the AI era."}
+  title={seo.default_title || "Product Impact — AI strategy, analysis, and playbooks for product builders"}
+  description={seo.default_description || "Independent analysis, strategic playbooks, and original research for product builders navigating the AI era."}
   canonicalUrl={`${siteUrl}/`}
   jsonLd={jsonLd}
 >
@@ -115,7 +138,7 @@ const jsonLd = {
   <div class="border-b border-[#161616] bg-[#080808]">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-2.5 flex items-center justify-between gap-4">
       <p class="text-[13px] text-[#666] leading-snug">
-        {hp.tagline ?? "Independent analysis and strategy for product builders navigating the AI era."}
+        {hp.tagline || "Independent analysis and strategy for product builders navigating the AI era."}
       </p>
       <a href="https://productimpactpod.substack.com" target="_blank" rel="noopener"
         class="hidden sm:inline-flex items-center gap-1 text-[12px] font-semibold text-[#ff6b4a] hover:text-[#ff8566] transition-colors shrink-0">
@@ -213,7 +236,7 @@ const jsonLd = {
           <div class="pl-4 md:pl-8">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-                <a href="/news/" class="hover:text-[#ff6b4a] transition-colors">Latest <span class="text-[#ff6b4a]">&#8250;</span></a>
+                Latest <span class="text-[#ff6b4a]">&#8250;</span>
               </h2>
               <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
             </div>
@@ -247,11 +270,34 @@ const jsonLd = {
             </div>
           </div>
 
-          {/* Right: display ad slot — populated client-side from CMS so it's always fresh. */}
+          {/* Right: display ad (CMS) or ph1.ca house ad fallback. top-[96px] clears scrolled nav. */}
           <div class="hidden lg:block">
-            <div class="sticky top-[96px]" id="home-ad-container">
-              {/* Skeleton shown until JS renders the ad */}
-              <div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] min-h-[400px]"></div>
+            <div class="sticky top-[96px]">
+              {sidebarAd?.type === "image" ? (
+                <a href={sidebarAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
+                  class="group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block">Advertisement</span>
+                  {sidebarAd.media_type === "video" ? (
+                    <video src={sidebarAd.image_url} autoplay muted loop playsinline class="w-full h-auto mt-3" />
+                  ) : (
+                    <img src={sidebarAd.image_url} alt={sidebarAd.name} class="w-full h-auto mt-3" loading="lazy" />
+                  )}
+                </a>
+              ) : sidebarAd?.type === "house" ? (
+                <a href={sidebarAd.link_url} target="_blank" rel="noopener" id="home-ad-slot"
+                  class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">{sidebarAd.eyebrow}</span>
+                  {sidebarAd.logo_url && (
+                    <img src={sidebarAd.logo_url} alt="" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                  )}
+                  <p class="text-[15px] font-bold text-white leading-snug mb-3">{sidebarAd.headline}</p>
+                  <p class="text-[12px] text-[#666] leading-relaxed mb-6">{sidebarAd.body}</p>
+                  <span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">
+                    {sidebarAd.link_text}
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </span>
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
@@ -287,7 +333,7 @@ const jsonLd = {
         <div class="flex items-center justify-between mb-6">
           <div>
             <h2 class="text-[24px] md:text-[28px] font-extrabold text-white tracking-tight">
-              <a href="/podcast/" class="hover:text-[#ff6b4a] transition-colors">Product Impact Podcast <span class="text-[#ff6b4a]">&#8250;</span></a>
+              Product Impact Podcast <span class="text-[#ff6b4a]">&#8250;</span>
             </h2>
             <p class="text-[13px] text-[#666]">Prove impact. Improve impact. Scale impact.</p>
           </div>
@@ -367,7 +413,7 @@ const jsonLd = {
           <div class="max-w-[1200px] mx-auto px-4 md:px-6">
             <div class="flex items-center justify-between mb-5">
               <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-                <a href="/news/" class="hover:text-[#ff6b4a] transition-colors">{c2Label} <span class="text-[#ff6b4a]">&#8250;</span></a>
+                {c2Label} <span class="text-[#ff6b4a]">&#8250;</span>
               </h2>
               <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
             </div>
@@ -411,7 +457,7 @@ const jsonLd = {
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-              <a href="/news/" class="hover:text-[#ff6b4a] transition-colors">{featuredLabel} <span class="text-[#ff6b4a]">&#8250;</span></a>
+              {featuredLabel} <span class="text-[#ff6b4a]">&#8250;</span>
             </h2>
             <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
           </div>
@@ -460,7 +506,7 @@ const jsonLd = {
         <div class="max-w-[1200px] mx-auto px-4 md:px-6">
           <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-              <a href="/news/" class="hover:text-[#ff6b4a] transition-colors">{evergreenLabel} <span class="text-[#ff6b4a]">&#8250;</span></a>
+              {evergreenLabel} <span class="text-[#ff6b4a]">&#8250;</span>
             </h2>
             <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">All articles</a>
           </div>
@@ -606,7 +652,7 @@ const jsonLd = {
           <div class="pl-4 md:pl-8">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-[22px] md:text-[26px] font-extrabold text-white tracking-tight">
-                <a href="/news/" class="hover:text-[#ff6b4a] transition-colors">{v2Label} <span class="text-[#ff6b4a]">&#8250;</span></a>
+                {v2Label} <span class="text-[#ff6b4a]">&#8250;</span>
               </h2>
               <a href="/news/" class="text-[13px] text-[#666] hover:text-white font-medium transition-colors">View all</a>
             </div>
@@ -674,16 +720,6 @@ const jsonLd = {
               <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
             </a>
           ))}
-          {/* Static "Become a Partner" CTA card always appended after CMS partners */}
-          <a href="/partnerships/"
-            class="group block p-8 rounded-xl border border-[#161616] hover:border-[#282828] transition-all relative overflow-hidden min-h-[200px] flex flex-col justify-between" style="background: linear-gradient(160deg, #4ab8c908, #0c0c0c 50%)">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-2.5 h-2.5 rounded-full" style="background: #4ab8c9; box-shadow: 0 0 8px #4ab8c930"></div>
-              <h3 class="text-[16px] font-bold text-white group-hover:text-[#ff6b4a] transition-colors">Become a Partner</h3>
-            </div>
-            <p class="text-[15px] text-[#888] leading-relaxed">Reach thousands of product leaders and organizational product adoption leaders</p>
-            <svg class="absolute top-6 right-6 w-4 h-4 text-[#333] group-hover:text-[#ff6b4a] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-          </a>
         </div>
       </div>
     </section>
@@ -966,99 +1002,3 @@ const jsonLd = {
     font-weight: 600;
   }
 </style>
-
-{/* ── Sidebar ad — client-side so CMS changes show without a rebuild ── */}
-<script is:inline define:vars={{
-  _sbUrl: import.meta.env.PUBLIC_SUPABASE_URL,
-  _sbKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-}}>
-(function() {
-  var sbUrl = _sbUrl, sbKey = _sbKey;
-  if (!sbUrl || !sbKey) return;
-
-  var DEFAULT_HOUSE_AD = {
-    enabled: true,
-    presented_by_label: "Presented by",
-    logo_url: "https://github.com/arpyph1/my-assets/blob/main/ph1_logo-200-271.png?raw=true",
-    logo_alt: "PH1",
-    link_url: "https://ph1.ca",
-    headline: "PH1 runs the user research that tells you whether your AI product actually works for real people — before you ship it.",
-    tagline: "Ship products proven to deliver impact in the AI era.",
-    cta_text: "Learn more",
-  };
-
-  function esc(s) {
-    return String(s || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  }
-
-  function renderBanner(ad, container) {
-    var a = document.createElement("a");
-    a.href = ad.link_url || "#";
-    a.target = "_blank"; a.rel = "noopener"; a.id = "home-ad-slot";
-    a.className = "group block rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden min-h-[400px] hover:border-[#333] transition-colors";
-    var label = document.createElement("span");
-    label.className = "text-[10px] font-bold uppercase tracking-wider text-[#444] px-4 pt-4 block";
-    label.textContent = "Advertisement";
-    a.appendChild(label);
-    if (ad.media_type === "video") {
-      var v = document.createElement("video");
-      v.src = ad.image_url; v.autoplay = true; v.muted = true; v.loop = true;
-      v.setAttribute("playsinline",""); v.className = "w-full h-auto mt-3";
-      a.appendChild(v);
-    } else {
-      var img = document.createElement("img");
-      img.src = ad.image_url; img.alt = esc(ad.name);
-      img.className = "w-full h-auto mt-3"; img.loading = "lazy";
-      a.appendChild(img);
-    }
-    container.innerHTML = ""; container.appendChild(a);
-  }
-
-  function renderHouseAd(ad, container) {
-    var arrowSvg = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-    var logoHtml = ad.logo_url
-      ? '<img src="' + esc(ad.logo_url) + '" alt="' + esc(ad.logo_alt) + '" class="h-10 w-auto mb-5 opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />'
-      : "";
-    container.innerHTML =
-      '<a href="' + esc(ad.link_url) + '" target="_blank" rel="noopener" id="home-ad-slot"' +
-      ' class="group block rounded-xl border border-[#1e1208] bg-gradient-to-b from-[#140a04] to-[#0a0a0a] p-6 min-h-[400px] hover:border-[#ff6b4a]/30 transition-colors">' +
-      '<span class="text-[10px] font-bold uppercase tracking-wider text-[#ff6b4a]/60 mb-5 block">' + esc(ad.presented_by_label) + '</span>' +
-      logoHtml +
-      '<p class="text-[15px] font-bold text-white leading-snug mb-3">' + esc(ad.headline) + '</p>' +
-      '<p class="text-[12px] text-[#666] leading-relaxed mb-6">' + esc(ad.tagline) + '</p>' +
-      '<span class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#ff6b4a] group-hover:text-[#ff8566] transition-colors">' +
-      esc(ad.cta_text) + arrowSvg + '</span>' +
-      '</a>';
-  }
-
-  fetch(sbUrl + "/rest/v1/site_settings?key=in.(display_ads,house_ad)&select=key,value", {
-    headers: { apikey: sbKey, Authorization: "Bearer " + sbKey },
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(rows) {
-    var settings = {};
-    (rows || []).forEach(function(r) { settings[r.key] = r.value; });
-
-    var activeAds = ((settings.display_ads || {}).ads || []).filter(function(a) {
-      return a.active !== false && a.image_url;
-    });
-    var houseAdConfig = Object.assign({}, DEFAULT_HOUSE_AD, settings.house_ad || {});
-
-    var pool = activeAds.map(function(a) { return Object.assign({ kind: "banner" }, a); });
-    if (houseAdConfig.enabled !== false) pool.push(Object.assign({ kind: "house" }, houseAdConfig));
-    if (!pool.length) return;
-
-    var ad = pool[Math.floor(Math.random() * pool.length)];
-    var container = document.getElementById("home-ad-container");
-    if (!container) return;
-
-    if (ad.kind === "banner") renderBanner(ad, container);
-    else renderHouseAd(ad, container);
-  })
-  .catch(function() {
-    // On error, render the house ad default silently
-    var container = document.getElementById("home-ad-container");
-    if (container) renderHouseAd(DEFAULT_HOUSE_AD, container);
-  });
-})();
-</script>
