@@ -1,12 +1,14 @@
 -- /wrapped promo landing page: giveaway entry for one free seat in the
--- January Maven cohort, plus an optional "coffee chat" request.
+-- January Maven cohort, plus an optional "coffee chat" opt-in.
 -- Same shape as survey_responses — anon insert, admin-only read/delete.
 
 create table if not exists wrapped_entries (
   id                 uuid primary key default gen_random_uuid(),
-  name               text not null,
+  first_name         text not null,
   email              text not null,
-  company            text,
+  company            text not null,
+  city               text not null,
+  why_listen         text not null,
   wants_coffee_chat  boolean not null default false,
   created_at         timestamptz not null default now()
 );
