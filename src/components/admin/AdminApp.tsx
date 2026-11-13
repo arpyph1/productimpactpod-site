@@ -12,9 +12,10 @@ import SocialScreen from "./screens/SocialScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
 import BrandingScreen from "./screens/BrandingScreen";
 import SurveysScreen from "./screens/SurveysScreen";
+import LandingPageScreen from "./screens/LandingPageScreen";
 import ArticleModal from "./ArticleModal";
 
-type Screen = "branding" | "settings" | "seo" | "homepage" | "articles" | "surveys" | "resources" | "podcast" | "partners" | "social" | "analytics";
+type Screen = "branding" | "settings" | "seo" | "homepage" | "articles" | "surveys" | "landing-page" | "resources" | "podcast" | "partners" | "social" | "analytics";
 
 interface AdminUser {
   user: User;
@@ -30,6 +31,7 @@ const NAV_ITEMS: { key: Screen; label: string; icon: string }[] = [
   { key: "social", label: "Social", icon: "M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" },
   { key: "homepage", label: "Homepage", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
   { key: "surveys", label: "Surveys", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+  { key: "landing-page", label: "Landing Page", icon: "M4 4h16v4H4V4zm0 8h10v8H4v-8zm12 0h4v8h-4v-8z" },
   { key: "resources", label: "Resources", icon: "M7 18h10M7 14h10M7 10h4M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7zM13 2v7h7" },
   { key: "podcast", label: "Podcast", icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" },
   { key: "partners", label: "Partners", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
@@ -164,7 +166,7 @@ export default function AdminApp() {
   // being re-registered every time adminAllowed state changes.
   const adminAllowedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const VALID_SCREENS: Screen[] = ["branding", "settings", "seo", "homepage", "articles", "surveys", "resources", "podcast", "partners", "social", "analytics"];
+  const VALID_SCREENS: Screen[] = ["branding", "settings", "seo", "homepage", "articles", "surveys", "landing-page", "resources", "podcast", "partners", "social", "analytics"];
   const readInitialScreen = (): Screen => {
     if (typeof window === "undefined") return "articles";
     const fromHash = window.location.hash.replace(/^#/, "");
@@ -399,7 +401,7 @@ export default function AdminApp() {
               <line x1="4" y1="18" x2="20" y2="18" />
             </svg>
           </button>
-          <h2 className="text-[16px] md:text-[20px] font-bold text-white capitalize flex-1 min-w-0 truncate">{screen}</h2>
+          <h2 className="text-[16px] md:text-[20px] font-bold text-white capitalize flex-1 min-w-0 truncate">{NAV_ITEMS.find(i => i.key === screen)?.label ?? screen}</h2>
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             {deployMsg && (
               <span className={`hidden sm:inline text-[12px] max-w-[260px] truncate ${deployMsg.includes("triggered") ? "text-green-400" : "text-[#ff6b4a]"}`}>{deployMsg}</span>
@@ -442,6 +444,7 @@ function ScreenRouter({ screen, supabase, admin, onEditArticle }: { screen: Scre
     case "homepage": return <HomepageScreen supabase={supabase} />;
     case "articles": return <ArticlesScreen supabase={supabase} onEditArticle={onEditArticle} />;
     case "surveys": return <SurveysScreen supabase={supabase} />;
+    case "landing-page": return <LandingPageScreen supabase={supabase} />;
     case "resources": return <ResourcesScreen supabase={supabase} />;
     case "podcast": return <PodcastScreen supabase={supabase} />;
     case "partners": return <PartnersScreen supabase={supabase} />;
