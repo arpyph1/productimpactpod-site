@@ -1,14 +1,14 @@
 ---
-// /wrapped — campaign landing page: giveaway entry for one free seat in the
-// January Maven cohort ("Fixing the Underperforming Agentic Product"),
-// plus an optional "coffee chat" opt-in. Submissions write to
-// wrapped_entries (see supabase/migrations/0025_wrapped_giveaway.sql)
-// through the public anon key, same pattern as SurveyWidget.astro.
-// Entries are listed in Admin → Landing Page.
+// /wrapped — campaign landing page: giveaway entry for one free seat in
+// Arpy & Brittany's live Maven cohort "Improve Your Underperforming AI
+// Agentic Product" (https://maven.com/arpy/improve-agent), plus an
+// optional "coffee chat" opt-in. Submissions write to wrapped_entries
+// (see supabase/migrations/0025_wrapped_giveaway.sql) through the public
+// anon key, same pattern as SurveyWidget.astro. Entries are listed in
+// Admin → Landing Page.
 //
-// TODO before sharing this link: confirm the real Maven course title/URL,
-// the entry deadline, and how the winner is notified — placeholders below
-// are marked clearly.
+// Course copy below is pulled from the live Maven listing — update here
+// if the cohort dates, price, or syllabus change there.
 
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
@@ -16,11 +16,10 @@ import Footer from "@components/Footer.astro";
 
 const siteUrl = "https://productimpactpod.com";
 
-// TODO: replace with the real course name + Maven listing URL.
-const COURSE_NAME = "Fixing the Underperforming Agentic Product";
-const COURSE_URL = "https://maven.com/";
-// TODO: replace with the real entry deadline.
-const DEADLINE_LABEL = "January 2027 cohort";
+const COURSE_NAME = "Improve Your Underperforming AI Agentic Product";
+const COURSE_URL = "https://maven.com/arpy/improve-agent";
+const DEADLINE_LABEL = "Jan 27 – Feb 21, 2027 cohort";
+const COURSE_PRICE = "$1,800 USD";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -32,8 +31,8 @@ const jsonLd = {
 ---
 
 <BaseLayout
-  title={`Win a Spot in Our ${DEADLINE_LABEL} Maven Course | Product Impact`}
-  description={`Enter to win one free seat in "${COURSE_NAME}," our Maven course on fixing underperforming agentic products — plus, tell us if you'd like a quick coffee chat.`}
+  title={`Win a Free Seat in "${COURSE_NAME}" | Product Impact`}
+  description={`Enter to win one free seat in "${COURSE_NAME}," Arpy & Brittany's live Maven course on fixing underperforming agentic products — plus, tell us if you'd like a quick coffee chat.`}
   canonicalUrl={`${siteUrl}/wrapped/`}
   jsonLd={jsonLd}
 >
@@ -41,25 +40,34 @@ const jsonLd = {
 
   <main class="max-w-[720px] mx-auto px-4 md:px-6 py-16">
     {/* Hero */}
-    <header class="text-center mb-12">
+    <header class="text-center mb-10">
       <div class="inline-block mb-5 px-4 py-1.5 rounded-full border border-[#ff6b4a]/30 bg-[#ff6b4a]/10 text-[#ff6b4a] text-xs font-bold uppercase tracking-wider">
         Giveaway — {DEADLINE_LABEL}
       </div>
       <h1 class="text-[34px] md:text-[48px] font-extrabold text-white tracking-tight leading-[1.1] mb-5">
         Win a free seat in <span class="text-[#ff6b4a]">{COURSE_NAME}</span>
       </h1>
-      <p class="text-[17px] md:text-[19px] text-[#999] leading-relaxed max-w-[560px] mx-auto">
-        We're giving away one spot in our Maven course on fixing
-        underperforming agentic products. Fill out the form below to enter —
-        and if you'd rather just talk it through, check the box and we'll set
-        up a quick coffee chat.
+      <p class="text-[17px] md:text-[19px] text-[#999] leading-relaxed max-w-[560px] mx-auto mb-6">
+        Solve the problems evals and telemetry can't. We're giving away one
+        seat ({COURSE_PRICE} value) in Arpy &amp; Brittany's live, four-week
+        Maven cohort on diagnosing and fixing underperforming agentic
+        products. Fill out the form below to enter — and if you'd rather
+        just talk it through, check the box and we'll set up a quick coffee
+        chat.
       </p>
+      <img
+        src="/wrapped-hero.webp"
+        width="308" height="202"
+        alt="Arpy Dragffy and Brittany Hobbs, hosts of Product Impact and instructors of the course"
+        class="mx-auto rounded-xl border border-[#1a1a1a]"
+        style="max-width: 280px; height: auto;"
+      />
     </header>
 
     {/* What you get */}
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
       {[
-        { title: "1 free seat", desc: `Full access to the ${DEADLINE_LABEL} live cohort.` },
+        { title: "1 free seat", desc: `Full access to the ${DEADLINE_LABEL} live cohort — a ${COURSE_PRICE} value.` },
         { title: "No cost to enter", desc: "Just fill out the form — no purchase necessary." },
         { title: "Or skip the wait", desc: "Check the coffee chat box below instead." },
       ].map((f) => (
@@ -68,6 +76,48 @@ const jsonLd = {
           <div class="text-[13px] text-[#888] leading-relaxed">{f.desc}</div>
         </div>
       ))}
+    </section>
+
+    {/* What you'll learn */}
+    <section class="mb-12">
+      <h2 class="text-xl font-bold text-white mb-5">What you'll learn</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {[
+          "Spot where and why AI products fail before your customers do",
+          "Run power-user research that holds up against bias",
+          "Build, launch, and analyse AI-powered research studies at scale",
+          "Measure what matters with journey-based KPIs",
+          "Build the golden data sets and failure modes that make evals work",
+          "Turn findings into an improvement plan your team can act on",
+        ].map((item) => (
+          <div class="flex items-start gap-2.5 p-4 rounded-lg border border-[#1a1a1a] bg-[#0a0a0a]">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-[#ff6b4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            <span class="text-[13px] text-[#ccc] leading-relaxed">{item}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* Instructors */}
+    <section class="mb-12 p-6 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a] flex flex-col sm:flex-row gap-5 items-start">
+      <div class="flex-1">
+        <h2 class="text-xl font-bold text-white mb-1">Led by Arpy &amp; Brittany</h2>
+        <p class="text-[13px] text-[#999] leading-relaxed mb-1">
+          <strong class="text-white">Arpy Dragffy</strong> — Founder &amp; CEO
+          of PH1 Research, host of Product Impact. 20 years of research and
+          strategy for Spotify, Microsoft, the NFL, and more.
+        </p>
+        <p class="text-[13px] text-[#999] leading-relaxed mb-4">
+          <strong class="text-white">Brittany Hobbs</strong> — COO &amp; VP
+          Research at PH1, previously VP at Huge. Behavioral scientist with
+          20+ years in UX research and AI adoption across Google, BBVA, and
+          Dell.
+        </p>
+        <a href={COURSE_URL} target="_blank" rel="noopener"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#333] text-[13px] font-semibold text-[#ccc] hover:text-white hover:border-[#555] transition-colors">
+          View Syllabus →
+        </a>
+      </div>
     </section>
 
     {/* Form */}
@@ -169,7 +219,7 @@ const jsonLd = {
         {[
           { q: "How is the winner picked?", a: "We'll review entries after the deadline and pick one winner at random. The winner is notified by email." },
           { q: "What if I don't win?", a: "Check the coffee chat box and we'll reach out directly — no giveaway required." },
-          { q: `What is "${COURSE_NAME}"?`, a: `A live Maven cohort on diagnosing and fixing underperforming agentic products. Full syllabus is on the course page.` },
+          { q: `What is "${COURSE_NAME}"?`, a: `A live, four-week Maven cohort (${DEADLINE_LABEL}) where you run a complete research study on your own AI product alongside Arpy & Brittany — leaving with the evidence to say what isn't working and what to change. Full syllabus is on the course page.` },
         ].map((item) => (
           <div class="border-b border-[#1a1a1a] pb-4">
             <div class="font-semibold text-white mb-1">{item.q}</div>
