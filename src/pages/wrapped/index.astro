@@ -1,14 +1,16 @@
 ---
-// /wrapped — campaign landing page: giveaway entry for one free seat in
-// Arpy & Brittany's live Maven cohort "Improve Your Underperforming AI
-// Agentic Product" (https://maven.com/arpy/improve-agent), plus an
-// optional "coffee chat" opt-in. Submissions write to wrapped_entries
+// /wrapped — thank-you landing page for Product Impact podcast listeners.
+// Flow: big graphic thank-you -> entry form -> benefits.
+// The giveaway is one free seat in Arpy & Brittany's live Maven cohort
+// "Improve Your Underperforming AI Agentic Product"
+// (https://maven.com/arpy/improve-agent), plus an optional coffee-chat
+// opt-in. Submissions write to wrapped_entries
 // (see supabase/migrations/0025_wrapped_giveaway.sql) through the public
 // anon key, same pattern as SurveyWidget.astro. Entries are listed in
 // Admin → Landing Page.
 //
-// Course copy below is pulled from the live Maven listing — update here
-// if the cohort dates, price, or syllabus change there.
+// Course copy is pulled from the live Maven listing — update the
+// constants below if the cohort dates, price, or syllabus change there.
 
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Nav from "@components/Nav.astro";
@@ -18,226 +20,358 @@ const siteUrl = "https://productimpactpod.com";
 
 const COURSE_NAME = "Improve Your Underperforming AI Agentic Product";
 const COURSE_URL = "https://maven.com/arpy/improve-agent";
-const DEADLINE_LABEL = "Jan 27 – Feb 21, 2027 cohort";
+const COHORT_LABEL = "Jan 27 – Feb 21, 2027";
 const COURSE_PRICE = "$1,800 USD";
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  name: `${COURSE_NAME} — Giveaway | Product Impact`,
+  name: `Thank you, listeners — ${COURSE_NAME} giveaway | Product Impact`,
   url: `${siteUrl}/wrapped/`,
   isPartOf: { "@id": `${siteUrl}/#website` },
 };
+
+const marquee = [
+  "Thank you", "You make the show", "Product Impact listeners", "Say hi",
+  "Win a free seat", "Coffee chat?", "Thank you", "You make the show",
+  "Product Impact listeners", "Say hi", "Win a free seat", "Coffee chat?",
+];
+
+const benefits = [
+  {
+    n: "01",
+    title: "A shot at a free seat",
+    desc: `One listener wins a full seat in the ${COHORT_LABEL} live cohort — a ${COURSE_PRICE} value, on us.`,
+    from: "#ff6b4a", to: "#f5a623",
+    icon: "M12 8v13m0-13a4 4 0 10-4-4 4 4 0 004 4zm0 0a4 4 0 114-4 4 4 0 01-4 4zM4 12h16v9H4z",
+  },
+  {
+    n: "02",
+    title: "A coffee chat with us",
+    desc: "Tick the box and we'll reach out to set up a quick chat — whether or not you win.",
+    from: "#9b7bff", to: "#c96bff",
+    icon: "M3 8h14v6a5 5 0 01-5 5H8a5 5 0 01-5-5V8zm14 1h1a3 3 0 010 6h-1M7 2v2m4-2v2",
+  },
+  {
+    n: "03",
+    title: "Run a real study on your product",
+    desc: "The cohort is built around one complete research study on your own AI product — you leave with evidence of what isn't working and what to change.",
+    from: "#4ab8c9", to: "#6bbf71",
+    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+  },
+  {
+    n: "04",
+    title: "Learn live from the hosts",
+    desc: "Arpy Dragffy and Brittany Hobbs teach every session in a four-week live format, alongside a cohort of peers.",
+    from: "#f5a623", to: "#ff6b4a",
+    icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z",
+  },
+];
+
+const learn = [
+  "Spot where and why AI products fail before your customers do",
+  "Run power-user research that holds up against bias",
+  "Build, launch, and analyse AI-powered research studies at scale",
+  "Measure what matters with journey-based KPIs",
+  "Build the golden data sets and failure modes that make evals work",
+  "Turn findings into an improvement plan your team can act on",
+];
 ---
 
 <BaseLayout
-  title={`Win a Free Seat in "${COURSE_NAME}" | Product Impact`}
-  description={`Enter to win one free seat in "${COURSE_NAME}," Arpy & Brittany's live Maven course on fixing underperforming agentic products — plus, tell us if you'd like a quick coffee chat.`}
+  title={`Thank you, listeners — win a free seat in "${COURSE_NAME}" | Product Impact`}
+  description={`Thanks for listening to Product Impact. Say hi for a chance to win a free seat in "${COURSE_NAME}," Arpy & Brittany's live Maven course — and tell us if you'd like a coffee chat.`}
   canonicalUrl={`${siteUrl}/wrapped/`}
   jsonLd={jsonLd}
 >
   <Nav />
 
-  <main class="max-w-[720px] mx-auto px-4 md:px-6 py-16">
-    {/* Hero */}
-    <header class="text-center mb-10">
-      <div class="inline-block mb-5 px-4 py-1.5 rounded-full border border-[#ff6b4a]/30 bg-[#ff6b4a]/10 text-[#ff6b4a] text-xs font-bold uppercase tracking-wider">
-        Giveaway — {DEADLINE_LABEL}
+  <main class="wr-page relative overflow-hidden">
+    {/* ───────── Hero ───────── */}
+    <header class="relative px-4 md:px-6 pt-14 md:pt-20 pb-12 text-center">
+      <div class="wr-blob wr-blob-a" aria-hidden="true"></div>
+      <div class="wr-blob wr-blob-b" aria-hidden="true"></div>
+      <div class="wr-blob wr-blob-c" aria-hidden="true"></div>
+
+      <div class="relative max-w-[880px] mx-auto">
+        <div class="wr-sticker inline-block mb-6 px-5 py-2 rounded-full text-[12px] md:text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#0a0a0a]">
+          For our podcast listeners
+        </div>
+
+        <h1 class="wr-title font-black uppercase leading-[0.86] tracking-tighter">
+          <span class="block">Thank</span>
+          <span class="block wr-title-grad">you!</span>
+        </h1>
+
+        <p class="mt-7 text-[18px] md:text-[22px] text-[#d4d4d4] leading-snug max-w-[620px] mx-auto">
+          Every listen, share, and reply keeps <strong class="text-white">Product Impact</strong> going.
+          So here's a little something back — say hi below for a shot at a
+          <strong class="text-[#ffb199]"> free seat</strong> in our live course.
+        </p>
+
+        <div class="mt-10 relative inline-block">
+          <div class="wr-polaroid">
+            <img
+              src="/wrapped-hero.webp"
+              width="308" height="197"
+              alt="Arpy Dragffy and Brittany Hobbs, hosts of Product Impact"
+              class="block w-[260px] md:w-[300px] h-auto rounded-sm"
+            />
+            <div class="mt-3 text-center text-[13px] font-bold text-[#222]" style="font-family: 'Comic Sans MS', 'Marker Felt', cursive;">
+              Arpy &amp; Brittany say thanks!
+            </div>
+          </div>
+          <span class="wr-star wr-star-1" aria-hidden="true">★</span>
+          <span class="wr-star wr-star-2" aria-hidden="true">★</span>
+          <span class="wr-star wr-star-3" aria-hidden="true">✦</span>
+        </div>
+
+        <div class="mt-9">
+          <a href="#enter" class="wr-cta inline-flex items-center gap-2 px-8 py-4 rounded-full text-[16px] font-extrabold text-[#0a0a0a]">
+            Say hi &amp; enter
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          </a>
+        </div>
       </div>
-      <h1 class="text-[34px] md:text-[48px] font-extrabold text-white tracking-tight leading-[1.1] mb-5">
-        Win a free seat in <span class="text-[#ff6b4a]">{COURSE_NAME}</span>
-      </h1>
-      <p class="text-[17px] md:text-[19px] text-[#999] leading-relaxed max-w-[560px] mx-auto mb-6">
-        Solve the problems evals and telemetry can't. We're giving away one
-        seat ({COURSE_PRICE} value) in Arpy &amp; Brittany's live, four-week
-        Maven cohort on diagnosing and fixing underperforming agentic
-        products. Fill out the form below to enter — and if you'd rather
-        just talk it through, check the box and we'll set up a quick coffee
-        chat.
-      </p>
-      <img
-        src="/wrapped-hero.webp"
-        width="308" height="202"
-        alt="Arpy Dragffy and Brittany Hobbs, hosts of Product Impact and instructors of the course"
-        class="mx-auto rounded-xl border border-[#1a1a1a]"
-        style="max-width: 280px; height: auto;"
-      />
     </header>
 
-    {/* What you get */}
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-      {[
-        { title: "1 free seat", desc: `Full access to the ${DEADLINE_LABEL} live cohort — a ${COURSE_PRICE} value.` },
-        { title: "No cost to enter", desc: "Just fill out the form — no purchase necessary." },
-        { title: "Or skip the wait", desc: "Check the coffee chat box below instead." },
-      ].map((f) => (
-        <div class="p-5 rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] text-center">
-          <div class="text-[15px] font-bold text-white mb-1">{f.title}</div>
-          <div class="text-[13px] text-[#888] leading-relaxed">{f.desc}</div>
-        </div>
-      ))}
-    </section>
-
-    {/* What you'll learn */}
-    <section class="mb-12">
-      <h2 class="text-xl font-bold text-white mb-5">What you'll learn</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {[
-          "Spot where and why AI products fail before your customers do",
-          "Run power-user research that holds up against bias",
-          "Build, launch, and analyse AI-powered research studies at scale",
-          "Measure what matters with journey-based KPIs",
-          "Build the golden data sets and failure modes that make evals work",
-          "Turn findings into an improvement plan your team can act on",
-        ].map((item) => (
-          <div class="flex items-start gap-2.5 p-4 rounded-lg border border-[#1a1a1a] bg-[#0a0a0a]">
-            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-[#ff6b4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-            <span class="text-[13px] text-[#ccc] leading-relaxed">{item}</span>
+    {/* ───────── Marquee ───────── */}
+    <div class="wr-marquee border-y-2 border-[#ff6b4a] bg-[#ff6b4a] text-[#0a0a0a] overflow-hidden -rotate-1 my-4" aria-hidden="true">
+      <div class="wr-marquee-track flex whitespace-nowrap py-3 text-[18px] md:text-[22px] font-black uppercase tracking-wider">
+        {[0, 1].map(() => (
+          <div class="flex shrink-0 items-center">
+            {marquee.map((m) => (
+              <span class="px-5 flex items-center gap-5">{m}<span>✦</span></span>
+            ))}
           </div>
         ))}
       </div>
-    </section>
+    </div>
 
-    {/* Instructors */}
-    <section class="mb-12 p-6 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a] flex flex-col sm:flex-row gap-5 items-start">
-      <div class="flex-1">
-        <h2 class="text-xl font-bold text-white mb-1">Led by Arpy &amp; Brittany</h2>
-        <p class="text-[13px] text-[#999] leading-relaxed mb-1">
-          <strong class="text-white">Arpy Dragffy</strong> — Founder &amp; CEO
-          of PH1 Research, host of Product Impact. 20 years of research and
-          strategy for Spotify, Microsoft, the NFL, and more.
-        </p>
-        <p class="text-[13px] text-[#999] leading-relaxed mb-4">
-          <strong class="text-white">Brittany Hobbs</strong> — COO &amp; VP
-          Research at PH1, previously VP at Huge. Behavioral scientist with
-          20+ years in UX research and AI adoption across Google, BBVA, and
-          Dell.
-        </p>
-        <a href={COURSE_URL} target="_blank" rel="noopener"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#333] text-[13px] font-semibold text-[#ccc] hover:text-white hover:border-[#555] transition-colors">
-          View Syllabus →
-        </a>
-      </div>
-    </section>
-
-    {/* Form */}
-    <section class="rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a] p-6 md:p-8">
-      <div id="wrapped-form-root">
-        <h2 class="text-xl font-bold text-white mb-1">Enter the giveaway</h2>
-        <p class="text-sm text-[#888] mb-6">
-          One entry per person. We'll email the winner directly — no spam, ever.
-        </p>
-
-        <form id="wrapped-form" class="space-y-4" novalidate>
-          <div>
-            <label for="wf-first-name" class="block text-xs font-bold uppercase tracking-wide text-[#888] mb-1.5">
-              First name
-            </label>
-            <input
-              id="wf-first-name" name="first_name" type="text" required autocomplete="given-name"
-              class="w-full px-4 py-3 rounded-lg bg-[#111] border border-[#222] text-white text-[15px] placeholder-[#555] focus:outline-none focus:border-[#ff6b4a]"
-              placeholder="Jane"
-            />
-          </div>
-
-          <div>
-            <label for="wf-email" class="block text-xs font-bold uppercase tracking-wide text-[#888] mb-1.5">
-              Email
-            </label>
-            <input
-              id="wf-email" name="email" type="email" required autocomplete="email"
-              class="w-full px-4 py-3 rounded-lg bg-[#111] border border-[#222] text-white text-[15px] placeholder-[#555] focus:outline-none focus:border-[#ff6b4a]"
-              placeholder="jane@company.com"
-            />
-          </div>
-
-          <div>
-            <label for="wf-company" class="block text-xs font-bold uppercase tracking-wide text-[#888] mb-1.5">
-              Company
-            </label>
-            <input
-              id="wf-company" name="company" type="text" required autocomplete="organization"
-              class="w-full px-4 py-3 rounded-lg bg-[#111] border border-[#222] text-white text-[15px] placeholder-[#555] focus:outline-none focus:border-[#ff6b4a]"
-              placeholder="Acme Inc."
-            />
-          </div>
-
-          <div>
-            <label for="wf-city" class="block text-xs font-bold uppercase tracking-wide text-[#888] mb-1.5">
-              City
-            </label>
-            <input
-              id="wf-city" name="city" type="text" required autocomplete="address-level2"
-              class="w-full px-4 py-3 rounded-lg bg-[#111] border border-[#222] text-white text-[15px] placeholder-[#555] focus:outline-none focus:border-[#ff6b4a]"
-              placeholder="San Francisco"
-            />
-          </div>
-
-          <div>
-            <label for="wf-why" class="block text-xs font-bold uppercase tracking-wide text-[#888] mb-1.5">
-              Why do you listen to Product Impact?
-            </label>
-            <textarea
-              id="wf-why" name="why_listen" required rows="3"
-              class="w-full px-4 py-3 rounded-lg bg-[#111] border border-[#222] text-white text-[15px] placeholder-[#555] focus:outline-none focus:border-[#ff6b4a] resize-vertical"
-              placeholder="Tell us in a sentence or two…"
-            ></textarea>
-          </div>
-
-          <label class="flex items-start gap-3 pt-2 cursor-pointer">
-            <input
-              id="wf-coffee" name="coffee" type="checkbox"
-              class="mt-0.5 w-4 h-4 accent-[#ff6b4a]"
-            />
-            <span class="text-sm text-[#ccc] leading-relaxed">
-              I'd like to participate in a coffee chat with the team.
-            </span>
-          </label>
-
-          <div id="wf-error" class="hidden text-sm text-[#fca5a5] bg-[#ef4444]/10 rounded-lg px-4 py-3"></div>
-
-          <button
-            id="wf-submit" type="submit"
-            class="w-full mt-2 px-6 py-3.5 rounded-xl bg-[#ff6b4a] hover:bg-[#ff8566] text-white text-[15px] font-bold transition-colors disabled:opacity-60 disabled:cursor-default"
-          >
-            Enter the giveaway
-          </button>
-
-          <p class="text-xs text-[#555] text-center leading-relaxed pt-1">
-            By submitting, you agree to be contacted about this giveaway and
-            occasional Product Impact updates. See our{" "}
-            <a href="/privacy/" class="text-[#888] hover:text-[#ff6b4a] underline">Privacy Policy</a>.
+    {/* ───────── Form ───────── */}
+    <section id="enter" class="relative px-4 md:px-6 py-14 md:py-20 scroll-mt-8">
+      <div class="max-w-[640px] mx-auto">
+        <div class="text-center mb-8">
+          <div class="text-[13px] font-extrabold uppercase tracking-[0.2em] text-[#ff6b4a] mb-2">Your turn</div>
+          <h2 class="text-[34px] md:text-[48px] font-black text-white leading-[1] tracking-tight">
+            Tell us about <span class="wr-title-grad">you</span>
+          </h2>
+          <p class="mt-3 text-[16px] text-[#999]">
+            Takes about a minute. One entry per person.
           </p>
-        </form>
+        </div>
+
+        <div class="wr-form-border rounded-[28px] p-[3px]">
+          <div class="rounded-[25px] bg-[#0b0b0b] p-6 md:p-9">
+            <div id="wrapped-form-root">
+              <form id="wrapped-form" class="space-y-5" novalidate>
+                <div>
+                  <label for="wf-first-name" class="wr-label">First name</label>
+                  <input
+                    id="wf-first-name" name="first_name" type="text" required autocomplete="given-name"
+                    class="wr-input" placeholder="Jane"
+                  />
+                </div>
+
+                <div>
+                  <label for="wf-email" class="wr-label">Email</label>
+                  <input
+                    id="wf-email" name="email" type="email" required autocomplete="email"
+                    class="wr-input" placeholder="jane@company.com"
+                  />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label for="wf-company" class="wr-label">Company</label>
+                    <input
+                      id="wf-company" name="company" type="text" required autocomplete="organization"
+                      class="wr-input" placeholder="Acme Inc."
+                    />
+                  </div>
+                  <div>
+                    <label for="wf-city" class="wr-label">City</label>
+                    <input
+                      id="wf-city" name="city" type="text" required autocomplete="address-level2"
+                      class="wr-input" placeholder="San Francisco"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="wf-why" class="wr-label">Why do you listen to Product Impact?</label>
+                  <textarea
+                    id="wf-why" name="why_listen" required rows="3"
+                    class="wr-input resize-y" placeholder="Tell us in a sentence or two…"
+                  ></textarea>
+                </div>
+
+                <label class="wr-coffee flex items-start gap-4 p-4 rounded-2xl cursor-pointer">
+                  <input
+                    id="wf-coffee" name="coffee" type="checkbox"
+                    class="mt-1 w-5 h-5 accent-[#ff6b4a] flex-shrink-0"
+                  />
+                  <span>
+                    <span class="block text-[16px] font-bold text-white">I'd like a coffee chat</span>
+                    <span class="block text-[13px] text-[#999] leading-relaxed">
+                      Check this and we'll reach out to set up a quick chat with the team.
+                    </span>
+                  </span>
+                </label>
+
+                <div id="wf-error" class="hidden text-sm text-[#fca5a5] bg-[#ef4444]/10 rounded-xl px-4 py-3"></div>
+
+                <button
+                  id="wf-submit" type="submit"
+                  class="wr-cta w-full px-6 py-4 rounded-full text-[17px] font-extrabold text-[#0a0a0a] disabled:opacity-60 disabled:cursor-default"
+                >
+                  Enter the giveaway
+                </button>
+
+                <p class="text-xs text-[#666] text-center leading-relaxed">
+                  By submitting, you agree to be contacted about this giveaway and
+                  occasional Product Impact updates. See our{" "}
+                  <a href="/privacy/" class="text-[#999] hover:text-[#ff6b4a] underline">Privacy Policy</a>.
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    {/* FAQ */}
-    <section class="mt-14">
-      <h2 class="text-xl font-bold text-white mb-5">A few details</h2>
-      <div class="space-y-4">
-        {[
-          { q: "How is the winner picked?", a: "We'll review entries after the deadline and pick one winner at random. The winner is notified by email." },
-          { q: "What if I don't win?", a: "Check the coffee chat box and we'll reach out directly — no giveaway required." },
-          { q: `What is "${COURSE_NAME}"?`, a: `A live, four-week Maven cohort (${DEADLINE_LABEL}) where you run a complete research study on your own AI product alongside Arpy & Brittany — leaving with the evidence to say what isn't working and what to change. Full syllabus is on the course page.` },
-        ].map((item) => (
-          <div class="border-b border-[#1a1a1a] pb-4">
-            <div class="font-semibold text-white mb-1">{item.q}</div>
-            <div class="text-sm text-[#999] leading-relaxed">{item.a}</div>
+    {/* ───────── Benefits ───────── */}
+    <section class="relative px-4 md:px-6 pb-16 md:pb-24">
+      <div class="max-w-[960px] mx-auto">
+        <div class="text-center mb-10">
+          <div class="text-[13px] font-extrabold uppercase tracking-[0.2em] text-[#9b7bff] mb-2">What's in it for you</div>
+          <h2 class="text-[34px] md:text-[52px] font-black text-white leading-[1] tracking-tight">
+            Here's what you <span class="wr-title-grad">get</span>
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {benefits.map((b, i) => (
+            <div
+              class="wr-card relative overflow-hidden rounded-[28px] p-7 md:p-8 text-[#0a0a0a]"
+              style={`background: linear-gradient(135deg, ${b.from}, ${b.to}); --tilt: ${i % 2 === 0 ? "-1.2deg" : "1.2deg"};`}
+            >
+              <div class="absolute -right-3 -top-6 text-[110px] font-black leading-none opacity-[0.14] select-none" aria-hidden="true">{b.n}</div>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-2xl bg-[#0a0a0a]/85 flex items-center justify-center mb-5">
+                  <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={b.icon} /></svg>
+                </div>
+                <h3 class="text-[24px] md:text-[26px] font-black leading-tight mb-2">{b.title}</h3>
+                <p class="text-[15px] md:text-[16px] font-medium leading-relaxed text-[#0a0a0a]/80">{b.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* About the course */}
+        <div class="mt-14 rounded-[28px] border-2 border-dashed border-[#2a2a2a] p-7 md:p-10">
+          <div class="text-[13px] font-extrabold uppercase tracking-[0.2em] text-[#4ab8c9] mb-2">The prize</div>
+          <h3 class="text-[26px] md:text-[34px] font-black text-white leading-tight mb-2">{COURSE_NAME}</h3>
+          <p class="text-[15px] text-[#999] leading-relaxed mb-6">
+            A four-week live Maven cohort ({COHORT_LABEL}) with Arpy Dragffy and Brittany Hobbs —
+            solving the problems that evals and telemetry can't.
+          </p>
+          <div class="flex flex-wrap gap-2.5 mb-7">
+            {learn.map((item) => (
+              <span class="wr-chip px-4 py-2 rounded-full text-[13px] font-semibold text-[#e5e5e5]">{item}</span>
+            ))}
           </div>
-        ))}
+          <a href={COURSE_URL} target="_blank" rel="noopener"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-[#4ab8c9] text-[14px] font-extrabold text-[#4ab8c9] hover:bg-[#4ab8c9] hover:text-[#0a0a0a] transition-colors">
+            See the full syllabus on Maven →
+          </a>
+        </div>
+
+        <p class="mt-10 text-center text-[13px] text-[#777] max-w-[520px] mx-auto leading-relaxed">
+          We'll pick one winner at random after entries close and email them
+          directly. Not selected? Tick the coffee chat box and we'll still reach out.
+        </p>
       </div>
-      <p class="text-sm text-[#666] mt-6">
-        Curious about the course itself?{" "}
-        <a href={COURSE_URL} target="_blank" rel="noopener" class="text-[#ff6b4a] hover:text-[#ff8566] font-semibold">
-          View it on Maven →
-        </a>
-      </p>
     </section>
   </main>
 
   <Footer />
 </BaseLayout>
+
+<style is:global>
+  .wr-page { background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(255,107,74,0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 40%, rgba(155,123,255,0.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 70%, rgba(74,184,201,0.08), transparent 60%);
+  }
+
+  .wr-title { font-size: clamp(76px, 17vw, 200px); color: #fff; }
+  .wr-title-grad {
+    background: linear-gradient(90deg, #ff6b4a, #f5a623 45%, #c96bff);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+
+  .wr-sticker {
+    background: linear-gradient(90deg, #f5a623, #ff8566);
+    transform: rotate(-3deg);
+    box-shadow: 0 6px 0 rgba(255,107,74,0.35);
+  }
+
+  .wr-blob { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .55; pointer-events: none; }
+  .wr-blob-a { width: 340px; height: 340px; background: #ff6b4a; top: 30px; left: -80px; animation: wr-float 9s ease-in-out infinite; }
+  .wr-blob-b { width: 300px; height: 300px; background: #9b7bff; top: 120px; right: -90px; animation: wr-float 11s ease-in-out infinite reverse; }
+  .wr-blob-c { width: 240px; height: 240px; background: #4ab8c9; bottom: -40px; left: 30%; opacity: .35; animation: wr-float 13s ease-in-out infinite; }
+
+  .wr-polaroid {
+    background: #fafafa; padding: 14px 14px 16px; transform: rotate(-3deg);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    transition: transform .3s ease;
+  }
+  .wr-polaroid:hover { transform: rotate(0deg) scale(1.03); }
+
+  .wr-star { position: absolute; color: #f5a623; font-size: 34px; animation: wr-twinkle 2.4s ease-in-out infinite; }
+  .wr-star-1 { top: -18px; right: -26px; }
+  .wr-star-2 { bottom: 10px; left: -34px; color: #ff6b4a; font-size: 26px; animation-delay: .8s; }
+  .wr-star-3 { top: 30%; right: -42px; color: #9b7bff; font-size: 28px; animation-delay: 1.5s; }
+
+  .wr-cta {
+    background: linear-gradient(90deg, #ff6b4a, #f5a623);
+    box-shadow: 0 8px 0 rgba(255,107,74,0.28);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .wr-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 0 rgba(255,107,74,0.28); }
+  .wr-cta:active { transform: translateY(4px); box-shadow: 0 3px 0 rgba(255,107,74,0.28); }
+
+  .wr-marquee-track { animation: wr-marquee 28s linear infinite; width: max-content; }
+
+  .wr-form-border { background: linear-gradient(135deg, #ff6b4a, #f5a623, #9b7bff, #4ab8c9); }
+
+  .wr-label { display:block; margin-bottom: 6px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #aaa; }
+  .wr-input {
+    width: 100%; padding: 14px 16px; border-radius: 14px; background: #131313;
+    border: 2px solid #232323; color: #fff; font-size: 16px; transition: border-color .15s, box-shadow .15s;
+  }
+  .wr-input::placeholder { color: #555; }
+  .wr-input:focus { outline: none; border-color: #ff6b4a; box-shadow: 0 0 0 4px rgba(255,107,74,0.15); }
+
+  .wr-coffee { background: rgba(155,123,255,0.08); border: 2px solid rgba(155,123,255,0.25); transition: border-color .15s, background .15s; }
+  .wr-coffee:hover, .wr-coffee:has(input:checked) { border-color: #9b7bff; background: rgba(155,123,255,0.14); }
+
+  .wr-card { transform: rotate(var(--tilt, 0deg)); transition: transform .25s ease; }
+  .wr-card:hover { transform: rotate(0deg) translateY(-4px); }
+
+  .wr-chip { background: #151515; border: 1.5px solid #2a2a2a; }
+
+  @keyframes wr-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-24px) } }
+  @keyframes wr-twinkle { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1 } 50% { transform: scale(1.3) rotate(15deg); opacity: .6 } }
+  @keyframes wr-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wr-blob, .wr-star, .wr-marquee-track { animation: none; }
+    .wr-polaroid, .wr-card, .wr-cta { transition: none; }
+  }
+</style>
 
 <script is:inline define:vars={{ sbUrl: import.meta.env.PUBLIC_SUPABASE_URL, sbKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY }}>
 (function () {
@@ -296,10 +430,11 @@ const jsonLd = {
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       root.innerHTML =
-        '<div class="text-center py-6">' +
-        '<div class="text-2xl font-bold text-white mb-2">You\'re entered 🎉</div>' +
-        '<p class="text-sm text-[#999] leading-relaxed">We\'ll email the winner directly. ' +
-        (coffee ? 'We\'ll also be in touch to set up your coffee chat.' : '') +
+        '<div class="text-center py-8">' +
+        '<div class="wr-title-grad text-[56px] font-black leading-none mb-3">You\'re in!</div>' +
+        '<p class="text-[17px] text-[#d4d4d4] leading-relaxed">Thanks, ' + firstName.replace(/[<>&"']/g, '') + ' — you\'re entered. ' +
+        'We\'ll email the winner directly.' +
+        (coffee ? ' We\'ll also be in touch to set up your coffee chat.' : '') +
         '</p></div>';
     }).catch(function () {
       showError('Could not submit — please try again in a moment.');
